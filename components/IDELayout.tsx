@@ -11,8 +11,8 @@ import { Sparkle, Terminal, Gear } from 'phosphor-react'
 
 export default function IDELayout() {
   const { 
-    sidebarCollapsed, 
-    setSidebarCollapsed, 
+    activePanel,
+    setActivePanel,
     setCommandPalette, 
     setAIModal, 
     setSettingsModal 
@@ -21,7 +21,7 @@ export default function IDELayout() {
   // Global hotkeys
   useHotkeys('meta+b', (e) => {
     e.preventDefault()
-    setSidebarCollapsed(!sidebarCollapsed)
+    setActivePanel(activePanel ? '' : 'files')
   })
 
   useHotkeys('meta+shift+p', (e) => {

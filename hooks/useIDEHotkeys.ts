@@ -5,10 +5,11 @@ import { useIDEStore } from '@/stores/ide-store'
 
 export function useIDEHotkeys() {
   const {
-    setCommandPaletteOpen,
-    setAiChatOpen,
+    setCommandPalette,
+    setAIChatOpen,
     setTerminalOpen,
-    setSidebarOpen,
+    activePanel,
+    setActivePanel,
     activeTab,
     tabs,
     addTab,
@@ -19,7 +20,7 @@ export function useIDEHotkeys() {
   // Command Palette
   useHotkeys('meta+k', (e) => {
     e.preventDefault()
-    setCommandPaletteOpen(true)
+    setCommandPalette(true)
   }, { preventDefault: true })
 
   // Save File
@@ -54,13 +55,14 @@ export function useIDEHotkeys() {
   // Terminal
   useHotkeys('meta+j', (e) => {
     e.preventDefault()
-    setTerminalOpen(prev => !prev)
+    const { terminalOpen } = useIDEStore.getState()
+    setTerminalOpen(!terminalOpen)
   }, { preventDefault: true })
 
   // AI Assistant
   useHotkeys('meta+i', (e) => {
     e.preventDefault()
-    setAiChatOpen(true)
+    setAIChatOpen(true)
   }, { preventDefault: true })
 
   // Settings
@@ -73,7 +75,7 @@ export function useIDEHotkeys() {
   // Toggle Sidebar
   useHotkeys('meta+b', (e) => {
     e.preventDefault()
-    setSidebarOpen(prev => !prev)
+    setActivePanel(activePanel ? '' : 'files')
   }, { preventDefault: true })
 
   // Switch Tabs
@@ -95,6 +97,6 @@ export function useIDEHotkeys() {
   // Escape - Close modals
   useHotkeys('escape', (e) => {
     e.preventDefault()
-    setCommandPaletteOpen(false)
+    setCommandPalette(false)
   }, { preventDefault: true })
 }

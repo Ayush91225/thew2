@@ -86,9 +86,9 @@ export default function Sidebar() {
   }
 
   const handleCreateItem = () => {
-    if (!newItemName.trim()) return
+    if (!newItemName.trim() || !creatingFile) return
     
-    if (creatingFile?.type === 'file') {
+    if (creatingFile.type === 'file') {
       createFile(creatingFile.parentId || null, newItemName)
     } else {
       createFolder(creatingFile.parentId || null, newItemName)

@@ -25,8 +25,10 @@ export class FileSystemManager {
     try {
       if ('showDirectoryPicker' in window) {
         this.fileHandle = await (window as any).showDirectoryPicker()
-        this.projectRoot = this.fileHandle.name
-        return await this.readDirectory(this.fileHandle)
+        if (this.fileHandle) {
+          this.projectRoot = this.fileHandle.name
+          return await this.readDirectory(this.fileHandle)
+        }
       }
     } catch (error) {
       console.error('Failed to open project:', error)
@@ -37,7 +39,7 @@ export class FileSystemManager {
   async readDirectory(dirHandle: FileSystemDirectoryHandle, path = ''): Promise<FileNode> {
     const children: FileNode[] = []
     
-    for await (const [name, handle] of dirHandle.entries()) {
+    for await (const [name, handle] of (dirHandle as any).entries()) {
       const fullPath = path ? `${path}/${name}` : name
       
       if (handle.kind === 'directory') {
