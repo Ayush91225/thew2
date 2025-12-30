@@ -16,12 +16,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-        <script src="https://unpkg.com/@phosphor-icons/web"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-      </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
         {children}
       </body>

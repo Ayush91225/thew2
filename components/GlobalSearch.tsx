@@ -304,7 +304,7 @@ export default function GlobalSearch() {
           {results.length > 0 ? (
             <div className="p-4">
               <div className="text-xs text-zinc-400 mb-3">
-                {results.length} result{results.length !== 1 ? 's' : ''} in {new Set(results.map(r => r.file)).size} file{new Set(results.map(r => r.file)).size !== 1 ? 's' : ''}
+                {results.length} result{results.length !== 1 ? &apos;s&apos; : &apos;&apos;} in {new Set(results.map(r => r.file)).size} file{new Set(results.map(r => r.file)).size !== 1 ? &apos;s&apos; : &apos;&apos;}
               </div>
               
               <div className="space-y-1">
@@ -336,7 +336,7 @@ export default function GlobalSearch() {
           ) : globalSearchQuery.length > 2 && !isSearching ? (
             <div className="p-8 text-center text-zinc-600">
               <i className="ph ph-magnifying-glass text-2xl mb-2"></i>
-              <div>No results found for "{globalSearchQuery}"</div>
+              <div>No results found for &quot;{globalSearchQuery}&quot;</div>
             </div>
           ) : (
             <div className="p-8 text-center text-zinc-600">
