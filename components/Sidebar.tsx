@@ -4,6 +4,7 @@ import { useIDEStore } from '@/stores/ide-store'
 import { FileTreeManager, FileTreeNode } from '@/lib/file-tree'
 import { DebugPanel, ExtensionsPanel, DatabasePanel, APIPanel } from './SidebarPanels'
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 
 const sidebarTabs = [
   { id: 'files', icon: 'ph-fill ph-files', label: 'Files' },
@@ -355,9 +356,11 @@ A modern, enterprise-level IDE built with Next.js and React.
             }`}
           ></i>
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-zinc-700 to-white border-line cursor-pointer overflow-hidden">
-            <img 
+            <Image 
               src="https://api.dicebear.com/9.x/glass/svg?seed=kriya-user" 
               alt="User Avatar"
+              width={28}
+              height={28}
               className="w-full h-full"
             />
           </div>

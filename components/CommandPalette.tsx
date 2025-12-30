@@ -52,7 +52,7 @@ export default function CommandPalette() {
 
   useEffect(() => {
     loadFromURL()
-  }, [])
+  }, [loadFromURL])
 
   const executeCommand = (commandId: number) => {
     const command = commands.find(cmd => cmd.id === commandId)
@@ -68,7 +68,6 @@ export default function CommandPalette() {
         setAIChatOpen(true)
         break
       case 'settings':
-        const { setView } = useIDEStore.getState()
         setView('settings')
         break
       case 'search':

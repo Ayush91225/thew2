@@ -130,7 +130,7 @@ export default function MainEditor() {
         editorRef.current.dispose()
       }
     }
-  }, [currentTab?.id, fontSize, tabSize, minimap])
+  }, [currentTab?.id, fontSize, tabSize, minimap, activeTab, currentTab, handleContentChange, saveFile])
 
   // Update editor content when tab changes
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function MainEditor() {
         editorRef.current.setValue(currentTab.content)
       }
     }
-  }, [activeTab])
+  }, [activeTab, currentTab])
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-black">

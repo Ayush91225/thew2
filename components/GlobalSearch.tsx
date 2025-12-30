@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useIDEStore } from '@/stores/ide-store'
 import { useHotkeys } from 'react-hotkeys-hook'
 
@@ -40,15 +40,7 @@ export default function GlobalSearch() {
     if (globalSearch) setGlobalSearch(false)
   })
 
-  useEffect(() => {
-    if (globalSearchQuery.length > 2) {
-      performSearch()
-    } else {
-      setResults([])
-    }
-  }, [globalSearchQuery, caseSensitive, wholeWord, useRegex])
-
-  const performSearch = async () => {
+  const performSearch = useCallback(async () => {
     setIsSearching(true)
     
     // Simulate search delay
@@ -131,7 +123,15 @@ export default function GlobalSearch() {
     
     setResults(searchResults)
     setIsSearching(false)
-  }
+  }, [globalSearchQuery, caseSensitive, wholeWord, useRegex, tabs])
+
+  useEffect(() => {
+    if (globalSearchQuery.length > 2) {
+      performSearch()
+    } else {
+      setResults([])
+    }
+  }, [globalSearchQuery, caseSensitive, wholeWord, useRegex, performSearch])
 
   const jumpToResult = (result: SearchResult) => {
     // Find existing tab or create new one
@@ -304,7 +304,7 @@ export default function GlobalSearch() {
           {results.length > 0 ? (
             <div className="p-4">
               <div className="text-xs text-zinc-400 mb-3">
-                {results.length} result{results.length !== 1 ? &apos;s&apos; : &apos;&apos;} in {new Set(results.map(r => r.file)).size} file{new Set(results.map(r => r.file)).size !== 1 ? &apos;s&apos; : &apos;&apos;}
+                {results.length} result{results.length !== 1 ? 's' : ''} in {new Set(results.map(r => r.file)).size} file{new Set(results.map(r => r.file)).size !== 1 ? 's' : ''}
               </div>
               
               <div className="space-y-1">
