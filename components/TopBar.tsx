@@ -13,9 +13,7 @@ export default function TopBar() {
     <nav className="h-12 border-b-line px-4 flex items-center justify-between bg-black shrink-0">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2.5 cursor-pointer group">
-          <svg width="16" height="16" viewBox="0 0 76 65" fill="white">
-            <path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/>
-          </svg>
+
           <span className="font-black text-xs tracking-tight text-white">KRIYA</span>
         </div>
         <div className="h-4 w-px bg-zinc-800"></div>
