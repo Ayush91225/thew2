@@ -316,12 +316,22 @@ export default function CodeEditor() {
       // Set up real-time collaboration event listeners
       const handleOperation = (data: any) => {
         console.log('📝 Remote operation received:', data)
-        applyRemoteOperation(data.operation)
+        if (data.operation) {
+          applyRemoteOperation(data.operation)
+        } else if (data.type && data.data) {
+          applyRemoteOperation(data.data)
+        } else {
+          console.warn('Invalid operation format:', data)
+        }
       }
 
       const handleCursorUpdate = (data: any) => {
         console.log('👆 Remote cursor update:', data)
-        updateRemoteCursor(data.userId, data.cursor)
+        if (data.userId && data.cursor) {
+          updateRemoteCursor(data.userId, data.cursor)
+        } else {
+          console.warn('Invalid cursor update format:', data)
+        }
       }
 
       const handleOperationConfirmed = (data: any) => {

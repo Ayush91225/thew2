@@ -64,7 +64,16 @@ class CollaborationService {
         try {
           const data = JSON.parse(event.data)
           console.log('📨 Message received:', data)
-          this.emit(data.type, data.data || data)
+          
+          // Handle different message formats
+          if (data.type) {
+            this.emit(data.type, data.data || data)
+          } else if (data.action) {
+            this.emit(data.action, data)
+          } else {
+            // Fallback for direct data
+            this.emit('message', data)
+          }
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error, event.data)
         }
