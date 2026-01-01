@@ -1581,9 +1581,9 @@ context:
           },
           
           // Git Actions
-          setGitBranch: (branch) => set({ gitBranch: branch }),
-          setGitStatus: (status) => set({ gitStatus: status }),
-          setUncommittedChanges: (count) => set({ uncommittedChanges: count }),
+          setGitBranch: (branch: string) => set({ gitBranch: branch }),
+          setGitStatus: (status: 'clean' | 'modified' | 'staged' | 'committed') => set({ gitStatus: status }),
+          setUncommittedChanges: (count: number) => set({ uncommittedChanges: count }),
           
           // Collaboration Actions
           setCollaborationUsers: (users) => set({ collaborationUsers: users }),

@@ -435,7 +435,7 @@ export default function CodeEditor() {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
       editor.getAction('editor.action.insertLineBefore')?.run()
     })
-  }, [currentTab, collab, activeTab])
+  }, [currentTab, collab, activeTab, applyRemoteOperation, updateRemoteCursor])
 
   if (!currentTab) {
     return (
