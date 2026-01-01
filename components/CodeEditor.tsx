@@ -382,11 +382,17 @@ export default function CodeEditor() {
     if (collab && activeTab) {
       // Set up real-time collaboration
       collaborationService.on('operation', (data: any) => {
+        console.log('📝 Remote operation received:', data)
         applyRemoteOperation(data.operation)
       })
 
       collaborationService.on('cursor-update', (data: any) => {
+        console.log('👆 Remote cursor update:', data)
         updateRemoteCursor(data.userId, data.cursor)
+      })
+
+      collaborationService.on('operation-confirmed', (data: any) => {
+        console.log('✅ Operation confirmed by server:', data)
       })
 
       // Track content changes for collaboration
@@ -399,6 +405,7 @@ export default function CodeEditor() {
             content: change.text,
             length: change.rangeLength
           }
+          console.log('📤 Sending operation:', operation)
           collaborationService.sendOperation(operation)
         }
       })
