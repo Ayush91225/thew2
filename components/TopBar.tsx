@@ -17,6 +17,7 @@ export default function TopBar() {
   
   const [collaborationUsers, setCollaborationUsers] = useState<any[]>([])
   const [isConnecting, setIsConnecting] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
 
   useEffect(() => {
     // Initialize collaboration service
@@ -48,6 +49,18 @@ export default function TopBar() {
     // Set up event listeners
     collaborationService.on('connected', () => {
       console.log('Connected to collaboration service')
+      setConnectionStatus('connected')
+    })
+
+    collaborationService.on('disconnected', (data: any) => {
+      console.log('Disconnected from collaboration service:', data)
+      setConnectionStatus('disconnected')
+      setCollaborationUsers([])
+    })
+
+    collaborationService.on('error', (error: any) => {
+      console.error('Collaboration service error:', error)
+      setConnectionStatus('error')
     })
 
     collaborationService.on('user-joined', (data: any) => {
@@ -71,7 +84,10 @@ export default function TopBar() {
   }, [])
 
   const toggleCollaboration = async () => {
-    if (!activeTab) return
+    if (!activeTab) {
+      console.warn('No active tab for collaboration')
+      return
+    }
 
     setIsConnecting(true)
     const newMode = collab ? 'solo' : 'live'
@@ -79,24 +95,37 @@ export default function TopBar() {
     console.log(`🔄 Toggling to ${newMode} mode for tab:`, activeTab)
     
     try {
+      if (newMode === 'live') {
+        // Check if WebSocket is connected
+        const status = collaborationService.getConnectionStatus()
+        if (status !== 'connected') {
+          console.log('WebSocket not connected, current status:', status)
+          setConnectionStatus('connecting')
+          // Wait a bit for connection
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+      }
+      
       // Join document in the new mode
       collaborationService.joinDocument(activeTab, newMode)
       setCollab(!collab)
       
       if (newMode === 'solo') {
         setCollaborationUsers([])
+        setConnectionStatus('disconnected')
       } else {
-        // Add a mock collaborator for demo
+        // Add a mock collaborator for demo after a delay
         setTimeout(() => {
           setCollaborationUsers([{
             id: 'demo-collaborator',
             name: '192.168.1.100',
             avatar: 'https://api.dicebear.com/9.x/glass/svg?seed=192.168.1.100'
           }])
-        }, 1000)
+        }, 2000)
       }
     } catch (error) {
       console.error('Failed to toggle collaboration:', error)
+      setConnectionStatus('error')
     } finally {
       setIsConnecting(false)
     }
@@ -215,10 +244,16 @@ export default function TopBar() {
         {/* Connection status */}
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${
-            collab ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'
+            connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' :
+            connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+            connectionStatus === 'error' ? 'bg-red-400' :
+            'bg-zinc-600'
           }`}></div>
           <span className="text-xs text-zinc-400">
-            {collab ? `Live (${collaborationUsers.length + 1} users)` : 'Solo'}
+            {connectionStatus === 'connected' && collab ? `Live (${collaborationUsers.length + 1} users)` :
+             connectionStatus === 'connecting' ? 'Connecting...' :
+             connectionStatus === 'error' ? 'Connection Error' :
+             collab ? 'Disconnected' : 'Solo'}
           </span>
         </div>
 

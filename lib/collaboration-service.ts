@@ -28,41 +28,55 @@ class CollaborationService {
   private mode: 'solo' | 'live' = 'solo'
   private callbacks: Map<string, Function[]> = new Map()
 
-  private readonly WS_URL = process.env.NEXT_PUBLIC_COLLABORATION_WS_URL || 'wss://vvswi3elpi.execute-api.ap-south-1.amazonaws.com/prod'
-  private readonly API_URL = process.env.NEXT_PUBLIC_COLLABORATION_API_URL || 'https://vvswi3elpi.execute-api.ap-south-1.amazonaws.com/prod'
+  private readonly WS_URL = process.env.NEXT_PUBLIC_COLLABORATION_WS_URL || 'wss://xtc3torv9c.execute-api.ap-south-1.amazonaws.com/prod'
+  private readonly API_URL = process.env.NEXT_PUBLIC_COLLABORATION_API_URL || 'https://1ngwyksutc.execute-api.ap-south-1.amazonaws.com/prod'
 
   connect(token: string) {
     if (typeof window === 'undefined') return
     
-    console.log('🔌 Connecting to collaboration service...')
+    console.log('🔌 Connecting to collaboration service...', this.WS_URL)
     
-    // Use native WebSocket for API Gateway
-    this.ws = new WebSocket(`${this.WS_URL}?token=${token}`)
+    try {
+      // Use native WebSocket for API Gateway
+      this.ws = new WebSocket(`${this.WS_URL}?token=${token}`)
 
-    this.ws.onopen = () => {
-      console.log('✅ WebSocket connected')
-      this.isConnected = true
-      this.emit('connected')
-    }
-
-    this.ws.onclose = (event) => {
-      console.log('❌ WebSocket disconnected', event.code, event.reason)
-      this.isConnected = false
-      this.emit('disconnected')
-    }
-
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        console.log('📨 Message received:', data)
-        this.emit(data.type, data.data)
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error)
+      this.ws.onopen = () => {
+        console.log('✅ WebSocket connected successfully')
+        this.isConnected = true
+        this.emit('connected')
       }
-    }
 
-    this.ws.onerror = (error) => {
-      console.error('🚨 WebSocket error:', error)
+      this.ws.onclose = (event) => {
+        console.log('❌ WebSocket disconnected', event.code, event.reason)
+        this.isConnected = false
+        this.emit('disconnected', { code: event.code, reason: event.reason })
+        
+        // Auto-reconnect after 3 seconds if not a clean close
+        if (event.code !== 1000) {
+          setTimeout(() => {
+            console.log('🔄 Attempting to reconnect...')
+            this.connect(token)
+          }, 3000)
+        }
+      }
+
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('📨 Message received:', data)
+          this.emit(data.type, data.data || data)
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error, event.data)
+        }
+      }
+
+      this.ws.onerror = (error) => {
+        console.error('🚨 WebSocket error:', error)
+        this.emit('error', error)
+      }
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error)
+      this.emit('error', error)
     }
   }
 
@@ -111,6 +125,10 @@ class CollaborationService {
       const message = JSON.stringify({ action, ...data })
       console.log('📤 Sending:', message)
       this.ws.send(message)
+      return true
+    } else {
+      console.warn('⚠️ WebSocket not connected, cannot send message:', action)
+      return false
     }
   }
 
@@ -175,8 +193,15 @@ class CollaborationService {
     return this.mode === 'live'
   }
 
-  isSoloMode() {
-    return this.mode === 'solo'
+  getConnectionStatus() {
+    if (!this.ws) return 'disconnected'
+    switch (this.ws.readyState) {
+      case WebSocket.CONNECTING: return 'connecting'
+      case WebSocket.OPEN: return 'connected'
+      case WebSocket.CLOSING: return 'closing'
+      case WebSocket.CLOSED: return 'disconnected'
+      default: return 'unknown'
+    }
   }
 }
 

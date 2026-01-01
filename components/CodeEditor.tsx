@@ -159,6 +159,68 @@ export default function CodeEditor() {
 
   const monacoInitialized = useRef(false)
 
+  // Collaboration helper functions
+  const applyRemoteOperation = useCallback((operation: TextOperation) => {
+    if (!editorRef.current) return
+    
+    const editor = editorRef.current
+    const model = editor.getModel()
+    if (!model) return
+
+    try {
+      if (operation.type === 'insert' && operation.content) {
+        const position = model.getPositionAt(operation.position)
+        const range = {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        }
+        model.pushEditOperations([], [{ range, text: operation.content }], () => null)
+      } else if (operation.type === 'delete' && operation.length) {
+        const startPos = model.getPositionAt(operation.position)
+        const endPos = model.getPositionAt(operation.position + operation.length)
+        const range = {
+          startLineNumber: startPos.lineNumber,
+          startColumn: startPos.column,
+          endLineNumber: endPos.lineNumber,
+          endColumn: endPos.column
+        }
+        model.pushEditOperations([], [{ range, text: '' }], () => null)
+      }
+    } catch (error) {
+      console.error('Error applying remote operation:', error)
+    }
+  }, [])
+
+  const updateRemoteCursor = useCallback((userId: string, cursor: { line: number; column: number }) => {
+    if (!editorRef.current) return
+    
+    const editor = editorRef.current
+    const existingDecoration = collaborationCursors.current.get(userId)
+    
+    if (existingDecoration) {
+      editor.removeDecorations([existingDecoration])
+    }
+
+    const decorations = editor.createDecorationsCollection([
+      {
+        range: {
+          startLineNumber: cursor.line,
+          startColumn: cursor.column,
+          endLineNumber: cursor.line,
+          endColumn: cursor.column
+        },
+        options: {
+          className: `collaboration-cursor-${userId}`,
+          hoverMessage: { value: `User ${userId}` }
+        }
+      }
+    ])
+    
+    collaborationCursors.current.set(userId, decorations)
+  }, [])
+
   useEffect(() => {
     if (!monacoInitialized.current && typeof window !== 'undefined') {
       monacoInitialized.current = true
@@ -244,6 +306,40 @@ export default function CodeEditor() {
     }
   }, [])
 
+  // Collaboration setup - initialize when collab mode changes
+  useEffect(() => {
+    if (!editorRef.current || !activeTab) return
+
+    if (collab) {
+      console.log('🔗 Setting up collaboration for tab:', activeTab)
+      
+      // Set up real-time collaboration event listeners
+      const handleOperation = (data: any) => {
+        console.log('📝 Remote operation received:', data)
+        applyRemoteOperation(data.operation)
+      }
+
+      const handleCursorUpdate = (data: any) => {
+        console.log('👆 Remote cursor update:', data)
+        updateRemoteCursor(data.userId, data.cursor)
+      }
+
+      const handleOperationConfirmed = (data: any) => {
+        console.log('✅ Operation confirmed by server:', data)
+      }
+
+      collaborationService.on('operation', handleOperation)
+      collaborationService.on('cursor-update', handleCursorUpdate)
+      collaborationService.on('operation-confirmed', handleOperationConfirmed)
+
+      return () => {
+        collaborationService.off('operation', handleOperation)
+        collaborationService.off('cursor-update', handleCursorUpdate)
+        collaborationService.off('operation-confirmed', handleOperationConfirmed)
+      }
+    }
+  }, [collab, activeTab, applyRemoteOperation, updateRemoteCursor])
+
   // Handle tab switching
   useEffect(() => {
     if (editorRef.current && currentTab && currentTabRef.current !== currentTab.id) {
@@ -306,68 +402,6 @@ export default function CodeEditor() {
     editorRef.current?.getAction('editor.action.formatDocument')?.run()
   })
 
-  // Collaboration helper functions
-  const applyRemoteOperation = useCallback((operation: TextOperation) => {
-    if (!editorRef.current) return
-    
-    const editor = editorRef.current
-    const model = editor.getModel()
-    if (!model) return
-
-    try {
-      if (operation.type === 'insert' && operation.content) {
-        const position = model.getPositionAt(operation.position)
-        const range = {
-          startLineNumber: position.lineNumber,
-          startColumn: position.column,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column
-        }
-        model.pushEditOperations([], [{ range, text: operation.content }], () => null)
-      } else if (operation.type === 'delete' && operation.length) {
-        const startPos = model.getPositionAt(operation.position)
-        const endPos = model.getPositionAt(operation.position + operation.length)
-        const range = {
-          startLineNumber: startPos.lineNumber,
-          startColumn: startPos.column,
-          endLineNumber: endPos.lineNumber,
-          endColumn: endPos.column
-        }
-        model.pushEditOperations([], [{ range, text: '' }], () => null)
-      }
-    } catch (error) {
-      console.error('Error applying remote operation:', error)
-    }
-  }, [])
-
-  const updateRemoteCursor = useCallback((userId: string, cursor: { line: number; column: number }) => {
-    if (!editorRef.current) return
-    
-    const editor = editorRef.current
-    const existingDecoration = collaborationCursors.current.get(userId)
-    
-    if (existingDecoration) {
-      editor.removeDecorations([existingDecoration])
-    }
-
-    const decorations = editor.createDecorationsCollection([
-      {
-        range: {
-          startLineNumber: cursor.line,
-          startColumn: cursor.column,
-          endLineNumber: cursor.line,
-          endColumn: cursor.column
-        },
-        options: {
-          className: `collaboration-cursor-${userId}`,
-          hoverMessage: { value: `User ${userId}` }
-        }
-      }
-    ])
-    
-    collaborationCursors.current.set(userId, decorations)
-  }, [])
-
   const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
     editorRef.current = editor
     
@@ -378,23 +412,8 @@ export default function CodeEditor() {
 
     monaco.editor.setTheme('kriya-dark')
 
-    // Collaboration setup
-    if (collab && activeTab) {
-      // Set up real-time collaboration
-      collaborationService.on('operation', (data: any) => {
-        console.log('📝 Remote operation received:', data)
-        applyRemoteOperation(data.operation)
-      })
-
-      collaborationService.on('cursor-update', (data: any) => {
-        console.log('👆 Remote cursor update:', data)
-        updateRemoteCursor(data.userId, data.cursor)
-      })
-
-      collaborationService.on('operation-confirmed', (data: any) => {
-        console.log('✅ Operation confirmed by server:', data)
-      })
-
+    // Set up editor event listeners for collaboration
+    if (collab) {
       // Track content changes for collaboration
       editor.onDidChangeModelContent((e: any) => {
         if (collab && e.changes.length > 0) {
@@ -442,7 +461,7 @@ export default function CodeEditor() {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
       editor.getAction('editor.action.insertLineBefore')?.run()
     })
-  }, [currentTab, collab, activeTab, applyRemoteOperation, updateRemoteCursor])
+  }, [currentTab, collab])
 
   if (!currentTab) {
     return (
