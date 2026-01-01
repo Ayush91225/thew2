@@ -168,6 +168,11 @@ export default function CodeEditor() {
     if (!model) return
 
     try {
+      // Set flag to prevent sending this change back
+      if (editor._setApplyingRemoteOperation) {
+        editor._setApplyingRemoteOperation(true)
+      }
+      
       if (operation.type === 'insert' && operation.content) {
         const position = model.getPositionAt(operation.position)
         const range = {
@@ -188,8 +193,19 @@ export default function CodeEditor() {
         }
         model.pushEditOperations([], [{ range, text: '' }], () => null)
       }
+      
+      // Reset flag after operation
+      setTimeout(() => {
+        if (editor._setApplyingRemoteOperation) {
+          editor._setApplyingRemoteOperation(false)
+        }
+      }, 50)
     } catch (error) {
       console.error('Error applying remote operation:', error)
+      // Reset flag on error
+      if (editor._setApplyingRemoteOperation) {
+        editor._setApplyingRemoteOperation(false)
+      }
     }
   }, [])
 
@@ -423,29 +439,33 @@ export default function CodeEditor() {
     monaco.editor.setTheme('kriya-dark')
 
     // Set up editor event listeners for collaboration
-    if (collab) {
-      // Track content changes for collaboration
-      editor.onDidChangeModelContent((e: any) => {
-        if (collab && e.changes.length > 0) {
-          const change = e.changes[0]
-          const operation: TextOperation = {
-            type: change.text ? 'insert' : 'delete',
-            position: change.rangeOffset,
-            content: change.text,
-            length: change.rangeLength
-          }
-          console.log('📤 Sending operation:', operation)
-          collaborationService.sendOperation(operation)
+    let isApplyingRemoteOperation = false
+    
+    // Track content changes for collaboration
+    editor.onDidChangeModelContent((e: any) => {
+      if (collab && !isApplyingRemoteOperation && e.changes.length > 0) {
+        const change = e.changes[0]
+        const operation: TextOperation = {
+          type: change.text ? 'insert' : 'delete',
+          position: change.rangeOffset,
+          content: change.text,
+          length: change.rangeLength
         }
-      })
+        console.log('📤 Sending operation:', operation)
+        collaborationService.sendOperation(operation)
+      }
+    })
 
-      // Track cursor position
-      editor.onDidChangeCursorPosition((e: any) => {
-        if (collab) {
-          collaborationService.updateCursor(e.position.lineNumber, e.position.column)
-        }
-      })
-    }
+    // Track cursor position
+    editor.onDidChangeCursorPosition((e: any) => {
+      if (collab && !isApplyingRemoteOperation) {
+        collaborationService.updateCursor(e.position.lineNumber, e.position.column)
+      }
+    })
+
+    // Store reference to prevent remote operation loops
+    editor._isApplyingRemoteOperation = () => isApplyingRemoteOperation
+    editor._setApplyingRemoteOperation = (value: boolean) => { isApplyingRemoteOperation = value }
 
     // Add custom commands
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD, () => {
