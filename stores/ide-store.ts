@@ -28,6 +28,28 @@ interface APIRequest {
   body?: string
 }
 
+interface Extension {
+  id: string
+  name: string
+  version: string
+  category: string
+  downloads: string
+  status: 'active' | 'disabled' | 'update-available'
+  icon: string
+}
+
+interface YamlFile {
+  id: string
+  name: string
+  path: string
+  content: string
+  isValid: boolean
+  errors?: string[]
+  isRunning?: boolean
+  lastRun?: Date
+  runStatus?: 'success' | 'error' | 'running'
+}
+
 interface AIMessage {
   id: string
   type: 'user' | 'assistant'
@@ -39,6 +61,7 @@ interface IDEState {
   // UI State
   commandPalette: boolean
   aiModal: boolean
+  yamlModal: boolean
   aiChatOpen: boolean
   settingsModal: boolean
   settingsOpen: boolean
@@ -49,6 +72,7 @@ interface IDEState {
   collab: boolean
   environment: 'production' | 'development'
   activePanel: string
+  isRunning: boolean
   
   // Editor State
   activeTab: string | null
@@ -75,6 +99,10 @@ interface IDEState {
   apiRequests: APIRequest[]
   activeApiRequest: string | null
   
+  // YAML State
+  yamlFiles: YamlFile[]
+  activeYamlFile: string | null
+  
   // Project State
   projectRoot: string | null
   projectFiles: any[]
@@ -90,6 +118,101 @@ interface IDEState {
   memoryUsage: number
   buildTime: number
   
+  // Performance Settings
+  maxFileSize: number
+  syntaxHighlighting: string
+  lazyLoading: boolean
+  incrementalBuild: boolean
+  memoryLimit: number
+  buildThreads: string
+  memoryOptimization: boolean
+  buildCache: boolean
+  
+  // Extension Settings
+  extensions: Extension[]
+  extensionSearchQuery: string
+  extensionFilter: string
+  autoUpdateExtensions: boolean
+  trustedExtensionsOnly: boolean
+  extensionSandbox: boolean
+  
+  // AI Assistant Settings
+  aiEnabled: boolean
+  aiModel: string
+  aiTemperature: number
+  aiMaxTokens: number
+  aiAutoComplete: boolean
+  aiCodeSuggestions: boolean
+  aiErrorAnalysis: boolean
+  aiDocGeneration: boolean
+  aiPrivacyMode: boolean
+  aiCustomPrompts: string[]
+  
+  // Keybinding Settings
+  keybindings: Record<string, string>
+  customKeybindings: Record<string, string>
+  keybindingPreset: string
+  enableVimMode: boolean
+  enableEmacsMode: boolean
+  
+  // Theme Settings
+  currentTheme: string
+  customThemes: Record<string, any>
+  themePreview: boolean
+  autoThemeSwitch: boolean
+  lightThemeTime: string
+  darkThemeTime: string
+  
+  // Language Settings
+  languageSettings: Record<string, {
+    enabled: boolean
+    autoDetect: boolean
+    formatter: string
+    linter: string
+    tabSize: number
+    insertSpaces: boolean
+    trimWhitespace: boolean
+    insertFinalNewline: boolean
+    languageServer: boolean
+    snippets: boolean
+    autoComplete: boolean
+    bracketMatching: boolean
+    folding: boolean
+    wordWrap: boolean
+    emmet: boolean
+  }>
+  defaultLanguage: string
+  languageAssociations: Record<string, string>
+  
+  // Debug Settings
+  debugAutoStart: boolean
+  debugPort: number
+  debugConsole: boolean
+  debugBreakOnExceptions: boolean
+  debugStepIntoLibraries: boolean
+  debugShowInlineValues: boolean
+  debugLogLevel: string
+  
+  // Preview Settings
+  previewOpen: boolean
+  previewUrl: string
+  previewMode: 'browser' | 'mobile' | 'tablet'
+  
+  notificationsEnabled: boolean
+  desktopNotifications: boolean
+  soundEnabled: boolean
+  notificationVolume: number
+  emailNotifications: boolean
+  slackIntegration: boolean
+  discordIntegration: boolean
+  buildNotifications: boolean
+  errorNotifications: boolean
+  collaborationNotifications: boolean
+  deploymentNotifications: boolean
+  quietHours: boolean
+  quietStart: string
+  quietEnd: string
+  
   // Git State
   gitBranch: string
   gitStatus: 'clean' | 'modified' | 'staged' | 'committed'
@@ -100,6 +223,7 @@ interface IDEState {
   setCommandPaletteOpen: (open: boolean) => void
   setSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void
   setAIModal: (open: boolean) => void
+  setYamlModal: (open: boolean) => void
   setAIChatOpen: (open: boolean) => void
   setSettingsModal: (open: boolean) => void
   setSettingsOpen: (open: boolean) => void
@@ -136,6 +260,15 @@ interface IDEState {
   deleteApiRequest: (id: string) => void
   setActiveApiRequest: (id: string) => void
   
+  // YAML Actions
+  addYamlFile: (file: YamlFile) => void
+  updateYamlFile: (id: string, content: string) => void
+  deleteYamlFile: (id: string) => void
+  setActiveYamlFile: (id: string) => void
+  validateYaml: (id: string) => void
+  runYaml: (id: string) => void
+  uploadYamlFile: (file: File) => Promise<void>
+  
   setFontSize: (size: number) => void
   setTabSize: (size: number) => void
   setMinimap: (enabled: boolean) => void
@@ -148,6 +281,116 @@ interface IDEState {
   
   // Performance Actions
   updateMetrics: (metrics: { cpu: number; memory: number; buildTime: number }) => void
+  setMaxFileSize: (size: number) => void
+  setSyntaxHighlighting: (level: string) => void
+  setLazyLoading: (enabled: boolean) => void
+  setIncrementalBuild: (enabled: boolean) => void
+  setMemoryLimit: (limit: number) => void
+  setBuildThreads: (threads: string) => void
+  setMemoryOptimization: (enabled: boolean) => void
+  setBuildCache: (enabled: boolean) => void
+  clearCache: () => void
+  runPerformanceTest: () => void
+  optimizePerformance: () => void
+  
+  // Extension Actions
+  setExtensionSearchQuery: (query: string) => void
+  setExtensionFilter: (filter: string) => void
+  toggleExtension: (id: string) => void
+  updateExtension: (id: string) => void
+  setAutoUpdateExtensions: (enabled: boolean) => void
+  setTrustedExtensionsOnly: (enabled: boolean) => void
+  setExtensionSandbox: (enabled: boolean) => void
+  checkForExtensionUpdates: () => void
+  
+  // AI Assistant Actions
+  setAiEnabled: (enabled: boolean) => void
+  setAiModel: (model: string) => void
+  setAiTemperature: (temp: number) => void
+  setAiMaxTokens: (tokens: number) => void
+  setAiAutoComplete: (enabled: boolean) => void
+  setAiCodeSuggestions: (enabled: boolean) => void
+  setAiErrorAnalysis: (enabled: boolean) => void
+  setAiDocGeneration: (enabled: boolean) => void
+  setAiPrivacyMode: (enabled: boolean) => void
+  addCustomPrompt: (prompt: string) => void
+  removeCustomPrompt: (index: number) => void
+  testAiConnection: () => void
+  
+  // Notification Actions
+  setNotificationsEnabled: (enabled: boolean) => void
+  setDesktopNotifications: (enabled: boolean) => void
+  setSoundEnabled: (enabled: boolean) => void
+  setNotificationVolume: (volume: number) => void
+  setEmailNotifications: (enabled: boolean) => void
+  setSlackIntegration: (enabled: boolean) => void
+  setDiscordIntegration: (enabled: boolean) => void
+  setBuildNotifications: (enabled: boolean) => void
+  setErrorNotifications: (enabled: boolean) => void
+  setCollaborationNotifications: (enabled: boolean) => void
+  setDeploymentNotifications: (enabled: boolean) => void
+  setQuietHours: (enabled: boolean) => void
+  setQuietStart: (time: string) => void
+  setQuietEnd: (time: string) => void
+  testNotification: () => void
+  
+  // Keybinding Actions
+  setKeybindingPreset: (preset: string) => void
+  setCustomKeybinding: (action: string, keys: string) => void
+  resetKeybindings: () => void
+  setVimMode: (enabled: boolean) => void
+  setEmacsMode: (enabled: boolean) => void
+  exportKeybindings: () => void
+  importKeybindings: (bindings: Record<string, string>) => void
+  
+  // Theme Actions
+  setTheme: (theme: string) => void
+  createCustomTheme: (name: string, config: any) => void
+  deleteCustomTheme: (name: string) => void
+  setThemePreview: (enabled: boolean) => void
+  setAutoThemeSwitch: (enabled: boolean) => void
+  setLightThemeTime: (time: string) => void
+  setDarkThemeTime: (time: string) => void
+  exportTheme: (name: string) => void
+  importTheme: (config: any) => void
+  
+  // Language Actions
+  setLanguageEnabled: (language: string, enabled: boolean) => void
+  setLanguageAutoDetect: (language: string, enabled: boolean) => void
+  setLanguageFormatter: (language: string, formatter: string) => void
+  setLanguageLinter: (language: string, linter: string) => void
+  setLanguageTabSize: (language: string, size: number) => void
+  setLanguageInsertSpaces: (language: string, enabled: boolean) => void
+  setLanguageTrimWhitespace: (language: string, enabled: boolean) => void
+  setLanguageInsertFinalNewline: (language: string, enabled: boolean) => void
+  setLanguageServer: (language: string, enabled: boolean) => void
+  setLanguageSnippets: (language: string, enabled: boolean) => void
+  setLanguageAutoComplete: (language: string, enabled: boolean) => void
+  setLanguageBracketMatching: (language: string, enabled: boolean) => void
+  setLanguageFolding: (language: string, enabled: boolean) => void
+  setLanguageWordWrap: (language: string, enabled: boolean) => void
+  setLanguageEmmet: (language: string, enabled: boolean) => void
+  setDefaultLanguage: (language: string) => void
+  addLanguageAssociation: (extension: string, language: string) => void
+  removeLanguageAssociation: (extension: string) => void
+  resetLanguageSettings: (language: string) => void
+  
+  // Debug Actions
+  setDebugAutoStart: (enabled: boolean) => void
+  setDebugPort: (port: number) => void
+  setDebugConsole: (enabled: boolean) => void
+  setDebugBreakOnExceptions: (enabled: boolean) => void
+  setDebugStepIntoLibraries: (enabled: boolean) => void
+  setDebugShowInlineValues: (enabled: boolean) => void
+  setDebugLogLevel: (level: string) => void
+  
+  // Preview Actions
+  setPreviewOpen: (open: boolean) => void
+  setPreviewUrl: (url: string) => void
+  setPreviewMode: (mode: 'browser' | 'mobile' | 'tablet') => void
+  
+  // Notification helper
+  sendNotification: (type: 'build' | 'error' | 'collaboration' | 'deployment', title: string, message: string) => void
   
   // Git Actions
   setGitBranch: (branch: string) => void
@@ -175,6 +418,7 @@ export const useIDEStore = create<IDEState>()(
           // Initial state
           commandPalette: false,
           aiModal: false,
+          yamlModal: false,
           aiChatOpen: false,
           settingsModal: false,
           settingsOpen: false,
@@ -185,6 +429,7 @@ export const useIDEStore = create<IDEState>()(
           collab: false,
           environment: 'production',
           activePanel: 'files',
+          isRunning: false,
           activeTab: null,
           tabs: [],
           recentFiles: [],
@@ -198,39 +443,399 @@ export const useIDEStore = create<IDEState>()(
           debugSession: false,
           apiRequests: [],
           activeApiRequest: null,
+          yamlFiles: [
+            {
+              id: 'instruct',
+              name: 'instruct.yaml',
+              path: '/instruct.yaml',
+              content: `# Instruct YAML Template
+# Describe what you want this YAML configuration to accomplish
+
+name: "my-project"
+description: |
+  Explain what this configuration should do:
+  - What services or components to set up
+  - What environment or deployment target
+  - What specific requirements or constraints
+  - Any dependencies or integrations needed
+
+# Example instructions:
+# "Create a Docker Compose setup for a Node.js app with Redis and PostgreSQL"
+# "Generate Kubernetes deployment for a microservice with auto-scaling"
+# "Set up CI/CD pipeline configuration for automated testing and deployment"
+
+instructions: |
+  Write your detailed instructions here...
+  
+  What I want to achieve:
+  - 
+  - 
+  - 
+
+# Configuration preferences (optional)
+preferences:
+  environment: "production"  # development, staging, production
+  scale: "small"            # small, medium, large
+  security: "standard"      # basic, standard, high
+  
+# Additional context
+context:
+  technology_stack: []
+  existing_infrastructure: ""
+  constraints: ""`,
+              isValid: true
+            },
+            {
+              id: 'docker-compose',
+              name: 'docker-compose.yml',
+              path: '/docker-compose.yml',
+              content: `version: '3.8'\nservices:\n  app:\n    build: .\n    ports:\n      - "3000:3000"\n    environment:\n      - NODE_ENV=production`,
+              isValid: true
+            },
+            {
+              id: 'kubernetes',
+              name: 'kubernetes.yaml',
+              path: '/k8s/deployment.yaml',
+              content: `apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: kriya-ide\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: kriya-ide`,
+              isValid: true
+            }
+          ],
+          activeYamlFile: null,
           projectRoot: null,
           projectFiles: [],
           fontSize: 14,
           tabSize: 2,
           minimap: false,
-          autoSave: true,
+          autoSave: false,
           cpuUsage: 45,
           memoryUsage: 67,
           buildTime: 2.3,
+          maxFileSize: 50,
+          syntaxHighlighting: 'Full (Recommended)',
+          lazyLoading: true,
+          incrementalBuild: true,
+          memoryLimit: 4,
+          buildThreads: 'Auto (Recommended)',
+          memoryOptimization: true,
+          buildCache: true,
+          extensions: [
+            {
+              id: 'prettier',
+              name: 'Prettier',
+              version: '9.0.0',
+              category: 'Code formatting',
+              downloads: '2.1M',
+              status: 'active',
+              icon: 'ph-code'
+            },
+            {
+              id: 'gitlens',
+              name: 'GitLens',
+              version: '13.6.0',
+              category: 'Git integration',
+              downloads: '15M',
+              status: 'active',
+              icon: 'ph-git-branch'
+            },
+            {
+              id: 'material-theme',
+              name: 'Material Theme',
+              version: '34.2.1',
+              category: 'Theme',
+              downloads: '8.5M',
+              status: 'disabled',
+              icon: 'ph-palette'
+            },
+            {
+              id: 'eslint',
+              name: 'ESLint',
+              version: '2.4.2',
+              category: 'Linting',
+              downloads: '22M',
+              status: 'update-available',
+              icon: 'ph-bug'
+            }
+          ],
+          extensionSearchQuery: '',
+          extensionFilter: 'All',
+          autoUpdateExtensions: true,
+          trustedExtensionsOnly: true,
+          extensionSandbox: true,
+          aiEnabled: true,
+          aiModel: 'GPT-4',
+          aiTemperature: 0.7,
+          aiMaxTokens: 2048,
+          aiAutoComplete: true,
+          aiCodeSuggestions: true,
+          aiErrorAnalysis: true,
+          aiDocGeneration: false,
+          aiPrivacyMode: false,
+          aiCustomPrompts: [
+            'Explain this code in simple terms',
+            'Optimize this function for performance',
+            'Add error handling to this code'
+          ],
+          notificationsEnabled: true,
+          desktopNotifications: true,
+          soundEnabled: false,
+          notificationVolume: 0.5,
+          emailNotifications: false,
+          slackIntegration: false,
+          discordIntegration: false,
+          buildNotifications: true,
+          errorNotifications: true,
+          collaborationNotifications: true,
+          deploymentNotifications: true,
+          quietHours: false,
+          quietStart: '22:00',
+          quietEnd: '08:00',
+          
+          // Keybinding Settings
+          keybindings: {
+            'save': 'Ctrl+S',
+            'open': 'Ctrl+O',
+            'new': 'Ctrl+N',
+            'find': 'Ctrl+F',
+            'replace': 'Ctrl+H',
+            'commandPalette': 'Ctrl+Shift+P',
+            'terminal': 'Ctrl+`',
+            'run': 'F5',
+            'debug': 'F9',
+            'comment': 'Ctrl+/',
+            'duplicate': 'Ctrl+D',
+            'delete': 'Ctrl+Shift+K',
+            'format': 'Shift+Alt+F',
+            'goToLine': 'Ctrl+G',
+            'closeTab': 'Ctrl+W',
+            'nextTab': 'Ctrl+Tab',
+            'prevTab': 'Ctrl+Shift+Tab',
+            'splitEditor': 'Ctrl+\\',
+            'toggleSidebar': 'Ctrl+B',
+            'zen': 'Ctrl+K Z'
+          },
+          customKeybindings: {},
+          keybindingPreset: 'VSCode',
+          enableVimMode: false,
+          enableEmacsMode: false,
+          
+          // Theme Settings
+          currentTheme: 'Dark',
+          customThemes: {},
+          themePreview: false,
+          autoThemeSwitch: false,
+          lightThemeTime: '08:00',
+          darkThemeTime: '20:00',
+          
+          // Language Settings
+          languageSettings: {
+            javascript: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Prettier',
+              linter: 'ESLint',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: true
+            },
+            typescript: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Prettier',
+              linter: 'TypeScript',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: false
+            },
+            python: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Black',
+              linter: 'Pylint',
+              tabSize: 4,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: false
+            },
+            java: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Google Java Format',
+              linter: 'Checkstyle',
+              tabSize: 4,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: false
+            },
+            css: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Prettier',
+              linter: 'Stylelint',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: true
+            },
+            html: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Prettier',
+              linter: 'HTMLHint',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: true
+            },
+            json: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Prettier',
+              linter: 'JSON',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: false,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: false
+            },
+            yaml: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'YAML',
+              linter: 'YAML Lint',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: false
+            },
+            markdown: {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Prettier',
+              linter: 'Markdownlint',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: false,
+              folding: true,
+              wordWrap: true,
+              emmet: false
+            }
+          },
+          defaultLanguage: 'plaintext',
+          languageAssociations: {
+            '.js': 'javascript',
+            '.jsx': 'javascript',
+            '.ts': 'typescript',
+            '.tsx': 'typescript',
+            '.py': 'python',
+            '.java': 'java',
+            '.css': 'css',
+            '.html': 'html',
+            '.json': 'json',
+            '.yml': 'yaml',
+            '.yaml': 'yaml',
+            '.md': 'markdown'
+          },
+          
+          // Debug Settings
+          debugAutoStart: false,
+          debugPort: 9229,
+          debugConsole: true,
+          debugBreakOnExceptions: false,
+          debugStepIntoLibraries: false,
+          debugShowInlineValues: true,
+          debugLogLevel: 'info',
+          
+          // Preview Settings
+          previewOpen: true,
+          previewUrl: '',
+          previewMode: 'browser',
+          
           gitBranch: 'main',
           gitStatus: 'modified',
           uncommittedChanges: 3,
           
           // Actions
-          setCommandPalette: (open) => { set({ commandPalette: open }); get().saveToURL() },
-          setCommandPaletteOpen: (open) => { set({ commandPalette: open }); get().saveToURL() },
+          setCommandPalette: (open) => set({ commandPalette: open }),
+          setCommandPaletteOpen: (open) => set({ commandPalette: open }),
           setSidebarOpen: (open) => { 
             const newValue = typeof open === 'function' ? open(get().activePanel !== '') : open
             set({ activePanel: newValue ? 'files' : '' })
-            get().saveToURL()
           },
-          setAIModal: (open) => { set({ aiModal: open }); get().saveToURL() },
-          setAIChatOpen: (open) => { set({ aiChatOpen: open }); get().saveToURL() },
-          setSettingsModal: (open) => { set({ settingsModal: open }); get().saveToURL() },
-          setSettingsOpen: (open) => { set({ settingsOpen: open }); get().saveToURL() },
-          setGlobalSearch: (open) => { set({ globalSearch: open }); get().saveToURL() },
-          setGlobalSearchQuery: (query) => { set({ globalSearchQuery: query }); get().saveToURL() },
-          setTerminalOpen: (open) => { set({ terminalOpen: open }); get().saveToURL() },
-          setView: (view) => { set({ view }); get().saveToURL() },
-          setCollab: (collab) => { set({ collab }); get().saveToURL() },
-          setEnvironment: (environment) => { set({ environment }); get().saveToURL() },
-          setActivePanel: (panel) => { set({ activePanel: panel }); get().saveToURL() },
-          setActiveTab: (tabId) => { set({ activeTab: tabId }); get().saveToURL() },
+          setAIModal: (open) => set({ aiModal: open }),
+          setYamlModal: (open) => set({ yamlModal: open }),
+          setAIChatOpen: (open) => set({ aiChatOpen: open }),
+          setSettingsModal: (open) => set({ settingsModal: open }),
+          setSettingsOpen: (open) => set({ settingsOpen: open }),
+          setGlobalSearch: (open) => set({ globalSearch: open }),
+          setGlobalSearchQuery: (query) => set({ globalSearchQuery: query }),
+          setTerminalOpen: (open) => set({ terminalOpen: open }),
+          setView: (view) => set({ view }),
+          setCollab: (collab) => set({ collab }),
+          setEnvironment: (environment) => set({ environment }),
+          setActivePanel: (panel) => set({ activePanel: panel }),
+          setActiveTab: (tabId) => set({ activeTab: tabId }),
           
           addTab: (file) => set((state) => {
             const existingTab = state.tabs.find(tab => tab.path === file.path)
@@ -326,6 +931,124 @@ export const useIDEStore = create<IDEState>()(
           
           setActiveApiRequest: (id) => set({ activeApiRequest: id }),
           
+          // YAML Actions
+          addYamlFile: (file) => set((state) => ({
+            yamlFiles: [...state.yamlFiles, file],
+            activeYamlFile: file.id
+          })),
+          
+          updateYamlFile: (id, content) => set((state) => ({
+            yamlFiles: state.yamlFiles.map(file => 
+              file.id === id ? { ...file, content, isValid: true } : file
+            )
+          })),
+          
+          deleteYamlFile: (id) => set((state) => ({
+            yamlFiles: state.yamlFiles.filter(file => file.id !== id),
+            activeYamlFile: state.activeYamlFile === id ? null : state.activeYamlFile
+          })),
+          
+          setActiveYamlFile: (id) => set({ activeYamlFile: id }),
+          
+          validateYaml: (id) => set((state) => {
+            const file = state.yamlFiles.find(f => f.id === id)
+            if (!file) return state
+            
+            try {
+              const lines = file.content.split('\n')
+              const errors: string[] = []
+              
+              lines.forEach((line, index) => {
+                if (line.trim() && !line.match(/^\s*[a-zA-Z_][a-zA-Z0-9_]*:\s*/) && !line.match(/^\s*-\s*/)) {
+                  if (!line.match(/^\s*#/) && line.trim() !== '') {
+                    errors.push(`Line ${index + 1}: Invalid YAML syntax`)
+                  }
+                }
+              })
+              
+              return {
+                yamlFiles: state.yamlFiles.map(f => 
+                  f.id === id ? { ...f, isValid: errors.length === 0, errors } : f
+                )
+              }
+            } catch (error) {
+              return {
+                yamlFiles: state.yamlFiles.map(f => 
+                  f.id === id ? { ...f, isValid: false, errors: ['Invalid YAML format'] } : f
+                )
+              }
+            }
+          }),
+          
+          runYaml: (id) => {
+            const file = get().yamlFiles.find(f => f.id === id)
+            if (!file) return
+            
+            // Set running state
+            set((state) => ({
+              yamlFiles: state.yamlFiles.map(f => 
+                f.id === id ? { ...f, isRunning: true, runStatus: 'running' as const } : f
+              )
+            }))
+            
+            // Send start notification
+            get().sendNotification('deployment', 'YAML Execution Started', `Running ${file.name}`)
+            
+            // Simulate execution with animation
+            setTimeout(() => {
+              const success = Math.random() > 0.2 // 80% success rate
+              set((state) => ({
+                yamlFiles: state.yamlFiles.map(f => 
+                  f.id === id ? { 
+                    ...f, 
+                    isRunning: false, 
+                    runStatus: success ? 'success' as const : 'error' as const,
+                    lastRun: new Date()
+                  } : f
+                )
+              }))
+              
+              // Send completion notification
+              if (success) {
+                get().sendNotification('deployment', 'YAML Execution Complete', `${file.name} executed successfully`)
+              } else {
+                get().sendNotification('error', 'YAML Execution Failed', `Error executing ${file.name}`)
+              }
+            }, 2000)
+          },
+          
+          uploadYamlFile: async (file: File) => {
+            try {
+              const content = await file.text()
+              const newYamlFile = {
+                id: `uploaded-${Date.now()}`,
+                name: file.name,
+                path: `/${file.name}`,
+                content,
+                isValid: true
+              }
+              
+              set((state) => ({
+                yamlFiles: [...state.yamlFiles, newYamlFile],
+                activeYamlFile: newYamlFile.id
+              }))
+              
+              // Also add to editor tabs
+              const { addTab } = get()
+              addTab({
+                id: newYamlFile.id,
+                name: newYamlFile.name,
+                path: newYamlFile.path,
+                content: newYamlFile.content,
+                language: 'yaml',
+                isDirty: false,
+                icon: 'ph-fill ph-file-text'
+              })
+            } catch (error) {
+              console.error('Failed to upload YAML file:', error)
+            }
+          },
+          
           // AI Chat Actions
           addAIMessage: (message) => set((state) => ({
             aiMessages: [...state.aiMessages, {
@@ -362,6 +1085,481 @@ export const useIDEStore = create<IDEState>()(
             memoryUsage: metrics.memory, 
             buildTime: metrics.buildTime 
           }),
+          
+          setMaxFileSize: (size) => set({ maxFileSize: size }),
+          setSyntaxHighlighting: (level) => set({ syntaxHighlighting: level }),
+          setLazyLoading: (enabled) => set({ lazyLoading: enabled }),
+          setIncrementalBuild: (enabled) => set({ incrementalBuild: enabled }),
+          setMemoryLimit: (limit) => set({ memoryLimit: limit }),
+          setBuildThreads: (threads) => set({ buildThreads: threads }),
+          setMemoryOptimization: (enabled) => set({ memoryOptimization: enabled }),
+          setBuildCache: (enabled) => set({ buildCache: enabled }),
+          
+          clearCache: () => {
+            console.log('Cache cleared')
+            set((state) => ({ buildTime: Math.max(0.5, state.buildTime - 0.5) }))
+          },
+          
+          runPerformanceTest: () => {
+            console.log('Running performance test...')
+            setTimeout(() => {
+              set({ 
+                cpuUsage: Math.floor(Math.random() * 30) + 20,
+                memoryUsage: Math.floor(Math.random() * 40) + 30,
+                buildTime: Math.random() * 2 + 1
+              })
+            }, 2000)
+          },
+          
+          optimizePerformance: () => {
+            console.log('Optimizing performance...')
+            set((state) => ({
+              cpuUsage: Math.max(10, state.cpuUsage - 15),
+              memoryUsage: Math.max(20, state.memoryUsage - 20),
+              buildTime: Math.max(0.8, state.buildTime - 0.8)
+            }))
+            
+            // Send notification about optimization
+            get().sendNotification('build', 'Performance Optimized', 'System performance has been improved')
+          },
+          
+          // Extension Actions
+          setExtensionSearchQuery: (query) => set({ extensionSearchQuery: query }),
+          setExtensionFilter: (filter) => set({ extensionFilter: filter }),
+          
+          toggleExtension: (id) => set((state) => ({
+            extensions: state.extensions.map(ext => 
+              ext.id === id 
+                ? { ...ext, status: ext.status === 'active' ? 'disabled' : 'active' }
+                : ext
+            )
+          })),
+          
+          updateExtension: (id) => set((state) => ({
+            extensions: state.extensions.map(ext => 
+              ext.id === id 
+                ? { ...ext, status: 'active', version: '(updated)' }
+                : ext
+            )
+          })),
+          
+          setAutoUpdateExtensions: (enabled) => set({ autoUpdateExtensions: enabled }),
+          setTrustedExtensionsOnly: (enabled) => set({ trustedExtensionsOnly: enabled }),
+          setExtensionSandbox: (enabled) => set({ extensionSandbox: enabled }),
+          
+          checkForExtensionUpdates: () => {
+            console.log('Checking for extension updates...')
+            setTimeout(() => {
+              const updatesFound = Math.floor(Math.random() * 3) + 1
+              set((state) => ({
+                extensions: state.extensions.map(ext => 
+                  Math.random() > 0.7 
+                    ? { ...ext, status: 'update-available' }
+                    : ext
+                )
+              }))
+              
+              // Send notification about updates
+              get().sendNotification('build', 'Extension Updates Available', `${updatesFound} extension updates found`)
+            }, 1000)
+          },
+          
+          // AI Assistant Actions
+          setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
+          setAiModel: (model) => set({ aiModel: model }),
+          setAiTemperature: (temp) => set({ aiTemperature: temp }),
+          setAiMaxTokens: (tokens) => set({ aiMaxTokens: tokens }),
+          setAiAutoComplete: (enabled) => set({ aiAutoComplete: enabled }),
+          setAiCodeSuggestions: (enabled) => set({ aiCodeSuggestions: enabled }),
+          setAiErrorAnalysis: (enabled) => set({ aiErrorAnalysis: enabled }),
+          setAiDocGeneration: (enabled) => set({ aiDocGeneration: enabled }),
+          setAiPrivacyMode: (enabled) => set({ aiPrivacyMode: enabled }),
+          
+          addCustomPrompt: (prompt) => set((state) => ({
+            aiCustomPrompts: [...state.aiCustomPrompts, prompt]
+          })),
+          
+          removeCustomPrompt: (index) => set((state) => ({
+            aiCustomPrompts: state.aiCustomPrompts.filter((_, i) => i !== index)
+          })),
+          
+          testAiConnection: () => {
+            console.log('Testing AI connection...')
+            // Simulate connection test
+            setTimeout(() => {
+              console.log('AI connection successful')
+            }, 1500)
+          },
+          
+          // Notification Actions
+          setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
+          setDesktopNotifications: (enabled) => {
+            if (enabled && typeof window !== 'undefined' && 'Notification' in window) {
+              if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                  set({ desktopNotifications: permission === 'granted' })
+                })
+                return
+              } else if (Notification.permission === 'denied') {
+                set({ desktopNotifications: false })
+                return
+              }
+            }
+            set({ desktopNotifications: enabled })
+          },
+          setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
+          setNotificationVolume: (volume) => set({ notificationVolume: volume }),
+          setEmailNotifications: (enabled) => set({ emailNotifications: enabled }),
+          setSlackIntegration: (enabled) => set({ slackIntegration: enabled }),
+          setDiscordIntegration: (enabled) => set({ discordIntegration: enabled }),
+          setBuildNotifications: (enabled) => set({ buildNotifications: enabled }),
+          setErrorNotifications: (enabled) => set({ errorNotifications: enabled }),
+          setCollaborationNotifications: (enabled) => set({ collaborationNotifications: enabled }),
+          setDeploymentNotifications: (enabled) => set({ deploymentNotifications: enabled }),
+          setQuietHours: (enabled) => set({ quietHours: enabled }),
+          setQuietStart: (time) => set({ quietStart: time }),
+          setQuietEnd: (time) => set({ quietEnd: time }),
+          
+          testNotification: () => {
+            const state = get()
+            if (!state.desktopNotifications) return
+            
+            if (typeof window !== 'undefined' && 'Notification' in window) {
+              if (Notification.permission === 'granted') {
+                const notification = new Notification('Kriya IDE Test', {
+                  body: 'Notifications are working correctly!',
+                  icon: '/favicon.ico'
+                })
+                
+                if (state.soundEnabled && state.notificationVolume > 0) {
+                  const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')
+                  audio.volume = state.notificationVolume
+                  audio.play().catch(() => {})
+                }
+                
+                setTimeout(() => notification.close(), 5000)
+              } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                  if (permission === 'granted') {
+                    set({ desktopNotifications: true })
+                    get().testNotification()
+                  } else {
+                    set({ desktopNotifications: false })
+                  }
+                })
+              }
+            }
+          },
+          
+          setKeybindingPreset: (preset) => {
+            const presets = {
+              'VSCode': {
+                'save': 'Ctrl+S', 'open': 'Ctrl+O', 'new': 'Ctrl+N', 'find': 'Ctrl+F',
+                'replace': 'Ctrl+H', 'commandPalette': 'Ctrl+Shift+P', 'terminal': 'Ctrl+`',
+                'run': 'F5', 'debug': 'F9', 'comment': 'Ctrl+/', 'duplicate': 'Ctrl+D',
+                'delete': 'Ctrl+Shift+K', 'format': 'Shift+Alt+F', 'goToLine': 'Ctrl+G',
+                'closeTab': 'Ctrl+W', 'nextTab': 'Ctrl+Tab', 'prevTab': 'Ctrl+Shift+Tab',
+                'splitEditor': 'Ctrl+\\', 'toggleSidebar': 'Ctrl+B', 'zen': 'Ctrl+K Z'
+              },
+              'Sublime': {
+                'save': 'Ctrl+S', 'open': 'Ctrl+O', 'new': 'Ctrl+N', 'find': 'Ctrl+F',
+                'replace': 'Ctrl+H', 'commandPalette': 'Ctrl+Shift+P', 'terminal': 'Ctrl+Shift+`',
+                'run': 'Ctrl+B', 'debug': 'F9', 'comment': 'Ctrl+/', 'duplicate': 'Ctrl+Shift+D',
+                'delete': 'Ctrl+Shift+K', 'format': 'Ctrl+Shift+F', 'goToLine': 'Ctrl+G',
+                'closeTab': 'Ctrl+W', 'nextTab': 'Ctrl+PageDown', 'prevTab': 'Ctrl+PageUp',
+                'splitEditor': 'Alt+Shift+2', 'toggleSidebar': 'Ctrl+K Ctrl+B', 'zen': 'Shift+F11'
+              },
+              'Atom': {
+                'save': 'Ctrl+S', 'open': 'Ctrl+O', 'new': 'Ctrl+N', 'find': 'Ctrl+F',
+                'replace': 'Ctrl+Shift+F', 'commandPalette': 'Ctrl+Shift+P', 'terminal': 'Ctrl+Shift+`',
+                'run': 'Ctrl+R', 'debug': 'F5', 'comment': 'Ctrl+/', 'duplicate': 'Ctrl+Shift+D',
+                'delete': 'Ctrl+Shift+K', 'format': 'Ctrl+Alt+B', 'goToLine': 'Ctrl+G',
+                'closeTab': 'Ctrl+W', 'nextTab': 'Ctrl+PageDown', 'prevTab': 'Ctrl+PageUp',
+                'splitEditor': 'Ctrl+Shift+L', 'toggleSidebar': 'Ctrl+\\', 'zen': 'Ctrl+Shift+F11'
+              }
+            }
+            
+            set({ 
+              keybindingPreset: preset,
+              keybindings: presets[preset as keyof typeof presets] || presets.VSCode
+            })
+          },
+          
+          setCustomKeybinding: (action, keys) => set((state) => ({
+            customKeybindings: { ...state.customKeybindings, [action]: keys },
+            keybindings: { ...state.keybindings, [action]: keys }
+          })),
+          
+          resetKeybindings: () => {
+            const { setKeybindingPreset } = get()
+            setKeybindingPreset('VSCode')
+            set({ customKeybindings: {} })
+          },
+          
+          setVimMode: (enabled) => set({ enableVimMode: enabled, enableEmacsMode: enabled ? false : get().enableEmacsMode }),
+          setEmacsMode: (enabled) => set({ enableEmacsMode: enabled, enableVimMode: enabled ? false : get().enableVimMode }),
+          
+          exportKeybindings: () => {
+            const { keybindings, customKeybindings } = get()
+            const data = JSON.stringify({ keybindings, customKeybindings }, null, 2)
+            const blob = new Blob([data], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = 'kriya-keybindings.json'
+            a.click()
+            URL.revokeObjectURL(url)
+          },
+          
+          importKeybindings: (bindings) => set((state) => ({
+            customKeybindings: { ...state.customKeybindings, ...bindings },
+            keybindings: { ...state.keybindings, ...bindings }
+          })),
+          
+          // Theme Actions
+          setTheme: (theme) => set({ currentTheme: theme }),
+          
+          createCustomTheme: (name, config) => set((state) => ({
+            customThemes: { ...state.customThemes, [name]: config }
+          })),
+          
+          deleteCustomTheme: (name) => set((state) => {
+            const { [name]: deleted, ...rest } = state.customThemes
+            return { customThemes: rest }
+          }),
+          
+          setThemePreview: (enabled) => set({ themePreview: enabled }),
+          setAutoThemeSwitch: (enabled) => set({ autoThemeSwitch: enabled }),
+          setLightThemeTime: (time) => set({ lightThemeTime: time }),
+          setDarkThemeTime: (time) => set({ darkThemeTime: time }),
+          
+          exportTheme: (name) => {
+            const { customThemes } = get()
+            const theme = customThemes[name]
+            if (theme) {
+              const data = JSON.stringify({ [name]: theme }, null, 2)
+              const blob = new Blob([data], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `${name}-theme.json`
+              a.click()
+              URL.revokeObjectURL(url)
+            }
+          },
+          
+          importTheme: (config) => set((state) => ({
+            customThemes: { ...state.customThemes, ...config }
+          })),
+          
+          // Language Actions
+          setLanguageEnabled: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], enabled }
+            }
+          })),
+          
+          setLanguageAutoDetect: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], autoDetect: enabled }
+            }
+          })),
+          
+          setLanguageFormatter: (language, formatter) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], formatter }
+            }
+          })),
+          
+          setLanguageLinter: (language, linter) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], linter }
+            }
+          })),
+          
+          setLanguageTabSize: (language, size) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], tabSize: size }
+            }
+          })),
+          
+          setLanguageInsertSpaces: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], insertSpaces: enabled }
+            }
+          })),
+          
+          setLanguageTrimWhitespace: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], trimWhitespace: enabled }
+            }
+          })),
+          
+          setLanguageInsertFinalNewline: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], insertFinalNewline: enabled }
+            }
+          })),
+          
+          setLanguageServer: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], languageServer: enabled }
+            }
+          })),
+          
+          setLanguageSnippets: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], snippets: enabled }
+            }
+          })),
+          
+          setLanguageAutoComplete: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], autoComplete: enabled }
+            }
+          })),
+          
+          setLanguageBracketMatching: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], bracketMatching: enabled }
+            }
+          })),
+          
+          setLanguageFolding: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], folding: enabled }
+            }
+          })),
+          
+          setLanguageWordWrap: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], wordWrap: enabled }
+            }
+          })),
+          
+          setLanguageEmmet: (language, enabled) => set((state) => ({
+            languageSettings: {
+              ...state.languageSettings,
+              [language]: { ...state.languageSettings[language], emmet: enabled }
+            }
+          })),
+          
+          setDefaultLanguage: (language) => set({ defaultLanguage: language }),
+          
+          addLanguageAssociation: (extension, language) => set((state) => ({
+            languageAssociations: { ...state.languageAssociations, [extension]: language }
+          })),
+          
+          removeLanguageAssociation: (extension) => set((state) => {
+            const { [extension]: removed, ...rest } = state.languageAssociations
+            return { languageAssociations: rest }
+          }),
+          
+          resetLanguageSettings: (language) => {
+            const defaultSettings = {
+              enabled: true,
+              autoDetect: true,
+              formatter: 'Default',
+              linter: 'Default',
+              tabSize: 2,
+              insertSpaces: true,
+              trimWhitespace: true,
+              insertFinalNewline: true,
+              languageServer: true,
+              snippets: true,
+              autoComplete: true,
+              bracketMatching: true,
+              folding: true,
+              wordWrap: false,
+              emmet: false
+            }
+            
+            set((state) => ({
+              languageSettings: {
+                ...state.languageSettings,
+                [language]: defaultSettings
+              }
+            }))
+          },
+          
+          // Debug Actions
+          setDebugAutoStart: (enabled) => set({ debugAutoStart: enabled }),
+          setDebugPort: (port) => set({ debugPort: port }),
+          setDebugConsole: (enabled) => set({ debugConsole: enabled }),
+          setDebugBreakOnExceptions: (enabled) => set({ debugBreakOnExceptions: enabled }),
+          setDebugStepIntoLibraries: (enabled) => set({ debugStepIntoLibraries: enabled }),
+          setDebugShowInlineValues: (enabled) => set({ debugShowInlineValues: enabled }),
+          setDebugLogLevel: (level) => set({ debugLogLevel: level }),
+          
+          // Preview Actions
+          setPreviewOpen: (open) => set({ previewOpen: open }),
+          setPreviewUrl: (url) => set({ previewUrl: url }),
+          setPreviewMode: (mode) => set({ previewMode: mode }),
+          
+          sendNotification: (type, title, message) => {
+            const state = get()
+            
+            // Check if notifications are enabled
+            if (!state.notificationsEnabled || !state.desktopNotifications) return
+            
+            // Check event type settings
+            const eventTypeMap = {
+              build: state.buildNotifications,
+              error: state.errorNotifications,
+              collaboration: state.collaborationNotifications,
+              deployment: state.deploymentNotifications
+            }
+            
+            if (!eventTypeMap[type]) return
+            
+            // Check quiet hours
+            if (state.quietHours) {
+              const now = new Date()
+              const currentTime = now.getHours() * 60 + now.getMinutes()
+              const [startHour, startMin] = state.quietStart.split(':').map(Number)
+              const [endHour, endMin] = state.quietEnd.split(':').map(Number)
+              const startTime = startHour * 60 + startMin
+              const endTime = endHour * 60 + endMin
+              
+              if (startTime <= endTime) {
+                if (currentTime >= startTime && currentTime <= endTime) return
+              } else {
+                if (currentTime >= startTime || currentTime <= endTime) return
+              }
+            }
+            
+            // Send browser notification
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              const notification = new Notification(title, {
+                body: message,
+                icon: '/favicon.ico',
+                tag: type
+              })
+              
+              // Play sound if enabled
+              if (state.soundEnabled && state.notificationVolume > 0) {
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')
+                audio.volume = state.notificationVolume
+                audio.play().catch(() => {})
+              }
+              
+              setTimeout(() => notification.close(), 5000)
+            }
+          },
           
           // Git Actions
           setGitBranch: (branch) => set({ gitBranch: branch }),

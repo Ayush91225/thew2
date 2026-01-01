@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import CommandPalette from '@/components/CommandPalette'
 import AIAssistant from '@/components/AIAssistant'
+import YamlEditor from '@/components/YamlEditor'
 import AIChatEnhanced from '@/components/AIChatEnhanced'
 import GlobalSearch from '@/components/GlobalSearch'
 import TopBar from '@/components/TopBar'
@@ -72,11 +73,14 @@ export default function Home() {
       <div className="hidden lg:flex flex-col h-screen">
         <CommandPalette />
         <AIAssistant />
+        <YamlEditor />
         <GlobalSearch />
         <TopBar />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
-          {renderMainContent()}
+          <div className="flex flex-1 overflow-hidden">
+            {renderMainContent()}
+          </div>
           {aiChatOpen && <AIChatEnhanced />}
         </div>
         <Terminal />

@@ -6,7 +6,14 @@ const nextConfig = {
   
   // Image configuration
   images: {
-    domains: ['api.dicebear.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
   
   // Security headers

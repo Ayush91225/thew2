@@ -4,17 +4,19 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { useIDEStore } from '@/stores/ide-store'
 import CommandPalette from '@/components/CommandPalette'
 import AIAssistant from '@/components/AIAssistant'
+import YamlEditor from '@/components/YamlEditor'
 import Sidebar from '@/components/Sidebar'
 import FileTabs from '@/components/FileTabs'
 import CodeEditor from '@/components/CodeEditor'
-import { Sparkle, Terminal, Gear } from 'phosphor-react'
+import { Sparkle, Terminal, Gear, FileText } from 'phosphor-react'
 
 export default function IDELayout() {
   const { 
     activePanel,
     setActivePanel,
     setCommandPalette, 
-    setAIModal, 
+    setAIModal,
+    setYamlModal,
     setSettingsModal 
   } = useIDEStore()
 
@@ -49,6 +51,13 @@ export default function IDELayout() {
             title="AI Assistant (⌘I)"
           >
             <Sparkle size={14} />
+          </button>
+          <button
+            onClick={() => setYamlModal(true)}
+            className="p-1 hover-item rounded text-zinc-500 hover:text-white"
+            title="YAML Editor (⌘Y)"
+          >
+            <FileText size={14} />
           </button>
           <button
             onClick={() => setSettingsModal(true)}
@@ -90,6 +99,7 @@ export default function IDELayout() {
       {/* Modals */}
       <CommandPalette />
       <AIAssistant />
+      <YamlEditor />
     </div>
   )
 }

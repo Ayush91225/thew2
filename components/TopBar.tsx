@@ -5,7 +5,21 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { useState } from 'react'
 
 export default function TopBar() {
-  const { view, setView, collab, setCollab, environment, setEnvironment } = useIDEStore()
+  const { 
+    view, 
+    setView, 
+    collab, 
+    setCollab, 
+    environment, 
+    setEnvironment, 
+    setYamlModal, 
+    yamlModal, 
+    activeYamlFile, 
+    runYaml, 
+    activeTab, 
+    tabs,
+    isRunning
+  } = useIDEStore()
   const [showEnvDropdown, setShowEnvDropdown] = useState(false)
   const [showAccountDropdown, setShowAccountDropdown] = useState(false)
 
@@ -165,9 +179,43 @@ export default function TopBar() {
           )}
         </div>
 
-        <button className="btn-primary flex items-center gap-2">
-          <i className="ph-fill ph-rocket-launch"></i>
-          RUN
+        <button 
+          onClick={() => setYamlModal(true)}
+          className="px-3 py-1.5 text-xs bg-zinc-800 text-white rounded hover:bg-zinc-700 flex items-center gap-1"
+        >
+          <i className="ph ph-file-text"></i>
+          YAML
+        </button>
+
+        <button 
+          onClick={() => {
+            const { isRunning } = useIDEStore.getState()
+            if (isRunning) return
+            
+            useIDEStore.setState({ isRunning: true })
+            
+            setTimeout(() => {
+              if (yamlModal && activeYamlFile) {
+                runYaml(activeYamlFile)
+              } else if (activeTab) {
+                const activeFile = tabs.find(tab => tab.id === activeTab)
+                if (activeFile?.language === 'yaml') {
+                  console.log('Running YAML file:', activeFile.name)
+                } else {
+                  console.log('Running IDE project')
+                }
+              } else {
+                console.log('Running IDE project')
+              }
+              
+              useIDEStore.setState({ isRunning: false })
+            }, 2000)
+          }}
+          disabled={isRunning}
+          className={`btn-primary flex items-center gap-2 ${isRunning ? 'opacity-75' : ''}`}
+        >
+          <i className={`ph-fill ${isRunning ? 'ph-spinner animate-spin' : 'ph-rocket-launch'}`}></i>
+          {isRunning ? 'RUNNING...' : 'RUN'}
         </button>
       </div>
     </nav>

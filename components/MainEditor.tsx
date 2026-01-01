@@ -27,13 +27,15 @@ export default function MainEditor() {
   }, [activeTab, currentTab?.content, updateTabContent])
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout | undefined
     
     // Add keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
-        if (activeTab) {
+        if (activeTab && editorRef.current) {
+          const content = editorRef.current.getValue()
+          updateTabContent(activeTab, content)
           saveFile(activeTab)
           console.log('File saved:', currentTab?.name)
         }
@@ -109,14 +111,14 @@ export default function MainEditor() {
         },
       })
 
-      // Debounced content change
-      editor.onDidChangeModelContent(() => {
-        clearTimeout(timeoutId)
-        timeoutId = setTimeout(() => {
-          const content = editor.getValue()
-          handleContentChange(content)
-        }, 300)
-      })
+      // Manual save only - no auto content change
+      // editor.onDidChangeModelContent(() => {
+      //   clearTimeout(timeoutId)
+      //   timeoutId = setTimeout(() => {
+      //     const content = editor.getValue()
+      //     handleContentChange(content)
+      //   }, 300)
+      // })
 
       editorRef.current = editor
     }
