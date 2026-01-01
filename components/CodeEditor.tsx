@@ -452,14 +452,17 @@ export default function CodeEditor() {
           length: change.rangeLength
         }
         console.log('📤 Sending operation:', operation)
-        collaborationService.sendOperation(operation)
+        // Use shared document ID for collaboration
+        const sharedDocumentId = currentTab ? `shared-${currentTab.name}` : 'shared-document'
+        collaborationService.sendOperation(operation, sharedDocumentId)
       }
     })
 
     // Track cursor position
     editor.onDidChangeCursorPosition((e: any) => {
       if (collab && !isApplyingRemoteOperation) {
-        collaborationService.updateCursor(e.position.lineNumber, e.position.column)
+        const sharedDocumentId = currentTab ? `shared-${currentTab.name}` : 'shared-document'
+        collaborationService.updateCursor(e.position.lineNumber, e.position.column, sharedDocumentId)
       }
     })
 

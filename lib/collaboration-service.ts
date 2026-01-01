@@ -108,23 +108,28 @@ class CollaborationService {
     
     console.log(`📄 Joining document ${documentId} in ${mode} mode`)
     
-    this.send('join-document', { documentId, mode })
+    const success = this.send('join-document', { documentId, mode })
+    if (success) {
+      console.log('✅ Join document message sent successfully')
+    } else {
+      console.error('❌ Failed to send join document message')
+    }
   }
 
-  sendOperation(operation: TextOperation) {
+  sendOperation(operation: TextOperation, documentId?: string) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
 
     this.send('operation', {
-      documentId: this.currentDocumentId,
+      documentId: documentId || this.currentDocumentId,
       operation
     })
   }
 
-  updateCursor(line: number, column: number) {
+  updateCursor(line: number, column: number, documentId?: string) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
 
     this.send('cursor-update', {
-      documentId: this.currentDocumentId,
+      documentId: documentId || this.currentDocumentId,
       cursor: { line, column }
     })
   }

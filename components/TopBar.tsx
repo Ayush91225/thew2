@@ -106,8 +106,9 @@ export default function TopBar() {
         }
       }
       
-      // Join document in the new mode
-      collaborationService.joinDocument(activeTab, newMode)
+      // Join document in the new mode - use a shared document ID for all users
+      const sharedDocumentId = currentTab ? `shared-${currentTab.name}` : 'shared-document'
+      collaborationService.joinDocument(sharedDocumentId, newMode)
       setCollab(!collab)
       
       if (newMode === 'solo') {
