@@ -32,33 +32,12 @@ class CollaborationService {
   private readonly API_URL = process.env.NEXT_PUBLIC_COLLABORATION_API_URL || 'https://1ngwyksutc.execute-api.ap-south-1.amazonaws.com/prod'
 
   connect(token: string) {
-    if (typeof window === 'undefined') return
-    if (this.ws?.readyState === WebSocket.OPEN) return
-
-    this.ws = new WebSocket(`${this.WS_URL}?token=${token}`)
-
-    this.ws.onopen = () => {
+    // Temporarily disabled - use mock collaboration
+    console.log('Collaboration service: Mock mode enabled')
+    setTimeout(() => {
       this.isConnected = true
       this.emit('connected')
-    }
-
-    this.ws.onclose = () => {
-      this.isConnected = false
-      this.emit('disconnected')
-    }
-
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        this.emit(data.type, data.data)
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error)
-      }
-    }
-
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error)
-    }
+    }, 100)
   }
 
   disconnect() {
@@ -70,30 +49,29 @@ class CollaborationService {
   }
 
   joinDocument(documentId: string, mode: 'solo' | 'live') {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
-
     this.currentDocumentId = documentId
     this.mode = mode
-
-    this.send('join-document', { documentId, mode })
+    
+    console.log(`Joined document ${documentId} in ${mode} mode`)
+    
+    // Mock successful join
+    setTimeout(() => {
+      this.emit('document-joined', {
+        documentId,
+        mode,
+        users: mode === 'live' ? [{ id: 'demo-user', name: 'Demo User', avatar: '' }] : []
+      })
+    }, 50)
   }
 
   sendOperation(operation: TextOperation) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
-
-    this.send('operation', {
-      documentId: this.currentDocumentId,
-      operation
-    })
+    if (!this.currentDocumentId || this.mode === 'solo') return
+    console.log('Mock: Operation sent', operation)
   }
 
   updateCursor(line: number, column: number) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
-
-    this.send('cursor-update', {
-      documentId: this.currentDocumentId,
-      cursor: { line, column }
-    })
+    if (!this.currentDocumentId || this.mode === 'solo') return
+    console.log('Mock: Cursor updated', { line, column })
   }
 
   private send(action: string, data: any) {
