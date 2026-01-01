@@ -20,7 +20,18 @@ export default function TopBar() {
 
   useEffect(() => {
     // Initialize collaboration service
-    const token = 'demo-jwt-token' // In production, get from auth service
+    const generateToken = () => {
+      // Simple JWT-like token for demo
+      const payload = {
+        userId: 'demo-user-' + Math.random().toString(36).substr(2, 9),
+        name: 'Demo User',
+        avatar: 'https://api.dicebear.com/9.x/glass/svg?seed=demo'
+      }
+      return btoa(JSON.stringify(payload)) // Simple base64 encoding for demo
+    }
+    
+    const token = generateToken()
+    console.log('🔑 Generated demo token:', token)
     collaborationService.connect(token)
 
     // Set up event listeners
