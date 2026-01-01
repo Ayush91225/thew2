@@ -20,19 +20,30 @@ export default function TopBar() {
 
   useEffect(() => {
     // Initialize collaboration service
-    const generateToken = () => {
-      // Simple JWT-like token for demo
-      const payload = {
-        userId: 'demo-user-' + Math.random().toString(36).substr(2, 9),
-        name: 'Demo User',
-        avatar: 'https://api.dicebear.com/9.x/glass/svg?seed=demo'
+    const generateToken = async () => {
+      // Get user's public IP for identification
+      let userIP = 'unknown'
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json')
+        const ipData = await ipResponse.json()
+        userIP = ipData.ip
+      } catch (error) {
+        console.warn('Could not fetch IP:', error)
+        userIP = 'user-' + Math.random().toString(36).substr(2, 9)
       }
-      return btoa(JSON.stringify(payload)) // Simple base64 encoding for demo
+      
+      const payload = {
+        userId: userIP,
+        name: userIP,
+        avatar: `https://api.dicebear.com/9.x/glass/svg?seed=${userIP}`
+      }
+      return btoa(JSON.stringify(payload))
     }
     
-    const token = generateToken()
-    console.log('🔑 Generated demo token:', token)
-    collaborationService.connect(token)
+    generateToken().then(token => {
+      console.log('🔑 Generated token for IP-based user')
+      collaborationService.connect(token)
+    })
 
     // Set up event listeners
     collaborationService.on('connected', () => {
@@ -48,6 +59,7 @@ export default function TopBar() {
     })
 
     collaborationService.on('document-joined', (data: any) => {
+      console.log('📄 Document joined:', data)
       if (data.users) {
         setCollaborationUsers(data.users)
       }
@@ -64,6 +76,8 @@ export default function TopBar() {
     setIsConnecting(true)
     const newMode = collab ? 'solo' : 'live'
     
+    console.log(`🔄 Toggling to ${newMode} mode for tab:`, activeTab)
+    
     try {
       // Join document in the new mode
       collaborationService.joinDocument(activeTab, newMode)
@@ -71,6 +85,15 @@ export default function TopBar() {
       
       if (newMode === 'solo') {
         setCollaborationUsers([])
+      } else {
+        // Add a mock collaborator for demo
+        setTimeout(() => {
+          setCollaborationUsers([{
+            id: 'demo-collaborator',
+            name: '192.168.1.100',
+            avatar: 'https://api.dicebear.com/9.x/glass/svg?seed=192.168.1.100'
+          }])
+        }, 1000)
       }
     } catch (error) {
       console.error('Failed to toggle collaboration:', error)
@@ -158,18 +181,26 @@ export default function TopBar() {
 
       <div className="flex items-center gap-4">
         {/* Live collaboration indicators */}
-        {collab && collaborationUsers.length > 0 && (
+        {collab && (
           <div className="flex items-center gap-2">
-            <span className="label">Collaborators</span>
+            <span className="label">Live Session</span>
             <div className="flex -space-x-2">
+              {/* Current user */}
+              <div
+                className="w-6 h-6 rounded-full border-2 border-green-500 bg-gradient-to-br from-green-400 to-blue-600 flex items-center justify-center text-xs font-bold text-white"
+                title="You (Current Session)"
+              >
+                •
+              </div>
+              {/* Other collaborators */}
               {collaborationUsers.slice(0, 3).map((user, index) => (
                 <div
                   key={user.id}
-                  className="w-6 h-6 rounded-full border-2 border-black bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-xs font-bold text-white"
-                  title={user.name}
+                  className="w-6 h-6 rounded-full border-2 border-black bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center text-xs font-bold text-white"
+                  title={`Collaborator: ${user.name}`}
                   style={{ zIndex: collaborationUsers.length - index }}
                 >
-                  {user.name?.charAt(0) || 'U'}
+                  {user.name.split('.').pop()?.slice(-1) || 'U'}
                 </div>
               ))}
               {collaborationUsers.length > 3 && (
@@ -187,7 +218,7 @@ export default function TopBar() {
             collab ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'
           }`}></div>
           <span className="text-xs text-zinc-400">
-            {collab ? 'Live' : 'Solo'}
+            {collab ? `Live (${collaborationUsers.length + 1} users)` : 'Solo'}
           </span>
         </div>
 

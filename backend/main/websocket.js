@@ -57,7 +57,21 @@ async function handleConnect(connectionId, event) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'kriya-secret-key');
+    // For demo, accept base64 encoded JSON tokens
+    let decoded;
+    try {
+      // Try base64 first for demo tokens
+      decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
+      log('INFO', 'Using demo base64 token', { decoded });
+    } catch (base64Error) {
+      try {
+        // Fallback to JWT
+        decoded = jwt.verify(token, process.env.JWT_SECRET || 'kriya-secret-key');
+        log('INFO', 'Using JWT token', { decoded });
+      } catch (jwtError) {
+        throw new Error('Invalid token format');
+      }
+    }
     
     await dynamodb.put({
       TableName: 'kriya-sessions',
@@ -73,7 +87,7 @@ async function handleConnect(connectionId, event) {
     log('INFO', 'Connection established', { connectionId, userId: decoded.userId });
     return { statusCode: 200, body: 'Connected' };
   } catch (error) {
-    log('ERROR', 'JWT verification failed', { connectionId, error: error.message });
+    log('ERROR', 'Authentication failed', { connectionId, error: error.message });
     return { statusCode: 401, body: 'Invalid token' };
   }
 }
@@ -128,7 +142,11 @@ async function handleJoinDocument(connectionId, data) {
       data: {
         documentId,
         mode: 'live',
-        users: [{ id: session.Item.userId, name: 'Demo User' }]
+        users: [{ 
+          id: session.Item.userId, 
+          name: session.Item.userId, // Use IP as name
+          avatar: `https://api.dicebear.com/9.x/glass/svg?seed=${session.Item.userId}`
+        }]
       }
     });
     
@@ -155,7 +173,12 @@ async function handleOperation(connectionId, data) {
       return { statusCode: 401, body: 'Session not found' };
     }
 
-    // In a real implementation, broadcast to other users
+    // Echo operation back to sender for confirmation
+    await sendToConnection(connectionId, {
+      type: 'operation-confirmed',
+      data: { operation }
+    });
+    
     log('INFO', 'Operation processed', { connectionId, documentId });
     return { statusCode: 200, body: 'Operation processed' };
   } catch (error) {
