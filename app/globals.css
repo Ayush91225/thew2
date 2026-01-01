@@ -184,3 +184,29 @@ body {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: #52525b;
 }
+
+/* Collaboration cursor styles */
+.collaboration-cursor {
+  position: relative;
+}
+
+.collaboration-cursor::after {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 20px;
+  background: #3b82f6;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Different colors for different users */
+.collaboration-cursor-1::after { background: #3b82f6; }
+.collaboration-cursor-2::after { background: #10b981; }
+.collaboration-cursor-3::after { background: #f59e0b; }
+.collaboration-cursor-4::after { background: #ef4444; }
+.collaboration-cursor-5::after { background: #8b5cf6; }

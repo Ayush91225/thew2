@@ -4,6 +4,7 @@ import { useEffect, useRef, useMemo, useCallback } from 'react'
 import Editor from '@monaco-editor/react'
 import { useIDEStore } from '@/stores/ide-store'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { collaborationService, TextOperation } from '@/lib/collaboration-service'
 
 // Extract editor options to prevent recreation on every render
 const EDITOR_OPTIONS = {
@@ -149,9 +150,10 @@ const EDITOR_OPTIONS = {
 } as const
 
 export default function CodeEditor() {
-  const { tabs, activeTab, updateTabContent } = useIDEStore()
+  const { tabs, activeTab, updateTabContent, collab } = useIDEStore()
   const editorRef = useRef<any>(null)
   const currentTabRef = useRef<string | null>(null)
+  const collaborationCursors = useRef<Map<string, any>>(new Map())
 
   const currentTab = useMemo(() => tabs.find(tab => tab.id === activeTab), [tabs, activeTab])
 
@@ -304,6 +306,68 @@ export default function CodeEditor() {
     editorRef.current?.getAction('editor.action.formatDocument')?.run()
   })
 
+  // Collaboration helper functions
+  const applyRemoteOperation = useCallback((operation: TextOperation) => {
+    if (!editorRef.current) return
+    
+    const editor = editorRef.current
+    const model = editor.getModel()
+    if (!model) return
+
+    try {
+      if (operation.type === 'insert' && operation.content) {
+        const position = model.getPositionAt(operation.position)
+        const range = {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        }
+        model.pushEditOperations([], [{ range, text: operation.content }], () => null)
+      } else if (operation.type === 'delete' && operation.length) {
+        const startPos = model.getPositionAt(operation.position)
+        const endPos = model.getPositionAt(operation.position + operation.length)
+        const range = {
+          startLineNumber: startPos.lineNumber,
+          startColumn: startPos.column,
+          endLineNumber: endPos.lineNumber,
+          endColumn: endPos.column
+        }
+        model.pushEditOperations([], [{ range, text: '' }], () => null)
+      }
+    } catch (error) {
+      console.error('Error applying remote operation:', error)
+    }
+  }, [])
+
+  const updateRemoteCursor = useCallback((userId: string, cursor: { line: number; column: number }) => {
+    if (!editorRef.current) return
+    
+    const editor = editorRef.current
+    const existingDecoration = collaborationCursors.current.get(userId)
+    
+    if (existingDecoration) {
+      editor.removeDecorations([existingDecoration])
+    }
+
+    const decorations = editor.createDecorationsCollection([
+      {
+        range: {
+          startLineNumber: cursor.line,
+          startColumn: cursor.column,
+          endLineNumber: cursor.line,
+          endColumn: cursor.column
+        },
+        options: {
+          className: `collaboration-cursor-${userId}`,
+          hoverMessage: { value: `User ${userId}` }
+        }
+      }
+    ])
+    
+    collaborationCursors.current.set(userId, decorations)
+  }, [])
+
   const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
     editorRef.current = editor
     
@@ -313,6 +377,39 @@ export default function CodeEditor() {
     }
 
     monaco.editor.setTheme('kriya-dark')
+
+    // Collaboration setup
+    if (collab && activeTab) {
+      // Set up real-time collaboration
+      collaborationService.on('operation', (data: any) => {
+        applyRemoteOperation(data.operation)
+      })
+
+      collaborationService.on('cursor-update', (data: any) => {
+        updateRemoteCursor(data.userId, data.cursor)
+      })
+
+      // Track content changes for collaboration
+      editor.onDidChangeModelContent((e: any) => {
+        if (collab && e.changes.length > 0) {
+          const change = e.changes[0]
+          const operation: TextOperation = {
+            type: change.text ? 'insert' : 'delete',
+            position: change.rangeOffset,
+            content: change.text,
+            length: change.rangeLength
+          }
+          collaborationService.sendOperation(operation)
+        }
+      })
+
+      // Track cursor position
+      editor.onDidChangeCursorPosition((e: any) => {
+        if (collab) {
+          collaborationService.updateCursor(e.position.lineNumber, e.position.column)
+        }
+      })
+    }
 
     // Add custom commands
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD, () => {
@@ -338,7 +435,7 @@ export default function CodeEditor() {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
       editor.getAction('editor.action.insertLineBefore')?.run()
     })
-  }, [currentTab])
+  }, [currentTab, collab, activeTab])
 
   if (!currentTab) {
     return (

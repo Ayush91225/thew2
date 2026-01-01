@@ -19,6 +19,16 @@ interface TerminalTab {
   isActive: boolean
 }
 
+interface CollaborationUser {
+  id: string
+  name: string
+  avatar: string
+  cursor?: {
+    line: number
+    column: number
+  }
+}
+
 interface APIRequest {
   id: string
   name: string
@@ -392,10 +402,15 @@ interface IDEState {
   // Notification helper
   sendNotification: (type: 'build' | 'error' | 'collaboration' | 'deployment', title: string, message: string) => void
   
-  // Git Actions
-  setGitBranch: (branch: string) => void
-  setGitStatus: (status: 'clean' | 'modified' | 'staged' | 'committed') => void
-  setUncommittedChanges: (count: number) => void
+  // Collaboration State
+  collaborationUsers: CollaborationUser[]
+  isConnectedToCollaboration: boolean
+  
+  // Collaboration Actions
+  setCollaborationUsers: (users: CollaborationUser[]) => void
+  addCollaborationUser: (user: CollaborationUser) => void
+  removeCollaborationUser: (userId: string) => void
+  setCollaborationConnection: (connected: boolean) => void
   
   // File Tree Actions
   refreshFileTree: () => void
@@ -815,6 +830,10 @@ context:
           gitBranch: 'main',
           gitStatus: 'modified',
           uncommittedChanges: 3,
+          
+          // Collaboration State
+          collaborationUsers: [],
+          isConnectedToCollaboration: false,
           
           // Actions
           setCommandPalette: (open) => set({ commandPalette: open }),
@@ -1565,6 +1584,16 @@ context:
           setGitBranch: (branch) => set({ gitBranch: branch }),
           setGitStatus: (status) => set({ gitStatus: status }),
           setUncommittedChanges: (count) => set({ uncommittedChanges: count }),
+          
+          // Collaboration Actions
+          setCollaborationUsers: (users) => set({ collaborationUsers: users }),
+          addCollaborationUser: (user) => set((state) => ({
+            collaborationUsers: [...state.collaborationUsers, user]
+          })),
+          removeCollaborationUser: (userId) => set((state) => ({
+            collaborationUsers: state.collaborationUsers.filter(u => u.id !== userId)
+          })),
+          setCollaborationConnection: (connected) => set({ isConnectedToCollaboration: connected }),
           
           // File Tree Actions
           refreshFileTree: () => set((state) => ({
