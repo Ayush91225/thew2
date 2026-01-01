@@ -132,7 +132,7 @@ export default function MainEditor() {
         editorRef.current.dispose()
       }
     }
-  }, [currentTab?.id, fontSize, tabSize, minimap, activeTab, currentTab, handleContentChange, saveFile])
+  }, [currentTab?.id, fontSize, tabSize, minimap, activeTab, currentTab, handleContentChange, saveFile, updateTabContent])
 
   // Update editor content when tab changes
   useEffect(() => {

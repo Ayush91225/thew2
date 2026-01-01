@@ -2162,7 +2162,7 @@ export default function SettingsView() {
                   </div>
                   <div className="bg-black border border-zinc-700 rounded p-2 font-mono text-xs space-y-0.5">
                     <div className="text-blue-400">function <span className="text-yellow-300">hello</span>() {'{'}</div>
-                    <div className="text-green-400 ml-2">console.log(<span className="text-orange-300">'Hi'</span>)</div>
+                    <div className="text-green-400 ml-2">console.log(<span className="text-orange-300">&apos;Hi&apos;</span>)</div>
                     <div className="text-white">{'}'}</div>
                   </div>
                 </div>

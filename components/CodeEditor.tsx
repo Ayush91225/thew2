@@ -248,7 +248,7 @@ export default function CodeEditor() {
       editorRef.current.setValue(currentTab.content)
       currentTabRef.current = currentTab.id
     }
-  }, [currentTab?.id])
+  }, [currentTab?.id, currentTab])
 
   // Enhanced hotkeys
   useHotkeys('meta+s', (e) => {
