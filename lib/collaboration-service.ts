@@ -1,5 +1,3 @@
-import { io, Socket } from 'socket.io-client'
-
 export interface CollaborationUser {
   id: string
   name: string
@@ -24,7 +22,7 @@ export interface TextOperation {
 }
 
 class CollaborationService {
-  private socket: Socket | null = null
+  private ws: WebSocket | null = null
   private isConnected = false
   private currentDocumentId: string | null = null
   private mode: 'solo' | 'live' = 'solo'
@@ -34,77 +32,74 @@ class CollaborationService {
   private readonly API_URL = process.env.NEXT_PUBLIC_COLLABORATION_API_URL || 'https://1ngwyksutc.execute-api.ap-south-1.amazonaws.com/prod'
 
   connect(token: string) {
-    if (this.socket?.connected) return
+    if (typeof window === 'undefined') return
+    if (this.ws?.readyState === WebSocket.OPEN) return
 
-    this.socket = io(this.WS_URL, {
-      auth: { token },
-      transports: ['websocket']
-    })
+    this.ws = new WebSocket(`${this.WS_URL}?token=${token}`)
 
-    this.socket.on('connect', () => {
+    this.ws.onopen = () => {
       this.isConnected = true
       this.emit('connected')
-    })
+    }
 
-    this.socket.on('disconnect', () => {
+    this.ws.onclose = () => {
       this.isConnected = false
       this.emit('disconnected')
-    })
+    }
 
-    this.socket.on('document-joined', (data) => {
-      this.emit('document-joined', data)
-    })
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        this.emit(data.type, data.data)
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error)
+      }
+    }
 
-    this.socket.on('user-joined', (data) => {
-      this.emit('user-joined', data)
-    })
-
-    this.socket.on('user-left', (data) => {
-      this.emit('user-left', data)
-    })
-
-    this.socket.on('operation', (data) => {
-      this.emit('operation', data)
-    })
-
-    this.socket.on('cursor-update', (data) => {
-      this.emit('cursor-update', data)
-    })
+    this.ws.onerror = (error) => {
+      console.error('WebSocket error:', error)
+    }
   }
 
   disconnect() {
-    if (this.socket) {
-      this.socket.disconnect()
-      this.socket = null
+    if (this.ws) {
+      this.ws.close()
+      this.ws = null
       this.isConnected = false
     }
   }
 
   joinDocument(documentId: string, mode: 'solo' | 'live') {
-    if (!this.socket?.connected) return
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
 
     this.currentDocumentId = documentId
     this.mode = mode
 
-    this.socket.emit('join-document', { documentId, mode })
+    this.send('join-document', { documentId, mode })
   }
 
   sendOperation(operation: TextOperation) {
-    if (!this.socket?.connected || !this.currentDocumentId || this.mode === 'solo') return
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
 
-    this.socket.emit('operation', {
+    this.send('operation', {
       documentId: this.currentDocumentId,
       operation
     })
   }
 
   updateCursor(line: number, column: number) {
-    if (!this.socket?.connected || !this.currentDocumentId || this.mode === 'solo') return
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
 
-    this.socket.emit('cursor-update', {
+    this.send('cursor-update', {
       documentId: this.currentDocumentId,
       cursor: { line, column }
     })
+  }
+
+  private send(action: string, data: any) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ action, ...data }))
+    }
   }
 
   on(event: string, callback: Function) {
