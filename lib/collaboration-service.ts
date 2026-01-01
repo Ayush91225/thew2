@@ -28,15 +28,15 @@ class CollaborationService {
   private mode: 'solo' | 'live' = 'solo'
   private callbacks: Map<string, Function[]> = new Map()
 
-  private readonly WS_URL = process.env.NEXT_PUBLIC_COLLABORATION_WS_URL || 'wss://xtc3torv9c.execute-api.ap-south-1.amazonaws.com/prod'
-  private readonly API_URL = process.env.NEXT_PUBLIC_COLLABORATION_API_URL || 'https://1ngwyksutc.execute-api.ap-south-1.amazonaws.com/prod'
+  private readonly WS_URL = process.env.NEXT_PUBLIC_COLLABORATION_WS_URL || 'wss://vvswi3elpi.execute-api.ap-south-1.amazonaws.com/prod'
+  private readonly API_URL = process.env.NEXT_PUBLIC_COLLABORATION_API_URL || 'https://vvswi3elpi.execute-api.ap-south-1.amazonaws.com/prod'
 
   connect(token: string) {
     if (typeof window === 'undefined') return
     
     console.log('🔌 Connecting to collaboration service...')
     
-    // Use native WebSocket for AWS API Gateway
+    // Use native WebSocket for API Gateway
     this.ws = new WebSocket(`${this.WS_URL}?token=${token}`)
 
     this.ws.onopen = () => {
@@ -113,6 +113,8 @@ class CollaborationService {
       this.ws.send(message)
     }
   }
+
+
 
   on(event: string, callback: Function) {
     if (!this.callbacks.has(event)) {
