@@ -107,8 +107,8 @@ class CollaborationService {
 
   joinDocument(documentId: string, mode: 'solo' | 'live') {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket not connected, cannot join document')
-      return
+      console.warn('⚠️ WebSocket not connected, cannot join document')
+      return false
     }
 
     this.currentDocumentId = documentId
@@ -119,8 +119,10 @@ class CollaborationService {
     const success = this.send('join-document', { documentId, mode })
     if (success) {
       console.log('✅ Join document message sent successfully')
+      return true
     } else {
       console.error('❌ Failed to send join document message')
+      return false
     }
   }
 
