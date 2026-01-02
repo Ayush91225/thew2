@@ -161,18 +161,27 @@ export default function CodeEditor() {
 
   // Collaboration helper functions
   const applyRemoteOperation = useCallback((operation: TextOperation) => {
-    if (!editorRef.current) return
+    if (!editorRef.current) {
+      console.warn('Editor not available for remote operation')
+      return
+    }
     
     const editor = editorRef.current
     const model = editor.getModel()
-    if (!model) return
+    if (!model) {
+      console.warn('Editor model not available')
+      return
+    }
 
     try {
+      console.log('🔄 Applying remote operation:', operation)
+      
       // Set flag to prevent sending this change back
       if (editor._setApplyingRemoteOperation) {
         editor._setApplyingRemoteOperation(true)
       }
       
+      // Apply the operation based on type
       if (operation.type === 'insert' && operation.content) {
         const position = model.getPositionAt(operation.position)
         const range = {
@@ -181,7 +190,9 @@ export default function CodeEditor() {
           endLineNumber: position.lineNumber,
           endColumn: position.column
         }
-        model.pushEditOperations([], [{ range, text: operation.content }], () => null)
+        const editOperation = { range, text: operation.content }
+        model.pushEditOperations([], [editOperation], () => null)
+        console.log('✅ Insert operation applied successfully')
       } else if (operation.type === 'delete' && operation.length) {
         const startPos = model.getPositionAt(operation.position)
         const endPos = model.getPositionAt(operation.position + operation.length)
@@ -191,17 +202,30 @@ export default function CodeEditor() {
           endLineNumber: endPos.lineNumber,
           endColumn: endPos.column
         }
-        model.pushEditOperations([], [{ range, text: '' }], () => null)
+        const editOperation = { range, text: '' }
+        model.pushEditOperations([], [editOperation], () => null)
+        console.log('✅ Delete operation applied successfully')
       }
       
-      // Reset flag after operation
+      // Update the tab content immediately after applying remote operation
+      const currentActiveTab = useIDEStore.getState().activeTab
+      const currentTabs = useIDEStore.getState().tabs
+      const activeTabData = currentTabs.find(tab => tab.id === currentActiveTab)
+      
+      if (activeTabData) {
+        const newContent = model.getValue()
+        useIDEStore.getState().updateTabContent(activeTabData.id, newContent)
+        console.log('🔄 Tab content updated after remote operation')
+      }
+      
+      // Reset flag after a short delay to ensure the change event is processed
       setTimeout(() => {
         if (editor._setApplyingRemoteOperation) {
           editor._setApplyingRemoteOperation(false)
         }
-      }, 50)
+      }, 100) // Increased delay to ensure proper synchronization
     } catch (error) {
-      console.error('Error applying remote operation:', error)
+      console.error('❌ Error applying remote operation:', error)
       // Reset flag on error
       if (editor._setApplyingRemoteOperation) {
         editor._setApplyingRemoteOperation(false)
@@ -332,21 +356,34 @@ export default function CodeEditor() {
       // Set up real-time collaboration event listeners
       const handleOperation = (data: any) => {
         console.log('📝 Remote operation received:', data)
-        if (data.operation) {
-          applyRemoteOperation(data.operation)
-        } else if (data.type && data.data) {
-          applyRemoteOperation(data.data)
+        // Handle different data formats from the backend
+        if (data && typeof data === 'object') {
+          // Direct operation object
+          if (data.type && (data.type === 'insert' || data.type === 'delete')) {
+            applyRemoteOperation(data)
+          }
+          // Nested operation
+          else if (data.operation) {
+            applyRemoteOperation(data.operation)
+          }
+          // Legacy format
+          else if (data.data && data.data.operation) {
+            applyRemoteOperation(data.data.operation)
+          }
+          else {
+            console.warn('⚠️ Invalid operation format:', data)
+          }
         } else {
-          console.warn('Invalid operation format:', data)
+          console.warn('⚠️ Invalid operation data:', data)
         }
       }
 
       const handleCursorUpdate = (data: any) => {
         console.log('👆 Remote cursor update:', data)
-        if (data.userId && data.cursor) {
+        if (data && data.userId && data.cursor) {
           updateRemoteCursor(data.userId, data.cursor)
         } else {
-          console.warn('Invalid cursor update format:', data)
+          console.warn('⚠️ Invalid cursor update format:', data)
         }
       }
 
@@ -354,11 +391,14 @@ export default function CodeEditor() {
         console.log('✅ Operation confirmed by server:', data)
       }
 
+      // Add event listeners
       collaborationService.on('operation', handleOperation)
       collaborationService.on('cursor-update', handleCursorUpdate)
       collaborationService.on('operation-confirmed', handleOperationConfirmed)
 
+      // Cleanup function
       return () => {
+        console.log('🧹 Cleaning up collaboration event listeners')
         collaborationService.off('operation', handleOperation)
         collaborationService.off('cursor-update', handleCursorUpdate)
         collaborationService.off('operation-confirmed', handleOperationConfirmed)
@@ -441,9 +481,15 @@ export default function CodeEditor() {
     // Set up editor event listeners for collaboration
     let isApplyingRemoteOperation = false
     
-    // Track content changes for collaboration
+    // Track content changes for collaboration - FIXED: Use current state, not stale closure
     editor.onDidChangeModelContent((e: any) => {
-      if (collab && !isApplyingRemoteOperation && e.changes.length > 0) {
+      // Get current collaboration state from store
+      const currentCollabState = useIDEStore.getState().collab
+      const currentActiveTab = useIDEStore.getState().activeTab
+      const currentTabs = useIDEStore.getState().tabs
+      const activeTabData = currentTabs.find(tab => tab.id === currentActiveTab)
+      
+      if (currentCollabState && !isApplyingRemoteOperation && e.changes.length > 0) {
         const change = e.changes[0]
         const operation: TextOperation = {
           type: change.text ? 'insert' : 'delete',
@@ -453,15 +499,26 @@ export default function CodeEditor() {
         }
         console.log('📤 Sending operation:', operation)
         // Use shared document ID for collaboration
-        const sharedDocumentId = currentTab ? `shared-${currentTab.name}` : 'shared-document'
+        const sharedDocumentId = activeTabData ? `shared-${activeTabData.name}` : 'shared-document'
         collaborationService.sendOperation(operation, sharedDocumentId)
+      }
+      
+      // CRITICAL FIX: Update tab content in real-time, not just on save
+      if (activeTabData && !isApplyingRemoteOperation) {
+        const newContent = editor.getValue()
+        useIDEStore.getState().updateTabContent(activeTabData.id, newContent)
       }
     })
 
-    // Track cursor position
+    // Track cursor position - FIXED: Use current state
     editor.onDidChangeCursorPosition((e: any) => {
-      if (collab && !isApplyingRemoteOperation) {
-        const sharedDocumentId = currentTab ? `shared-${currentTab.name}` : 'shared-document'
+      const currentCollabState = useIDEStore.getState().collab
+      const currentActiveTab = useIDEStore.getState().activeTab
+      const currentTabs = useIDEStore.getState().tabs
+      const activeTabData = currentTabs.find(tab => tab.id === currentActiveTab)
+      
+      if (currentCollabState && !isApplyingRemoteOperation && activeTabData) {
+        const sharedDocumentId = `shared-${activeTabData.name}`
         collaborationService.updateCursor(e.position.lineNumber, e.position.column, sharedDocumentId)
       }
     })
@@ -494,7 +551,7 @@ export default function CodeEditor() {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
       editor.getAction('editor.action.insertLineBefore')?.run()
     })
-  }, [currentTab, collab])
+  }, []) // Remove dependencies to prevent recreation
 
   if (!currentTab) {
     return (

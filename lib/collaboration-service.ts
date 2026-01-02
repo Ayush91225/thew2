@@ -125,17 +125,43 @@ class CollaborationService {
   }
 
   sendOperation(operation: TextOperation, documentId?: string) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') {
+      console.warn('⚠️ Cannot send operation - WebSocket not ready or not in live mode')
+      return
+    }
 
-    this.send('operation', {
+    const message = {
+      action: 'operation',
+      documentId: documentId || this.currentDocumentId,
+      operation
+    }
+    
+    console.log('📤 Sending operation message:', message)
+    const success = this.send('operation', {
       documentId: documentId || this.currentDocumentId,
       operation
     })
+    
+    if (success) {
+      console.log('✅ Operation sent successfully')
+    } else {
+      console.error('❌ Failed to send operation')
+    }
   }
 
   updateCursor(line: number, column: number, documentId?: string) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') return
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.currentDocumentId || this.mode === 'solo') {
+      console.warn('⚠️ Cannot send cursor update - WebSocket not ready or not in live mode')
+      return
+    }
 
+    const message = {
+      action: 'cursor-update',
+      documentId: documentId || this.currentDocumentId,
+      cursor: { line, column }
+    }
+    
+    console.log('👆 Sending cursor update:', message)
     this.send('cursor-update', {
       documentId: documentId || this.currentDocumentId,
       cursor: { line, column }
