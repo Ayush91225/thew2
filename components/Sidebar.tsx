@@ -362,7 +362,7 @@ A modern, enterprise-level IDE built with Next.js and React.
                 node.type === 'directory' 
                   ? selectedFolder === node.id ? 'ph-fill ph-folder-open' : 'ph-fill ph-folder'
                   : fileManager.getFileIcon(node.name)
-              } text-sm`} style={node.type === 'directory' ? { color: selectedFolder === node.id ? '#FCD34D' : '#FFB800' } : {}}></i>
+              } text-sm`} style={node.type === 'directory' ? { color: selectedFolder === node.id ? '#10B981' : '#059669' } : {}}></i>
             </div>
             
             {isRenaming ? (
