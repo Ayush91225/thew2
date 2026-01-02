@@ -8,6 +8,8 @@ import YamlEditor from '@/components/YamlEditor'
 import Sidebar from '@/components/Sidebar'
 import FileTabs from '@/components/FileTabs'
 import CodeEditor from '@/components/CodeEditor'
+import CollaborationManager from '@/components/CollaborationManager'
+import CollaborationStatus from '@/components/CollaborationStatus'
 import { Sparkle, Terminal, Gear, FileText } from 'phosphor-react'
 
 export default function IDELayout() {
@@ -86,6 +88,7 @@ export default function IDELayout() {
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-slow"></div>
             <span className="text-zinc-500">Ready</span>
           </div>
+          <CollaborationStatus />
           <span className="text-zinc-600">TypeScript</span>
         </div>
         
@@ -100,6 +103,9 @@ export default function IDELayout() {
       <CommandPalette />
       <AIAssistant />
       <YamlEditor />
+      
+      {/* Collaboration Manager */}
+      <CollaborationManager />
     </div>
   )
 }

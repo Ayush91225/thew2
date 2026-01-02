@@ -3,6 +3,7 @@
 import { useIDEStore } from '@/stores/ide-store'
 import { FileTreeManager, FileTreeNode } from '@/lib/file-tree'
 import { DebugPanel, ExtensionsPanel, DatabasePanel, APIPanel } from './SidebarPanels'
+import CollaborationToggle from './CollaborationToggle'
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 
@@ -493,6 +494,7 @@ A modern, enterprise-level IDE built with Next.js and React.
         ></i>
         
         <div className="mt-auto flex flex-col gap-5 items-center">
+          <CollaborationToggle />
           <i 
             onClick={() => setView('settings')} 
             className={`ph-fill ph-gear-six text-lg cursor-pointer transition ${

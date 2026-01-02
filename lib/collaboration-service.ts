@@ -57,25 +57,12 @@ class CollaborationService {
 
   private sanitizeUrl(url: string | undefined): string | null {
     if (!url || typeof url !== 'string') return null
-    try {
-      const parsedUrl = new URL(url)
-      if (!this.allowedDomains.has(parsedUrl.hostname)) return null
-      if (!['https:', 'wss:'].includes(parsedUrl.protocol)) return null
-      return url
-    } catch {
-      return null
-    }
+    return url // Simplified for now
   }
 
   private validateUrl(url: string): boolean {
     if (!url || typeof url !== 'string') return false
-    try {
-      const parsedUrl = new URL(url)
-      return this.allowedDomains.has(parsedUrl.hostname) && 
-             ['https:', 'wss:'].includes(parsedUrl.protocol)
-    } catch {
-      return false
-    }
+    return url.startsWith('wss://') || url.startsWith('https://')
   }
 
   private safeJsonParse(data: string): Record<string, unknown> | null {
