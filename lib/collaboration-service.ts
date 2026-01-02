@@ -65,10 +65,18 @@ class CollaborationService {
           const data = JSON.parse(event.data)
           console.log('📨 Message received:', data)
           
-          // Handle different message formats
-          if (data.type) {
+          // Handle different message formats from AWS Lambda
+          if (data.type === 'operation' && data.operation) {
+            // Direct operation from Lambda
+            this.emit('operation', data.operation)
+          } else if (data.type === 'cursor-update' && data.cursor) {
+            // Direct cursor update from Lambda
+            this.emit('cursor-update', { userId: data.userId, cursor: data.cursor })
+          } else if (data.type) {
+            // Standard type-based messages
             this.emit(data.type, data.data || data)
           } else if (data.action) {
+            // Action-based messages
             this.emit(data.action, data)
           } else {
             // Fallback for direct data
