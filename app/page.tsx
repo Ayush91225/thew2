@@ -11,6 +11,8 @@ import GlobalSearch from '@/components/GlobalSearch'
 import TopBar from '@/components/TopBar'
 import Sidebar from '@/components/Sidebar'
 import MainEditor from '@/components/MainEditor'
+import CodeEditor from '@/components/CodeEditor'
+import FileTabs from '@/components/FileTabs'
 import Terminal from '@/components/Terminal'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import DeploymentDashboard from '@/components/DeploymentDashboard'
@@ -51,7 +53,12 @@ export default function Home() {
       case 'settings':
         return <SettingsView />
       default:
-        return <MainEditor />
+        return (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <FileTabs />
+            <CodeEditor />
+          </div>
+        )
     }
   }
 

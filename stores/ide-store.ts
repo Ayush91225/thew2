@@ -79,10 +79,12 @@ interface IDEState {
   globalSearchQuery: string
   terminalOpen: boolean
   view: string
+  previousView: string
   collab: boolean
   environment: 'production' | 'development'
   activePanel: string
   isRunning: boolean
+  runningFile: string | null
   
   // Editor State
   activeTab: string | null
@@ -245,6 +247,7 @@ interface IDEState {
   setEnvironment: (env: 'production' | 'development') => void
   setActivePanel: (panel: string) => void
   setActiveTab: (tabId: string) => void
+  runCurrentFile: () => void
   addTab: (file: FileTab) => void
   closeTab: (tabId: string) => void
   updateTabContent: (tabId: string, content: string) => void
@@ -441,12 +444,49 @@ export const useIDEStore = create<IDEState>()(
           globalSearchQuery: '',
           terminalOpen: false,
           view: 'workspace',
+          previousView: 'workspace',
           collab: false,
           environment: 'production',
           activePanel: 'files',
           isRunning: false,
-          activeTab: null,
-          tabs: [],
+          runningFile: null,
+          activeTab: 'MainEditor.tsx',
+          tabs: [
+            {
+              id: 'MainEditor.tsx',
+              name: 'MainEditor.tsx',
+              path: '/components/MainEditor.tsx',
+              content: `'use client'
+
+import { useEffect, useRef, useCallback, useState } from 'react'
+import { useIDEStore } from '@/stores/ide-store'
+
+export default function MainEditor() {
+  const { 
+    tabs, 
+    activeTab, 
+    setActiveTab, 
+    closeTab, 
+    updateTabContent,
+    fontSize,
+    tabSize,
+    minimap,
+    saveFile
+  } = useIDEStore()
+  
+  // Your editor implementation here
+  return (
+    <div className="flex-1 bg-black text-white p-4">
+      <h1>Welcome to Kriya IDE</h1>
+      <p>This is a sample file to demonstrate the editor.</p>
+    </div>
+  )
+}`,
+              language: 'typescript',
+              isDirty: false,
+              icon: 'ph-fill ph-file-tsx'
+            }
+          ],
           recentFiles: [],
           fileTree: fileManager.getFileTree(),
           fileTreeVersion: 0,
@@ -850,11 +890,53 @@ context:
           setGlobalSearch: (open) => set({ globalSearch: open }),
           setGlobalSearchQuery: (query) => set({ globalSearchQuery: query }),
           setTerminalOpen: (open) => set({ terminalOpen: open }),
-          setView: (view) => set({ view }),
+          setView: (view) => set((state) => ({ 
+            previousView: state.view !== 'settings' ? state.view : state.previousView,
+            view 
+          })),
           setCollab: (collab) => set({ collab }),
           setEnvironment: (environment) => set({ environment }),
           setActivePanel: (panel) => set({ activePanel: panel }),
           setActiveTab: (tabId) => set({ activeTab: tabId }),
+          
+          runCurrentFile: () => {
+            const state = get()
+            if (!state.activeTab) return
+            
+            const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
+            if (!activeTabData) return
+            
+            // Check if it's a YAML file
+            const isYamlFile = activeTabData.language === 'yaml' || 
+                              activeTabData.name.endsWith('.yml') || 
+                              activeTabData.name.endsWith('.yaml')
+            
+            if (isYamlFile) {
+              // Find corresponding YAML file and run it
+              const yamlFile = state.yamlFiles.find(f => f.id === activeTabData.id || f.path === activeTabData.path)
+              if (yamlFile) {
+                get().runYaml(yamlFile.id)
+              }
+            } else {
+              // Run regular file
+              set({ isRunning: true, runningFile: activeTabData.id })
+              
+              // Send notification
+              get().sendNotification('build', 'Running File', `Executing ${activeTabData.name}`)
+              
+              // Simulate execution
+              setTimeout(() => {
+                const success = Math.random() > 0.2 // 80% success rate
+                set({ isRunning: false, runningFile: null })
+                
+                if (success) {
+                  get().sendNotification('build', 'Execution Complete', `${activeTabData.name} executed successfully`)
+                } else {
+                  get().sendNotification('error', 'Execution Failed', `Error executing ${activeTabData.name}`)
+                }
+              }, 2000)
+            }
+          },
           
           addTab: (file) => set((state) => {
             const existingTab = state.tabs.find(tab => tab.path === file.path)

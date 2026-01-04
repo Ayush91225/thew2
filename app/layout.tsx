@@ -17,10 +17,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script async src="https://cdn.tailwindcss.com"></script>
-        <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-        <script async src="https://unpkg.com/@phosphor-icons/web"></script>
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/fill/style.css" />
+        <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css" />
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
         {children}

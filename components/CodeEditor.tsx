@@ -63,11 +63,11 @@ const EDITOR_OPTIONS: editor.IStandaloneEditorConstructionOptions = {
   minimap: { 
     enabled: true,
     side: 'right',
-    showSlider: 'always',
-    renderCharacters: true,
-    maxColumn: 200,
-    scale: 2,
-    size: 'proportional'
+    showSlider: 'mouseover',
+    renderCharacters: false,
+    maxColumn: 120,
+    scale: 1,
+    size: 'fit'
   },
   scrollBeyondLastLine: false,
   wordWrap: 'on',
@@ -148,14 +148,14 @@ const EDITOR_OPTIONS: editor.IStandaloneEditorConstructionOptions = {
   fastScrollSensitivity: 5,
   fixedOverflowWidgets: false,
   glyphMargin: true,
-  hideCursorInOverviewRuler: false,
+  hideCursorInOverviewRuler: true,
   links: true,
   matchBrackets: 'always',
   mouseWheelScrollSensitivity: 1,
   mouseWheelZoom: true,
   occurrencesHighlight: 'singleFile',
-  overviewRulerBorder: true,
-  overviewRulerLanes: 3,
+  overviewRulerBorder: false,
+  overviewRulerLanes: 0,
   readOnly: false,
   renameOnType: false,
   rulers: [80, 120],
@@ -361,15 +361,15 @@ export default function CodeEditor(): JSX.Element {
               'peekViewEditor.background': '#0D1117',
               'peekViewResult.background': '#161B22',
               'peekViewTitle.background': '#21262D',
-              'minimap.background': '#1E1E1E',
-              'minimap.foregroundOpacity': '#D4D4D4',
-              'minimap.findMatchHighlight': '#FFD700',
+              'minimap.background': '#000000',
+              'minimap.foregroundOpacity': '#6A737D',
+              'minimap.findMatchHighlight': '#264F78',
               'minimap.selectionHighlight': '#264F78',
               'minimap.errorHighlight': '#F85149',
               'minimap.warningHighlight': '#F0883E',
-              'minimapSlider.background': '#79797933',
-              'minimapSlider.hoverBackground': '#79797966',
-              'minimapSlider.activeBackground': '#797979cc',
+              'minimapSlider.background': '#ffffff08',
+              'minimapSlider.hoverBackground': '#ffffff15',
+              'minimapSlider.activeBackground': '#ffffff25',
             }
           })
 
@@ -458,6 +458,7 @@ export default function CodeEditor(): JSX.Element {
     if (currentTab && editorRef.current) {
       const content = editorRef.current.getValue()
       updateTabContent(currentTab.id, content)
+      useIDEStore.getState().saveFile(currentTab.id)
     }
   })
 
@@ -544,9 +545,8 @@ export default function CodeEditor(): JSX.Element {
             content: change.text,
             length: change.rangeLength
           }
-          // Use shared document ID for collaboration
-          const sharedDocumentId = activeTabData ? `shared-${activeTabData.name}` : 'shared-document'
-          collaborationService.sendOperation(operation, sharedDocumentId)
+          // Send operation for collaboration
+          collaborationService.sendOperation(operation)
         }
         
         // Update tab content in real-time
@@ -568,8 +568,7 @@ export default function CodeEditor(): JSX.Element {
         const activeTabData = currentTabs.find(tab => tab.id === currentActiveTab)
         
         if (currentCollabState && !isApplyingRemoteOperation && activeTabData) {
-          const sharedDocumentId = `shared-${activeTabData.name}`
-          collaborationService.updateCursor(e.position.lineNumber, e.position.column, sharedDocumentId)
+          collaborationService.updateCursor(e.position.lineNumber, e.position.column)
         }
       } catch (error) {
         // Silent error handling

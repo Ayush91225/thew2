@@ -1,26 +1,25 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { useIDEStore } from '@/stores/ide-store'
-import { X, Circle } from 'phosphor-react'
-import { getFileLanguage } from '@/lib/utils'
 
 const getFileIcon = (filename: string) => {
   const ext = filename.split('.').pop()?.toLowerCase()
   const iconMap: Record<string, string> = {
-    js: '🟨',
-    jsx: '⚛️',
-    ts: '🔷',
-    tsx: '⚛️',
-    py: '🐍',
-    java: '☕',
-    html: '🌐',
-    css: '🎨',
-    json: '📋',
-    md: '📝',
-    txt: '📄',
+    js: 'ph-fill ph-file-js',
+    jsx: 'ph-fill ph-file-jsx', 
+    ts: 'ph-fill ph-file-ts',
+    tsx: 'ph-fill ph-file-tsx',
+    py: 'ph-fill ph-file-py',
+    java: 'ph-fill ph-file-java',
+    html: 'ph-fill ph-file-html',
+    css: 'ph-fill ph-file-css',
+    json: 'ph-fill ph-brackets-curly',
+    md: 'ph-fill ph-file-text',
+    txt: 'ph-fill ph-file-text',
+    yml: 'ph-fill ph-file-text',
+    yaml: 'ph-fill ph-file-text',
   }
-  return iconMap[ext || ''] || '📄'
+  return iconMap[ext || ''] || 'ph-fill ph-file'
 }
 
 export default function FileTabs() {
@@ -30,13 +29,10 @@ export default function FileTabs() {
 
   return (
     <div className="flex items-center border-b-line bg-black/20">
-      <div className="flex items-center overflow-x-auto">
+      <div className="flex items-center overflow-x-auto scrollbar-thin">
         {tabs.map((tab) => (
-          <motion.div
+          <div
             key={tab.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
             className={`
               flex items-center gap-2 px-4 py-3 border-r-line cursor-pointer group
               transition-all duration-200 min-w-0 max-w-48
@@ -47,10 +43,10 @@ export default function FileTabs() {
             `}
             onClick={() => setActiveTab(tab.id)}
           >
-            <span className="text-sm">{getFileIcon(tab.name)}</span>
+            <i className={`${getFileIcon(tab.name)} text-sm`}></i>
             <span className="text-sm font-medium truncate">{tab.name}</span>
             {tab.isDirty && (
-              <Circle size={6} weight="fill" className="text-white flex-shrink-0" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white flex-shrink-0"></div>
             )}
             <button
               onClick={(e) => {
@@ -59,9 +55,9 @@ export default function FileTabs() {
               }}
               className="opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded p-1 transition-all"
             >
-              <X size={12} />
+              <i className="ph ph-x text-xs"></i>
             </button>
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>

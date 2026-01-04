@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { useIDEStore } from '@/stores/ide-store'
 
 export default function MainEditor() {
@@ -17,6 +17,7 @@ export default function MainEditor() {
   } = useIDEStore()
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<any>(null)
+  const [isMonacoLoaded, setIsMonacoLoaded] = useState(false)
 
   const currentTab = tabs.find(tab => tab.id === activeTab)
 
@@ -44,86 +45,127 @@ export default function MainEditor() {
     
     document.addEventListener('keydown', handleKeyDown)
     
-    const initEditor = () => {
-      if (typeof window !== 'undefined' && (window as any).require) {
-        (window as any).require.config({ 
-          paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } 
-        })
-        
-        ;(window as any).require(['vs/editor/editor.main'], () => {
-          const monaco = (window as any).monaco
-          monacoRef.current = monaco
+    const loadMonaco = async () => {
+      if (typeof window === 'undefined') return
+      
+      // Check if Monaco is already loaded
+      if ((window as any).monaco) {
+        setIsMonacoLoaded(true)
+        if (currentTab) {
+          createEditor((window as any).monaco, currentTab)
+        }
+        return
+      }
+
+      try {
+        // Load Monaco from CDN with better error handling
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js'
+        script.onload = () => {
+          const require = (window as any).require
+          require.config({ 
+            paths: { 'vs': 'https://unpkg.com/monaco-editor@0.44.0/min/vs' },
+            'vs/nls': { availableLanguages: { '*': 'en' } }
+          })
           
-          // Define custom theme
-          monaco.editor.defineTheme('kriya-dark', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-              { token: 'comment', foreground: '6A737D' },
-              { token: 'keyword', foreground: 'F97583' },
-              { token: 'string', foreground: '9ECBFF' },
-              { token: 'number', foreground: '79B8FF' },
-              { token: 'type', foreground: 'B392F0' },
-              { token: 'function', foreground: 'B392F0' },
-              { token: 'variable', foreground: 'E1E4E8' },
-            ],
-            colors: {
-              'editor.background': '#000000',
-              'editor.foreground': '#E1E4E8',
-              'editor.lineHighlightBackground': '#0A0A0A',
-              'editor.selectionBackground': '#264F78',
-              'editorCursor.foreground': '#FFFFFF',
-              'editorLineNumber.foreground': '#6A737D',
-              'editorGutter.background': '#000000',
+          require(['vs/editor/editor.main'], () => {
+            const monaco = (window as any).monaco
+            monacoRef.current = monaco
+            setIsMonacoLoaded(true)
+            
+            // Define custom theme
+            monaco.editor.defineTheme('kriya-dark', {
+              base: 'vs-dark',
+              inherit: true,
+              rules: [
+                { token: 'comment', foreground: '6A737D' },
+                { token: 'keyword', foreground: 'F97583' },
+                { token: 'string', foreground: '9ECBFF' },
+                { token: 'number', foreground: '79B8FF' },
+                { token: 'type', foreground: 'B392F0' },
+                { token: 'function', foreground: 'B392F0' },
+                { token: 'variable', foreground: 'E1E4E8' },
+              ],
+              colors: {
+                'editor.background': '#000000',
+                'editor.foreground': '#E1E4E8',
+                'editor.lineHighlightBackground': '#0A0A0A',
+                'editor.selectionBackground': '#264F78',
+                'editorCursor.foreground': '#FFFFFF',
+                'editorLineNumber.foreground': '#6A737D',
+                'editorGutter.background': '#000000',
+              }
+            })
+
+            if (currentTab) {
+              createEditor(monaco, currentTab)
             }
           })
-
-          if (currentTab) {
-            createEditor(monaco, currentTab)
-          }
-        })
+        }
+        script.onerror = () => {
+          console.error('Failed to load Monaco Editor')
+          setIsMonacoLoaded(false)
+        }
+        document.head.appendChild(script)
+      } catch (error) {
+        console.error('Error loading Monaco:', error)
+        setIsMonacoLoaded(false)
       }
     }
 
     const createEditor = (monaco: any, tab: any) => {
       const container = document.getElementById('editor-container')
-      if (!container) return
+      if (!container) {
+        console.error('Editor container not found')
+        return
+      }
 
       if (editorRef.current) {
         editorRef.current.dispose()
       }
 
-      const editor = monaco.editor.create(container, {
-        value: tab.content,
-        language: tab.language,
-        theme: 'kriya-dark',
-        fontSize,
-        tabSize,
-        minimap: { enabled: minimap },
-        scrollBeyondLastLine: false,
-        lineNumbers: 'on',
-        automaticLayout: true,
-        wordWrap: 'on',
-        scrollbar: {
-          vertical: 'visible',
-          horizontal: 'visible',
-          useShadows: false,
-        },
-      })
+      try {
+        const editor = monaco.editor.create(container, {
+          value: tab.content,
+          language: tab.language,
+          theme: 'kriya-dark',
+          fontSize: fontSize,
+          tabSize: tabSize,
+          minimap: { enabled: minimap },
+          scrollBeyondLastLine: false,
+          lineNumbers: 'on',
+          automaticLayout: true,
+          wordWrap: 'on',
+          scrollbar: {
+            vertical: 'visible',
+            horizontal: 'visible',
+            useShadows: false,
+          },
+          renderWhitespace: 'selection',
+          renderControlCharacters: true,
+          fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+          fontLigatures: true,
+          cursorBlinking: 'smooth',
+          cursorSmoothCaretAnimation: true,
+        })
 
-      // Manual save only - no auto content change
-      // editor.onDidChangeModelContent(() => {
-      //   clearTimeout(timeoutId)
-      //   timeoutId = setTimeout(() => {
-      //     const content = editor.getValue()
-      //     handleContentChange(content)
-      //   }, 300)
-      // })
+        // Enable content change tracking
+        editor.onDidChangeModelContent(() => {
+          clearTimeout(timeoutId)
+          timeoutId = setTimeout(() => {
+            const content = editor.getValue()
+            handleContentChange(content)
+          }, 300)
+        })
 
-      editorRef.current = editor
+        editorRef.current = editor
+        console.log('Monaco editor created successfully')
+      } catch (error) {
+        console.error('Error creating Monaco editor:', error)
+      }
     }
 
-    setTimeout(initEditor, 500)
+    loadMonaco()
     
     return () => {
       clearTimeout(timeoutId)
@@ -132,17 +174,70 @@ export default function MainEditor() {
         editorRef.current.dispose()
       }
     }
-  }, [currentTab?.id, fontSize, tabSize, minimap, activeTab, currentTab, handleContentChange, saveFile, updateTabContent])
+  }, [])
 
-  // Update editor content when tab changes
+  // Update editor when tab changes
   useEffect(() => {
-    if (editorRef.current && currentTab && monacoRef.current) {
+    if (editorRef.current && currentTab && monacoRef.current && isMonacoLoaded) {
       const currentValue = editorRef.current.getValue()
       if (currentValue !== currentTab.content) {
         editorRef.current.setValue(currentTab.content)
+        const model = editorRef.current.getModel()
+        if (model) {
+          monacoRef.current.editor.setModelLanguage(model, currentTab.language)
+        }
       }
+    } else if (isMonacoLoaded && currentTab && monacoRef.current) {
+      // Create editor if it doesn't exist but Monaco is loaded
+      const createEditor = (monaco: any, tab: any) => {
+        const container = document.getElementById('editor-container')
+        if (!container) return
+
+        if (editorRef.current) {
+          editorRef.current.dispose()
+        }
+
+        const editor = monaco.editor.create(container, {
+          value: tab.content,
+          language: tab.language,
+          theme: 'kriya-dark',
+          fontSize: fontSize,
+          tabSize: tabSize,
+          minimap: { enabled: minimap },
+          scrollBeyondLastLine: false,
+          lineNumbers: 'on',
+          automaticLayout: true,
+          wordWrap: 'on',
+          scrollbar: {
+            vertical: 'visible',
+            horizontal: 'visible',
+            useShadows: false,
+          },
+          renderWhitespace: 'selection',
+          renderControlCharacters: true,
+          fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+          fontLigatures: true,
+          cursorBlinking: 'smooth',
+          cursorSmoothCaretAnimation: true,
+        })
+
+        editor.onDidChangeModelContent(() => {
+          const content = editor.getValue()
+          handleContentChange(content)
+        })
+
+        editorRef.current = editor
+      }
+      createEditor(monacoRef.current, currentTab)
     }
-  }, [activeTab, currentTab])
+  }, [activeTab, currentTab, isMonacoLoaded, fontSize, tabSize, minimap])
+
+  // Update minimap setting
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions({ minimap: { enabled: minimap } })
+    }
+  }, [minimap])
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-black">
@@ -178,7 +273,25 @@ export default function MainEditor() {
       </div>
 
       {/* Monaco Editor Container */}
-      <div id="editor-container" className="flex-1 bg-black"></div>
+      <div id="editor-container" className="flex-1 bg-black relative">
+        {!isMonacoLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-zinc-400 text-sm">
+              <i className="ph ph-spinner animate-spin mr-2"></i>
+              Loading Monaco Editor...
+            </div>
+          </div>
+        )}
+        {isMonacoLoaded && !currentTab && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-zinc-500">
+              <i className="ph ph-file-text text-4xl mb-4 block"></i>
+              <div className="text-lg font-medium mb-2">No file open</div>
+              <div className="text-sm">Open a file from the sidebar to start editing</div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Status Bar */}
       <div className="h-6 border-t-line px-4 flex items-center justify-between text-[10px] mono bg-black shrink-0">
@@ -188,9 +301,15 @@ export default function MainEditor() {
             <span>main</span>
           </div>
           <div className="flex items-center gap-1">
-            <i className="ph ph-check-circle text-green-400"></i>
-            <span>Ready</span>
+            <i className={`ph ${isMonacoLoaded ? 'ph-check-circle text-green-400' : 'ph-spinner animate-spin text-yellow-400'}`}></i>
+            <span>{isMonacoLoaded ? 'Ready' : 'Loading...'}</span>
           </div>
+          {minimap && (
+            <div className="flex items-center gap-1">
+              <i className="ph ph-map text-blue-400"></i>
+              <span>Minimap</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <span>⌘S Save • ⌘K Commands • ⌃` Terminal • ⌘⇧F Search</span>

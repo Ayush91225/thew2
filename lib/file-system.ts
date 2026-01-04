@@ -29,9 +29,12 @@ export class FileSystemManager {
           this.projectRoot = this.fileHandle.name
           return await this.readDirectory(this.fileHandle)
         }
+      } else {
+        throw new Error('File System Access API not supported')
       }
     } catch (error) {
       console.error('Failed to open project:', error)
+      throw error
     }
     return null
   }

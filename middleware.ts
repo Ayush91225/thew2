@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Rate limiting simulation (in production, use Redis or similar)
-  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
   const rateLimitKey = `rate_limit_${ip}`
   
   // Authentication check for protected API routes

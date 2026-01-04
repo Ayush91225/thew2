@@ -12,7 +12,9 @@ export default function TopBar() {
     setEnvironment,
     activeTab,
     tabs,
-    updateTabContent
+    updateTabContent,
+    isRunning,
+    runCurrentFile
   } = useIDEStore()
   
   const [collaborationUsers, setCollaborationUsers] = useState<any[]>([])
@@ -270,6 +272,16 @@ export default function TopBar() {
         )}
 
         <div className="flex items-center gap-2">
+          {/* RUN BUTTON */}
+          <button 
+            onClick={runCurrentFile}
+            className="px-2 py-1 bg-white hover:bg-gray-100 text-black font-bold text-xs rounded transition-all duration-200 hover:scale-105"
+            title="Run current file"
+          >
+            <i className={`ph ${isRunning ? 'ph-spinner animate-spin' : 'ph-play'} mr-1`}></i>
+            {isRunning ? 'RUNNING' : 'RUN'}
+          </button>
+          
           <button className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center transition">
             <i className="ph ph-bell text-zinc-400 hover:text-white"></i>
           </button>

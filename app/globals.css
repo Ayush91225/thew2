@@ -210,3 +210,29 @@ body {
 .collaboration-cursor-3::after { background: #f59e0b; }
 .collaboration-cursor-4::after { background: #ef4444; }
 .collaboration-cursor-5::after { background: #8b5cf6; }
+
+/* Monaco minimap styling */
+.monaco-editor .minimap {
+  box-shadow: -8px 0 16px rgba(0, 0, 0, 0.4);
+}
+
+.monaco-editor .minimap-decorations-layer {
+  border-left: none !important;
+}
+
+/* Hide Monaco editor overview ruler */
+.monaco-editor .decorationsOverviewRuler {
+  display: none !important;
+}
+
+.monaco-editor .overview-ruler {
+  display: none !important;
+}
+
+.monaco-editor .minimap-shadow-visible {
+  display: none !important;
+}
+
+.monaco-editor .minimap-shadow-hidden {
+  display: none !important;
+}

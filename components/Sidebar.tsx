@@ -3,7 +3,6 @@
 import { useIDEStore } from '@/stores/ide-store'
 import { FileTreeManager, FileTreeNode } from '@/lib/file-tree'
 import { DebugPanel, ExtensionsPanel, DatabasePanel, APIPanel } from './SidebarPanels'
-import CollaborationToggle from './CollaborationToggle'
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 
@@ -47,6 +46,8 @@ export default function Sidebar() {
     uploadYamlFile,
     setYamlModal
   } = useIDEStore()
+  
+  const get = useIDEStore.getState
   
   const [creatingFile, setCreatingFile] = useState<{ parentId?: string; type: 'file' | 'folder' } | null>(null)
   const [newItemName, setNewItemName] = useState('')
@@ -494,9 +495,8 @@ A modern, enterprise-level IDE built with Next.js and React.
         ></i>
         
         <div className="mt-auto flex flex-col gap-5 items-center">
-          <CollaborationToggle />
           <i 
-            onClick={() => setView('settings')} 
+            onClick={() => setView(view === 'settings' ? get().previousView : 'settings')} 
             className={`ph-fill ph-gear-six text-lg cursor-pointer transition ${
               view === 'settings' ? 'icon-active' : 'text-zinc-700 hover:text-white'
             }`}
@@ -571,6 +571,104 @@ A modern, enterprise-level IDE built with Next.js and React.
           {activePanel === 'extensions' && <ExtensionsPanel />}
           {activePanel === 'database' && <DatabasePanel />}
           {activePanel === 'api' && <APIPanel />}
+          {activePanel === 'yaml' && (
+            <div className="flex flex-col h-full">
+              <div className="h-11 px-4 flex items-center justify-between shrink-0 border-b border-zinc-800/50">
+                <span className="text-white text-sm font-medium">YAML Files</span>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={createNewYamlFile}
+                    className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-800 transition-colors group"
+                    title="New YAML File"
+                  >
+                    <i className="ph ph-file-plus text-zinc-400 group-hover:text-blue-400 text-sm transition-colors"></i>
+                  </button>
+                  <label className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-800 transition-colors group cursor-pointer" title="Upload YAML File">
+                    <i className="ph ph-upload text-zinc-400 group-hover:text-green-400 text-sm transition-colors"></i>
+                    <input type="file" accept=".yml,.yaml" onChange={handleFileUpload} className="hidden" />
+                  </label>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                {yamlFiles.length === 0 ? (
+                  <div className="text-center text-zinc-500 text-sm py-8">
+                    <i className="ph ph-file-text text-2xl mb-2 block"></i>
+                    No YAML files
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {yamlFiles.map((yamlFile) => (
+                      <div
+                        key={yamlFile.id}
+                        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition group ${
+                          activeYamlFile === yamlFile.id ? 'bg-blue-600/20 text-white' : 'text-zinc-300 hover:bg-zinc-800/50'
+                        }`}
+                      >
+                        <div onClick={() => openYamlFile(yamlFile)} className="flex items-center gap-2 flex-1">
+                          <i className="ph ph-file-text text-sm"></i>
+                          <span className="text-xs truncate flex-1">{yamlFile.name}</span>
+                          {yamlFile.isRunning && (
+                            <i className="ph ph-spinner text-xs animate-spin text-blue-400"></i>
+                          )}
+                          {yamlFile.runStatus === 'success' && (
+                            <i className="ph ph-check-circle text-xs text-green-400"></i>
+                          )}
+                          {yamlFile.runStatus === 'error' && (
+                            <i className="ph ph-x-circle text-xs text-red-400"></i>
+                          )}
+                          {!yamlFile.isValid && (
+                            <i className="ph ph-warning text-xs text-yellow-400"></i>
+                          )}
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              validateYaml(yamlFile.id)
+                            }}
+                            className="p-1 text-zinc-400 hover:text-blue-400 transition rounded"
+                            title="Validate"
+                          >
+                            <i className="ph ph-check-circle text-xs"></i>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              runYaml(yamlFile.id)
+                            }}
+                            className="p-1 text-zinc-400 hover:text-green-400 transition rounded"
+                            title="Run"
+                            disabled={yamlFile.isRunning}
+                          >
+                            <i className={`ph ${yamlFile.isRunning ? 'ph-spinner animate-spin' : 'ph-play'} text-xs`}></i>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteYamlFile(yamlFile.id)
+                            }}
+                            className="p-1 text-zinc-400 hover:text-red-400 transition rounded"
+                            title="Delete"
+                          >
+                            <i className="ph ph-trash text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-4 pt-4 border-t border-zinc-800">
+                  <button
+                    onClick={() => setYamlModal(true)}
+                    className="w-full p-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded transition flex items-center justify-center gap-2"
+                  >
+                    <i className="ph ph-code"></i>
+                    Open YAML Editor
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </aside>
       )}
       

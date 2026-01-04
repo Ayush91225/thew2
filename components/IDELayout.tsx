@@ -10,6 +10,8 @@ import FileTabs from '@/components/FileTabs'
 import CodeEditor from '@/components/CodeEditor'
 import CollaborationManager from '@/components/CollaborationManager'
 import CollaborationStatus from '@/components/CollaborationStatus'
+import SettingsView from '@/components/SettingsView'
+import SettingsModal from '@/components/SettingsModal'
 import { Sparkle, Terminal, Gear, FileText } from 'phosphor-react'
 
 export default function IDELayout() {
@@ -19,7 +21,12 @@ export default function IDELayout() {
     setCommandPalette, 
     setAIModal,
     setYamlModal,
-    setSettingsModal 
+    setSettingsModal,
+    view,
+    isRunning,
+    runCurrentFile,
+    activeTab,
+    tabs
   } = useIDEStore()
 
   // Global hotkeys
@@ -46,7 +53,7 @@ export default function IDELayout() {
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setAIModal(true)}
             className="p-1 hover-item rounded text-zinc-500 hover:text-white"
@@ -61,6 +68,23 @@ export default function IDELayout() {
           >
             <FileText size={14} />
           </button>
+          
+          {/* RUN BUTTON - HIGHLY VISIBLE */}
+          <button
+            onClick={runCurrentFile}
+            className="px-6 py-2 bg-green-500 hover:bg-green-600 text-black font-black text-xs uppercase tracking-wider rounded-md shadow-lg border-2 border-green-300"
+            title="Run current file"
+            style={{ 
+              minWidth: '80px',
+              fontSize: '11px',
+              fontWeight: '900',
+              zIndex: 9999,
+              position: 'relative'
+            }}
+          >
+            ▶ RUN
+          </button>
+          
           <button
             onClick={() => setSettingsModal(true)}
             className="p-1 hover-item rounded text-zinc-500 hover:text-white"
@@ -75,10 +99,14 @@ export default function IDELayout() {
       <div className="flex-1 flex">
         <Sidebar />
         
-        <div className="flex-1 flex flex-col">
-          <FileTabs />
-          <CodeEditor />
-        </div>
+        {view === 'settings' ? (
+          <SettingsView />
+        ) : (
+          <div className="flex-1 flex flex-col">
+            <FileTabs />
+            <CodeEditor />
+          </div>
+        )}
       </div>
 
       {/* Status Bar */}
@@ -103,6 +131,7 @@ export default function IDELayout() {
       <CommandPalette />
       <AIAssistant />
       <YamlEditor />
+      <SettingsModal />
       
       {/* Collaboration Manager */}
       <CollaborationManager />
