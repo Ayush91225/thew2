@@ -35,7 +35,7 @@ export default function FileTabs() {
             key={tab.id}
             className={`
               flex items-center gap-2 px-4 py-3 border-r-line cursor-pointer group
-              transition-all duration-200 min-w-0 max-w-48
+              transition-all duration-200 min-w-0 max-w-48 h-11
               ${activeTab === tab.id 
                 ? 'tab-active' 
                 : 'hover:bg-white/5 text-zinc-400'

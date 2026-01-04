@@ -158,7 +158,7 @@ const EDITOR_OPTIONS: editor.IStandaloneEditorConstructionOptions = {
   overviewRulerLanes: 0,
   readOnly: false,
   renameOnType: false,
-  rulers: [80, 120],
+  rulers: [],
   scrollbar: {
     vertical: 'auto',
     horizontal: 'auto',
@@ -614,13 +614,33 @@ export default function CodeEditor(): JSX.Element {
   }
 
   return (
-    <div className="flex-1 h-full">
-      <Editor
-        height="100%"
-        language={currentTab.language}
-        onMount={handleEditorDidMount}
-        options={EDITOR_OPTIONS}
-      />
+    <div className="flex-1 h-full flex flex-col">
+      {/* Breadcrumb Path */}
+      <div className="h-9 px-4 flex items-center bg-zinc-950/80 border-b border-zinc-800/50 text-xs">
+        <div className="flex items-center gap-1.5 text-zinc-400">
+          <i className="ph ph-folder-simple text-zinc-500"></i>
+          {currentTab.path.split('/').filter(Boolean).map((segment, index, array) => (
+            <div key={index} className="flex items-center gap-1.5">
+              <span className={index === array.length - 1 ? 'text-zinc-200 font-medium' : 'text-zinc-400 hover:text-zinc-300 cursor-pointer'}>
+                {segment}
+              </span>
+              {index < array.length - 1 && (
+                <i className="ph ph-caret-right text-zinc-600 text-xs"></i>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Monaco Editor */}
+      <div className="flex-1">
+        <Editor
+          height="100%"
+          language={currentTab.language}
+          onMount={handleEditorDidMount}
+          options={EDITOR_OPTIONS}
+        />
+      </div>
     </div>
   )
 }

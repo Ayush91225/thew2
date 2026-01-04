@@ -890,14 +890,30 @@ context:
           setGlobalSearch: (open) => set({ globalSearch: open }),
           setGlobalSearchQuery: (query) => set({ globalSearchQuery: query }),
           setTerminalOpen: (open) => set({ terminalOpen: open }),
-          setView: (view) => set((state) => ({ 
-            previousView: state.view !== 'settings' ? state.view : state.previousView,
-            view 
-          })),
+          setView: (view) => {
+            set((state) => {
+              const newState = { 
+                previousView: state.view !== 'settings' ? state.view : state.previousView,
+                view 
+              }
+              // Update URL when view changes
+              setTimeout(() => get().saveToURL(), 0)
+              return newState
+            })
+          },
           setCollab: (collab) => set({ collab }),
           setEnvironment: (environment) => set({ environment }),
-          setActivePanel: (panel) => set({ activePanel: panel }),
-          setActiveTab: (tabId) => set({ activeTab: tabId }),
+          setActivePanel: (panel) => {
+            set({ activePanel: panel })
+            // Update URL when panel changes
+            setTimeout(() => get().saveToURL(), 0)
+          },
+          setActiveTab: (tabId) => {
+            set({ activeTab: tabId })
+            // Update URL when tab changes
+            const { saveToURL } = get()
+            saveToURL()
+          },
           
           runCurrentFile: () => {
             const state = get()
@@ -938,37 +954,63 @@ context:
             }
           },
           
-          addTab: (file) => set((state) => {
-            const existingTab = state.tabs.find(tab => tab.path === file.path)
-            if (existingTab) {
-              return { activeTab: existingTab.id }
-            }
-            return {
-              tabs: [...state.tabs, file],
-              activeTab: file.id
-            }
-          }),
+          addTab: (file) => {
+            set((state) => {
+              const existingTab = state.tabs.find(tab => tab.path === file.path)
+              if (existingTab) {
+                // Update URL when switching to existing tab
+                setTimeout(() => get().saveToURL(), 0)
+                return { activeTab: existingTab.id }
+              }
+              // Update URL when adding new tab
+              setTimeout(() => get().saveToURL(), 0)
+              return {
+                tabs: [...state.tabs, file],
+                activeTab: file.id
+              }
+            })
+          },
           
-          closeTab: (tabId) => set((state) => {
-            const newTabs = state.tabs.filter(tab => tab.id !== tabId)
-            let newActiveTab = state.activeTab
-            
-            if (state.activeTab === tabId && newTabs.length > 0) {
-              newActiveTab = newTabs[0].id
-            } else if (newTabs.length === 0) {
-              newActiveTab = null
-            }
-            
-            return { tabs: newTabs, activeTab: newActiveTab }
-          }),
+          closeTab: (tabId) => {
+            set((state) => {
+              const newTabs = state.tabs.filter(tab => tab.id !== tabId)
+              let newActiveTab = state.activeTab
+              
+              if (state.activeTab === tabId && newTabs.length > 0) {
+                // Find the index of the closed tab to select the next appropriate tab
+                const closedTabIndex = state.tabs.findIndex(tab => tab.id === tabId)
+                const nextIndex = Math.min(closedTabIndex, newTabs.length - 1)
+                newActiveTab = newTabs[nextIndex].id
+              } else if (newTabs.length === 0) {
+                newActiveTab = null
+              }
+              
+              // Update URL after tab change
+              setTimeout(() => get().saveToURL(), 0)
+              
+              return { tabs: newTabs, activeTab: newActiveTab }
+            })
+          },
           
-          updateTabContent: (tabId, content) => set((state) => ({
-            tabs: state.tabs.map(tab => 
-              tab.id === tabId 
-                ? { ...tab, content, isDirty: true }
-                : tab
-            )
-          })),
+          updateTabContent: (tabId, content) => {
+            set((state) => {
+              const updatedTabs = state.tabs.map(tab => 
+                tab.id === tabId 
+                  ? { ...tab, content, isDirty: tab.content !== content }
+                  : tab
+              )
+              
+              // Auto-save if enabled
+              if (state.autoSave) {
+                setTimeout(() => {
+                  const { saveFile } = get()
+                  saveFile(tabId)
+                }, 1000) // Auto-save after 1 second of inactivity
+              }
+              
+              return { tabs: updatedTabs }
+            })
+          },
           
           // Terminal Actions
           addTerminalTab: (tab) => set((state) => ({
@@ -1168,13 +1210,24 @@ context:
           setMinimap: (enabled) => set({ minimap: enabled }),
           setAutoSave: (enabled) => set({ autoSave: enabled }),
           
-          saveFile: (tabId) => set((state) => ({
-            tabs: state.tabs.map(tab => 
-              tab.id === tabId 
-                ? { ...tab, isDirty: false }
-                : tab
-            )
-          })),
+          saveFile: (tabId) => {
+            set((state) => {
+              const updatedTabs = state.tabs.map(tab => 
+                tab.id === tabId 
+                  ? { ...tab, isDirty: false }
+                  : tab
+              )
+              
+              // Add to recent files
+              const savedTab = state.tabs.find(tab => tab.id === tabId)
+              if (savedTab) {
+                const recentFiles = [savedTab.path, ...state.recentFiles.filter(path => path !== savedTab.path)].slice(0, 10)
+                return { tabs: updatedTabs, recentFiles }
+              }
+              
+              return { tabs: updatedTabs }
+            })
+          },
           
           // Project Actions
           setProjectRoot: (path) => set({ projectRoot: path }),
@@ -1734,35 +1787,77 @@ context:
           // Persistence
           loadFromURL: () => {
             if (typeof window === 'undefined') return
-            const params = new URLSearchParams(window.location.search)
-            const state = get()
             
-            const view = params.get('view')
-            const panel = params.get('panel')
-            const tab = params.get('tab')
-            const search = params.get('search')
-            const terminal = params.get('terminal')
-            
-            if (view && view !== state.view) set({ view })
-            if (panel && panel !== state.activePanel) set({ activePanel: panel })
-            if (tab && tab !== state.activeTab) set({ activeTab: tab })
-            if (search) set({ globalSearchQuery: search, globalSearch: true })
-            if (terminal === 'true') set({ terminalOpen: true })
+            try {
+              const params = new URLSearchParams(window.location.search)
+              const state = get()
+              
+              const view = params.get('view')
+              const panel = params.get('panel')
+              const tab = params.get('tab')
+              const search = params.get('search')
+              const terminal = params.get('terminal')
+              
+              // Validate and apply URL parameters
+              if (view && ['workspace', 'settings', 'preview'].includes(view) && view !== state.view) {
+                set({ view })
+              }
+              
+              if (panel && ['files', 'search', 'git', 'debug', 'extensions', 'docker', 'database', 'api', 'yaml'].includes(panel) && panel !== state.activePanel) {
+                set({ activePanel: panel })
+              }
+              
+              if (tab && state.tabs.find(t => t.id === tab) && tab !== state.activeTab) {
+                set({ activeTab: tab })
+              }
+              
+              if (search && search.length <= 100) { // Prevent excessively long search queries
+                set({ globalSearchQuery: search, globalSearch: true })
+              }
+              
+              if (terminal === 'true') {
+                set({ terminalOpen: true })
+              }
+            } catch (error) {
+              console.warn('Failed to load state from URL:', error)
+            }
           },
           
           saveToURL: () => {
             if (typeof window === 'undefined') return
-            const state = get()
-            const params = new URLSearchParams()
             
-            if (state.view !== 'workspace') params.set('view', state.view)
-            if (state.activePanel !== 'files') params.set('panel', state.activePanel)
-            if (state.activeTab) params.set('tab', state.activeTab)
-            if (state.globalSearchQuery) params.set('search', state.globalSearchQuery)
-            if (state.terminalOpen) params.set('terminal', 'true')
-            
-            const newURL = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname
-            window.history.replaceState({}, '', newURL)
+            try {
+              const state = get()
+              const params = new URLSearchParams()
+              
+              if (state.view && state.view !== 'workspace') {
+                params.set('view', state.view)
+              }
+              
+              if (state.activePanel && state.activePanel !== 'files') {
+                params.set('panel', state.activePanel)
+              }
+              
+              if (state.activeTab) {
+                params.set('tab', state.activeTab)
+              }
+              
+              if (state.globalSearchQuery && state.globalSearchQuery.trim()) {
+                params.set('search', state.globalSearchQuery.trim())
+              }
+              
+              if (state.terminalOpen) {
+                params.set('terminal', 'true')
+              }
+              
+              const newURL = params.toString() 
+                ? `${window.location.pathname}?${params.toString()}` 
+                : window.location.pathname
+                
+              window.history.replaceState({}, '', newURL)
+            } catch (error) {
+              console.warn('Failed to save state to URL:', error)
+            }
           },
           
           restoreLastSession: () => {
