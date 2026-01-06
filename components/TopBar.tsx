@@ -86,6 +86,8 @@ export default function TopBar() {
   }, [])
 
   const toggleCollaboration = async () => {
+    console.log('🔄 toggleCollaboration called, activeTab:', activeTab, 'collab:', collab)
+    
     if (!activeTab) {
       console.warn('No active tab for collaboration')
       return
@@ -97,34 +99,18 @@ export default function TopBar() {
     console.log(`🔄 Toggling to ${newMode} mode for tab:`, activeTab)
     
     try {
-      if (newMode === 'live') {
-        // Check if WebSocket is connected
-        const status = collaborationService.getConnectionStatus()
-        if (status !== 'connected') {
-          console.log('WebSocket not connected, current status:', status)
-          setConnectionStatus('connecting')
-          // Wait a bit for connection
-          await new Promise(resolve => setTimeout(resolve, 2000))
-        }
-      }
+      // Join document in the new mode - use a FIXED shared document ID for all users
+      const sharedDocumentId = 'shared-document' // Fixed ID so all users join the same document
+      console.log('🎯 About to call joinDocument with:', sharedDocumentId, newMode)
       
-      // Join document in the new mode - use a shared document ID for all users
-      const sharedDocumentId = currentTab ? `shared-${currentTab.name}` : 'shared-document'
-      collaborationService.joinDocument(sharedDocumentId, newMode)
+      const result = collaborationService.joinDocument(sharedDocumentId, newMode)
+      console.log('📋 joinDocument result:', result)
+      
       setCollab(!collab)
       
       if (newMode === 'solo') {
         setCollaborationUsers([])
         setConnectionStatus('disconnected')
-      } else {
-        // Add a mock collaborator for demo after a delay
-        setTimeout(() => {
-          setCollaborationUsers([{
-            id: 'demo-collaborator',
-            name: '192.168.1.100',
-            avatar: 'https://api.dicebear.com/9.x/glass/svg?seed=192.168.1.100'
-          }])
-        }, 2000)
       }
     } catch (error) {
       console.error('Failed to toggle collaboration:', error)
@@ -227,7 +213,7 @@ export default function TopBar() {
               {/* Other collaborators */}
               {collaborationUsers.slice(0, 3).map((user, index) => (
                 <div
-                  key={user.id}
+                  key={`${user.id}-${index}`}
                   className="w-6 h-6 rounded-full border-2 border-black bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center text-xs font-bold text-white"
                   title={`Collaborator: ${user.name}`}
                   style={{ zIndex: collaborationUsers.length - index }}

@@ -31,7 +31,8 @@ const EDITOR_CONFIG = {
   LINE_HEIGHT: 1.6,
   TAB_SIZE: 2,
   WORD_WRAP_COLUMN: 120,
-  OPERATION_DELAY: 100
+  OPERATION_DELAY: 100,
+  MAX_DELETE_LENGTH: 10000 // Maximum characters that can be deleted in one operation
 } as const
 
 const COLLABORATION_EVENTS = {
@@ -45,11 +46,31 @@ const OPERATION_TYPES = {
   DELETE: 'delete'
 } as const
 
-// Completely secure logger - no user input to prevent CWE-117
+// Secure logger with no user input to prevent CWE-117
 const logger = {
-  info: (): void => {},
-  warn: (): void => {},
-  error: (): void => {}
+  info: (message: string): void => {
+    console.info(`[CodeEditor] ${message}`)
+  },
+  warn: (message: string): void => {
+    console.warn(`[CodeEditor] ${message}`)
+  },
+  error: (message: string): void => {
+    console.error(`[CodeEditor] ${message}`)
+  }
+}
+
+// Helper function to sanitize content for XSS prevention
+const sanitizeForXSS = (content: string): string => {
+  return content.replace(/[<>"'&]/g, (match) => {
+    const entities: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#x27;',
+      '&': '&amp;'
+    }
+    return entities[match] || match
+  })
 }
 
 // Editor options extracted to prevent recreation
@@ -200,6 +221,7 @@ export default function CodeEditor(): JSX.Element {
   const currentTabRef = useRef<string | null>(null)
   const collaborationCursors = useRef<Map<string, editor.IEditorDecorationsCollection>>(new Map())
   const monacoInitialized = useRef<boolean>(false)
+  const timeoutRefs = useRef<{ change: NodeJS.Timeout | null; cursor: NodeJS.Timeout | null }>({ change: null, cursor: null })
 
   const currentTab = useMemo(() => tabs.find(tab => tab.id === activeTab), [tabs, activeTab])
 
@@ -212,10 +234,14 @@ export default function CodeEditor(): JSX.Element {
   // Apply remote operations with proper error handling
   const applyRemoteOperation = useCallback((operation: TextOperation): void => {
     const editor = editorRef.current
-    if (!editor) return
+    if (!editor) {
+      return
+    }
     
     const model = editor.getModel()
-    if (!model) return
+    if (!model) {
+      return
+    }
 
     try {
       // Set flag to prevent sending this change back
@@ -223,61 +249,154 @@ export default function CodeEditor(): JSX.Element {
         editor._setApplyingRemoteOperation!(true)
       }
       
-      // Apply the operation based on type
+      // Validate and sanitize operation data
+      if (!operation.type || !['insert', 'delete', 'replace'].includes(operation.type)) {
+        return
+      }
+      
+      // Apply operation with precise positioning
       if (operation.type === OPERATION_TYPES.INSERT && operation.content) {
-        const position = model.getPositionAt(operation.position)
-        const range = {
-          startLineNumber: position.lineNumber,
-          startColumn: position.column,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column
+        // Sanitize content to prevent XSS
+        const sanitizedContent = sanitizeForXSS(operation.content)
+        
+        let range
+        if (operation.range) {
+          // Validate range bounds
+          const lineCount = model.getLineCount()
+          const startLine = Math.max(1, Math.min(operation.range.startLine, lineCount))
+          const endLine = Math.max(1, Math.min(operation.range.endLine, lineCount))
+          const startColumn = Math.max(1, operation.range.startColumn)
+          const endColumn = Math.max(1, operation.range.endColumn)
+          
+          range = {
+            startLineNumber: startLine,
+            startColumn: startColumn,
+            endLineNumber: endLine,
+            endColumn: endColumn
+          }
+        } else {
+          // Fallback to position-based calculation with bounds checking
+          const maxOffset = model.getValueLength()
+          const safePosition = Math.max(0, Math.min(operation.position, maxOffset))
+          const position = model.getPositionAt(safePosition)
+          range = {
+            startLineNumber: position.lineNumber,
+            startColumn: position.column,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column
+          }
         }
-        const editOperation = { range, text: operation.content }
+        
+        const editOperation = { range, text: sanitizedContent }
         model.pushEditOperations([], [editOperation], () => null)
-      } else if (operation.type === OPERATION_TYPES.DELETE && typeof operation.length === 'number') {
-        const startPos = model.getPositionAt(operation.position)
-        const endPos = model.getPositionAt(operation.position + operation.length)
-        const range = {
-          startLineNumber: startPos.lineNumber,
-          startColumn: startPos.column,
-          endLineNumber: endPos.lineNumber,
-          endColumn: endPos.column
+        
+      } else if (operation.type === 'replace' && operation.content) {
+        // Handle replace operation for document sync
+        const currentContent = model.getValue()
+        if (currentContent !== operation.content) {
+          model.setValue(operation.content)
         }
+        
+      } else if (operation.type === OPERATION_TYPES.DELETE && typeof operation.length === 'number') {
+        // Validate delete length
+        const safeLength = Math.max(0, Math.min(operation.length, EDITOR_CONFIG.MAX_DELETE_LENGTH))
+        
+        let range
+        if (operation.range) {
+          // Validate range bounds
+          const lineCount = model.getLineCount()
+          const startLine = Math.max(1, Math.min(operation.range.startLine, lineCount))
+          const endLine = Math.max(1, Math.min(operation.range.endLine, lineCount))
+          const startColumn = Math.max(1, operation.range.startColumn)
+          const endColumn = Math.max(1, operation.range.endColumn)
+          
+          range = {
+            startLineNumber: startLine,
+            startColumn: startColumn,
+            endLineNumber: endLine,
+            endColumn: endColumn
+          }
+        } else {
+          // Fallback to position-based calculation with bounds checking
+          const maxOffset = model.getValueLength()
+          const safePosition = Math.max(0, Math.min(operation.position, maxOffset))
+          const safeEndPosition = Math.max(0, Math.min(operation.position + safeLength, maxOffset))
+          const startPos = model.getPositionAt(safePosition)
+          const endPos = model.getPositionAt(safeEndPosition)
+          range = {
+            startLineNumber: startPos.lineNumber,
+            startColumn: startPos.column,
+            endLineNumber: endPos.lineNumber,
+            endColumn: endPos.column
+          }
+        }
+        
         const editOperation = { range, text: '' }
         model.pushEditOperations([], [editOperation], () => null)
       }
       
-      // Update the tab content immediately after applying remote operation
+      // Update tab content after remote operation
       const currentActiveTab = useIDEStore.getState().activeTab
       const currentTabs = useIDEStore.getState().tabs
       const activeTabData = currentTabs.find(tab => tab.id === currentActiveTab)
       
       if (activeTabData) {
         const newContent = model.getValue()
-        useIDEStore.getState().updateTabContent(activeTabData.id, newContent)
+        
+        // Use direct state update to avoid triggering collaboration sync
+        useIDEStore.setState((state) => ({
+          tabs: state.tabs.map(tab => 
+            tab.id === activeTabData.id 
+              ? { ...tab, content: newContent, isDirty: false }
+              : tab
+          )
+        }))
       }
       
-      // Reset flag after a short delay
-      setTimeout(() => {
-        if (hasCollaborationMethods(editor)) {
-          editor._setApplyingRemoteOperation!(false)
-        }
-      }, EDITOR_CONFIG.OPERATION_DELAY)
     } catch (error) {
-      // Reset flag on error
-      if (hasCollaborationMethods(editor)) {
-        editor._setApplyingRemoteOperation!(false)
-      }
+      // Silent error handling
+    } finally {
+      // Reset flag after operation with proper error handling
+      setTimeout(() => {
+        try {
+          if (hasCollaborationMethods(editor)) {
+            editor._setApplyingRemoteOperation!(false)
+          }
+        } catch (error) {
+          // Silent error handling
+        }
+      }, 100)
     }
   }, [hasCollaborationMethods])
 
-  // Update remote cursor with proper type safety
+  // Update remote cursor with proper type safety and validation
   const updateRemoteCursor = useCallback((userId: string, cursor: CursorPosition): void => {
     const editor = editorRef.current
-    if (!editor) return
+    if (!editor) {
+      logger.warn('Editor not available for cursor update')
+      return
+    }
     
     try {
-      const existingDecoration = collaborationCursors.current.get(userId)
+      // Validate cursor position
+      if (typeof cursor.line !== 'number' || typeof cursor.column !== 'number') {
+        logger.warn('Invalid cursor position data')
+        return
+      }
+      
+      // Sanitize userId to prevent XSS
+      const sanitizedUserId = sanitizeForXSS(userId)
+      
+      // Validate cursor bounds
+      const model = editor.getModel()
+      if (!model) return
+      
+      const lineCount = model.getLineCount()
+      const safeLine = Math.max(1, Math.min(cursor.line, lineCount))
+      const lineLength = model.getLineLength(safeLine)
+      const safeColumn = Math.max(1, Math.min(cursor.column, lineLength + 1))
+      
+      const existingDecoration = collaborationCursors.current.get(sanitizedUserId)
       
       if (existingDecoration) {
         existingDecoration.clear()
@@ -286,21 +405,21 @@ export default function CodeEditor(): JSX.Element {
       const decorations = editor.createDecorationsCollection([
         {
           range: {
-            startLineNumber: cursor.line,
-            startColumn: cursor.column,
-            endLineNumber: cursor.line,
-            endColumn: cursor.column
+            startLineNumber: safeLine,
+            startColumn: safeColumn,
+            endLineNumber: safeLine,
+            endColumn: safeColumn
           },
           options: {
-            className: `collaboration-cursor-${userId}`,
-            hoverMessage: { value: `User ${userId}` }
+            className: `collaboration-cursor-${sanitizedUserId.replace(/[^a-zA-Z0-9-_]/g, '')}`,
+            hoverMessage: { value: `User ${sanitizedUserId}` }
           }
         }
       ])
       
-      collaborationCursors.current.set(userId, decorations)
+      collaborationCursors.current.set(sanitizedUserId, decorations)
     } catch (error) {
-      // Silent error handling
+      logger.error('Failed to update remote cursor')
     }
   }, [])
 
@@ -385,64 +504,26 @@ export default function CodeEditor(): JSX.Element {
             allowJs: true,
             typeRoots: ['node_modules/@types']
           })
-        }).catch(() => {
-          // Silent error handling
+        }).catch((error) => {
+          logger.error('Failed to initialize Monaco theme')
         })
-      }).catch(() => {
-        // Silent error handling
+      }).catch((error) => {
+        logger.error('Failed to load Monaco editor')
       })
     }
   }, [])
 
-  // Collaboration setup with proper cleanup
+  // Cleanup timeouts on unmount
   useEffect(() => {
-    if (!editorRef.current || !activeTab || !collab) return
-    
-    // Set up real-time collaboration event listeners
-    const handleOperation = (data: unknown): void => {
-      if (!data || typeof data !== 'object') return
-
-      const operationData = data as Record<string, unknown>
-      
-      // Handle different data formats from the backend
-      if (operationData.type && 
-          (operationData.type === OPERATION_TYPES.INSERT || operationData.type === OPERATION_TYPES.DELETE)) {
-        applyRemoteOperation(operationData as unknown as TextOperation)
-      } else if (operationData.operation && typeof operationData.operation === 'object') {
-        applyRemoteOperation(operationData.operation as unknown as TextOperation)
-      } else if (operationData.data && 
-                 typeof operationData.data === 'object' && 
-                 (operationData.data as Record<string, unknown>).operation) {
-        const nestedData = operationData.data as Record<string, unknown>
-        applyRemoteOperation(nestedData.operation as unknown as TextOperation)
-      }
-    }
-
-    const handleCursorUpdate = (data: unknown): void => {
-      if (!data || typeof data !== 'object') return
-
-      const cursorData = data as CollaborationCursor
-      if (cursorData.userId && cursorData.cursor) {
-        updateRemoteCursor(cursorData.userId, cursorData.cursor)
-      }
-    }
-
-    const handleOperationConfirmed = (): void => {
-      // Operation confirmed
-    }
-
-    // Add event listeners
-    collaborationService.on(COLLABORATION_EVENTS.OPERATION, handleOperation)
-    collaborationService.on(COLLABORATION_EVENTS.CURSOR_UPDATE, handleCursorUpdate)
-    collaborationService.on(COLLABORATION_EVENTS.OPERATION_CONFIRMED, handleOperationConfirmed)
-
-    // Cleanup function
     return () => {
-      collaborationService.off(COLLABORATION_EVENTS.OPERATION, handleOperation)
-      collaborationService.off(COLLABORATION_EVENTS.CURSOR_UPDATE, handleCursorUpdate)
-      collaborationService.off(COLLABORATION_EVENTS.OPERATION_CONFIRMED, handleOperationConfirmed)
+      if (timeoutRefs.current.change) {
+        clearTimeout(timeoutRefs.current.change)
+      }
+      if (timeoutRefs.current.cursor) {
+        clearTimeout(timeoutRefs.current.cursor)
+      }
     }
-  }, [collab, activeTab, applyRemoteOperation, updateRemoteCursor])
+  }, [])
 
   // Handle tab switching
   useEffect(() => {
@@ -519,6 +600,63 @@ export default function CodeEditor(): JSX.Element {
 
     monaco.editor.setTheme(EDITOR_CONFIG.THEME)
 
+    // Set up collaboration listeners after editor is ready
+    logger.info('Setting up collaboration listeners after editor mount')
+    
+    // Set up real-time collaboration event listeners with validation
+    const handleOperation = (data: unknown): void => {
+      if (!data || typeof data !== 'object') {
+        return
+      }
+
+      const operationData = data as Record<string, unknown>
+      
+      // Validate operation data structure
+      const isValidOperation = (op: unknown): op is TextOperation => {
+        if (!op || typeof op !== 'object') return false
+        const operation = op as Record<string, unknown>
+        return typeof operation.type === 'string' && 
+               ['insert', 'delete', 'replace'].includes(operation.type) &&
+               (typeof operation.position === 'number' || operation.type === 'replace')
+      }
+      
+      // Handle different data formats from the backend
+      if (isValidOperation(operationData)) {
+        applyRemoteOperation(operationData as TextOperation)
+      } else if (operationData.operation && isValidOperation(operationData.operation)) {
+        applyRemoteOperation(operationData.operation as TextOperation)
+      } else if (operationData.data && 
+                 typeof operationData.data === 'object' && 
+                 (operationData.data as Record<string, unknown>).operation &&
+                 isValidOperation((operationData.data as Record<string, unknown>).operation)) {
+        const nestedData = operationData.data as Record<string, unknown>
+        applyRemoteOperation(nestedData.operation as TextOperation)
+      }
+    }
+
+    const handleCursorUpdate = (data: unknown): void => {
+      if (!data || typeof data !== 'object') {
+        return
+      }
+
+      const cursorData = data as CollaborationCursor
+      if (cursorData.userId && cursorData.cursor && 
+          typeof cursorData.userId === 'string' &&
+          typeof cursorData.cursor === 'object' &&
+          typeof cursorData.cursor.line === 'number' &&
+          typeof cursorData.cursor.column === 'number') {
+        updateRemoteCursor(cursorData.userId, cursorData.cursor)
+      }
+    }
+
+    const handleOperationConfirmed = (): void => {
+      // Operation confirmed
+    }
+
+    collaborationService.on(COLLABORATION_EVENTS.OPERATION, handleOperation)
+    collaborationService.on(COLLABORATION_EVENTS.CURSOR_UPDATE, handleCursorUpdate)
+    collaborationService.on(COLLABORATION_EVENTS.OPERATION_CONFIRMED, handleOperationConfirmed)
+
     // Set up editor event listeners for collaboration
     let isApplyingRemoteOperation = false
     
@@ -528,38 +666,65 @@ export default function CodeEditor(): JSX.Element {
       isApplyingRemoteOperation = value 
     }
     
-    // Track content changes for collaboration
+    // Track content changes for real-time collaboration with throttling
     editor.onDidChangeModelContent((e) => {
       try {
-        // Get current collaboration state from store
         const currentCollabState = useIDEStore.getState().collab
         const currentActiveTab = useIDEStore.getState().activeTab
         const currentTabs = useIDEStore.getState().tabs
         const activeTabData = currentTabs.find(tab => tab.id === currentActiveTab)
         
+        // Only send operations if this is a local change (not from remote)
         if (currentCollabState && !isApplyingRemoteOperation && e.changes.length > 0) {
-          const change = e.changes[0]
-          const operation: TextOperation = {
-            type: change.text ? OPERATION_TYPES.INSERT : OPERATION_TYPES.DELETE,
-            position: change.rangeOffset,
-            content: change.text,
-            length: change.rangeLength
+          // Ensure document is joined before sending operations
+          if (!collaborationService.getCurrentDocumentId()) {
+            collaborationService.joinDocument('shared-document', 'live')
           }
-          // Send operation for collaboration
-          collaborationService.sendOperation(operation)
+          
+          // Clear previous timeout
+          if (timeoutRefs.current.change) {
+            clearTimeout(timeoutRefs.current.change)
+            timeoutRefs.current.change = null
+          }
+          
+          timeoutRefs.current.change = setTimeout(() => {
+            try {
+              // Only send if we're still not applying remote operations
+              if (!isApplyingRemoteOperation) {
+                const fullContent = editor.getValue()
+                
+                collaborationService.sendOperation({
+                  type: 'replace',
+                  content: fullContent,
+                  position: 0
+                })
+              }
+            } catch (error) {
+              // Silent error handling for timeout operations
+            } finally {
+              timeoutRefs.current.change = null
+            }
+          }, 300)
         }
         
-        // Update tab content in real-time
+        // Update tab content in real-time (but don't trigger collaboration sync)
         if (activeTabData && !isApplyingRemoteOperation) {
           const newContent = editor.getValue()
-          useIDEStore.getState().updateTabContent(activeTabData.id, newContent)
+          // Use direct state update to avoid triggering collaboration sync
+          useIDEStore.setState((state) => ({
+            tabs: state.tabs.map(tab => 
+              tab.id === activeTabData.id 
+                ? { ...tab, content: newContent, isDirty: false }
+                : tab
+            )
+          }))
         }
       } catch (error) {
-        // Silent error handling
+        logger.error('Failed to handle content change')
       }
     })
 
-    // Track cursor position
+    // Track cursor position for real-time collaboration with throttling
     editor.onDidChangeCursorPosition((e) => {
       try {
         const currentCollabState = useIDEStore.getState().collab
@@ -567,11 +732,31 @@ export default function CodeEditor(): JSX.Element {
         const currentTabs = useIDEStore.getState().tabs
         const activeTabData = currentTabs.find(tab => tab.id === currentActiveTab)
         
-        if (currentCollabState && !isApplyingRemoteOperation && activeTabData) {
-          collaborationService.updateCursor(e.position.lineNumber, e.position.column)
+        // Always allow cursor movement, only throttle collaboration updates
+        if (currentCollabState && activeTabData) {
+          // Clear previous timeout
+          if (timeoutRefs.current.cursor) {
+            clearTimeout(timeoutRefs.current.cursor)
+            timeoutRefs.current.cursor = null
+          }
+          
+          timeoutRefs.current.cursor = setTimeout(() => {
+            try {
+              // Only send cursor updates if not applying remote operations
+              if (!isApplyingRemoteOperation && e.position && typeof e.position.lineNumber === 'number' && typeof e.position.column === 'number') {
+                const safeLine = Math.max(1, e.position.lineNumber)
+                const safeColumn = Math.max(1, e.position.column)
+                collaborationService.updateCursor(safeLine, safeColumn)
+              }
+            } catch (error) {
+              // Silent error handling for timeout operations
+            } finally {
+              timeoutRefs.current.cursor = null
+            }
+          }, 100)
         }
       } catch (error) {
-        // Silent error handling
+        logger.error('Failed to handle cursor change')
       }
     })
 
@@ -615,20 +800,34 @@ export default function CodeEditor(): JSX.Element {
 
   return (
     <div className="flex-1 h-full flex flex-col">
-      {/* Breadcrumb Path */}
+      {/* Breadcrumb Path - Sanitized to prevent XSS */}
       <div className="h-9 px-4 flex items-center bg-zinc-950/80 border-b border-zinc-800/50 text-xs">
         <div className="flex items-center gap-1.5 text-zinc-400">
           <i className="ph ph-folder-simple text-zinc-500"></i>
-          {currentTab.path.split('/').filter(Boolean).map((segment, index, array) => (
-            <div key={index} className="flex items-center gap-1.5">
-              <span className={index === array.length - 1 ? 'text-zinc-200 font-medium' : 'text-zinc-400 hover:text-zinc-300 cursor-pointer'}>
-                {segment}
-              </span>
-              {index < array.length - 1 && (
-                <i className="ph ph-caret-right text-zinc-600 text-xs"></i>
-              )}
-            </div>
-          ))}
+          {currentTab.path.split('/').filter(Boolean).map((segment, index, array) => {
+            // Sanitize path segments to prevent XSS
+            const sanitizedSegment = segment.replace(/[<>"'&]/g, (match) => {
+              const entities: Record<string, string> = {
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#x27;',
+                '&': '&amp;'
+              }
+              return entities[match] || match
+            })
+            
+            return (
+              <div key={index} className="flex items-center gap-1.5">
+                <span className={index === array.length - 1 ? 'text-zinc-200 font-medium' : 'text-zinc-400 hover:text-zinc-300 cursor-pointer'}>
+                  {sanitizedSegment}
+                </span>
+                {index < array.length - 1 && (
+                  <i className="ph ph-caret-right text-zinc-600 text-xs"></i>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
       

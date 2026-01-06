@@ -6,6 +6,9 @@ const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const AWS = require('aws-sdk');
+const rateLimit = require('express-rate-limit');
+const csrf = require('csurf');
+const validator = require('validator');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,13 +17,23 @@ const server = http.createServer(app);
 AWS.config.update({ region: 'ap-south-1' });
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+
 // Middleware
 app.use(helmet());
+app.use(limiter);
 app.use(cors({
   origin: process.env.FRONTEND_URL || "https://kriya.navchetna.tech",
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+
+// CSRF protection for state-changing operations
+const csrfProtection = csrf({ cookie: true });
 
 // Socket.IO setup
 const io = socketIo(server, {
@@ -77,10 +90,17 @@ io.use((socket, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'kriya-secret');
+    if (!decoded.userId || !validator.isUUID(decoded.userId)) {
+      return next(new Error('Invalid user ID'));
+    }
     socket.userId = decoded.userId;
-    socket.userInfo = decoded;
+    socket.userInfo = {
+      name: validator.escape(decoded.name || 'Anonymous'),
+      avatar: validator.isURL(decoded.avatar || '') ? decoded.avatar : ''
+    };
     next();
   } catch (err) {
+    console.error('Socket authentication error:', err);
     next(new Error('Authentication error'));
   }
 });
@@ -91,71 +111,105 @@ io.on('connection', (socket) => {
 
   // Join document session
   socket.on('join-document', async (data) => {
-    const { documentId, mode } = data;
-    
-    if (mode === 'solo') {
-      socket.emit('document-joined', { 
-        documentId, 
-        mode: 'solo',
-        content: await getDocumentContent(documentId)
+    try {
+      const { documentId, mode } = data;
+      
+      if (!documentId || !validator.isUUID(documentId)) {
+        socket.emit('error', { message: 'Invalid document ID' });
+        return;
+      }
+      
+      if (mode === 'solo') {
+        socket.emit('document-joined', { 
+          documentId, 
+          mode: 'solo',
+          content: await getDocumentContent(documentId)
+        });
+        return;
+      }
+
+      // Live collaboration mode
+      socket.join(documentId);
+      
+      if (!activeSessions.has(documentId)) {
+        activeSessions.set(documentId, new DocumentSession(documentId));
+      }
+
+      const session = activeSessions.get(documentId);
+      session.addUser(socket.userId, socket.id, socket.userInfo);
+
+      // Send current document state
+      socket.emit('document-joined', {
+        documentId,
+        mode: 'live',
+        content: session.content,
+        version: session.version,
+        users: Array.from(session.users.entries()).map(([id, user]) => ({
+          id,
+          name: user.name,
+          avatar: user.avatar,
+          cursor: session.cursors.get(id)
+        }))
       });
-      return;
+
+      // Notify other users
+      socket.to(documentId).emit('user-joined', {
+        userId: socket.userId,
+        userInfo: socket.userInfo
+      });
+    } catch (error) {
+      console.error('Error joining document:', error);
+      socket.emit('error', { message: 'Failed to join document' });
     }
-
-    // Live collaboration mode
-    socket.join(documentId);
-    
-    if (!activeSessions.has(documentId)) {
-      activeSessions.set(documentId, new DocumentSession(documentId));
-    }
-
-    const session = activeSessions.get(documentId);
-    session.addUser(socket.userId, socket.id, socket.userInfo);
-
-    // Send current document state
-    socket.emit('document-joined', {
-      documentId,
-      mode: 'live',
-      content: session.content,
-      version: session.version,
-      users: Array.from(session.users.entries()).map(([id, user]) => ({
-        id,
-        name: user.name,
-        avatar: user.avatar,
-        cursor: session.cursors.get(id)
-      }))
-    });
-
-    // Notify other users
-    socket.to(documentId).emit('user-joined', {
-      userId: socket.userId,
-      userInfo: socket.userInfo
-    });
   });
 
   // Handle text operations
   socket.on('operation', (data) => {
-    const { documentId, operation } = data;
-    const session = activeSessions.get(documentId);
-    
-    if (!session) return;
-
-    const version = session.applyOperation({
-      ...operation,
-      userId: socket.userId
-    });
-
-    // Broadcast to other users
-    socket.to(documentId).emit('operation', {
-      operation: {
-        ...operation,
-        userId: socket.userId,
-        version
+    try {
+      const { documentId, operation } = data;
+      
+      if (!documentId || !validator.isUUID(documentId)) {
+        return;
       }
-    });
+      
+      const session = activeSessions.get(documentId);
+      if (!session) return;
 
-    // Save to database periodically
-    saveDocumentState(documentId, session);
+      // Validate operation
+      if (!operation || !['insert', 'delete'].includes(operation.type)) {
+        return;
+      }
+
+      const version = session.applyOperation({
+        ...operation,
+        userId: socket.userId
+      });
+
+      // Apply operation to document content with bounds checking
+      if (operation.type === 'insert' && operation.content) {
+        const pos = Math.max(0, Math.min(operation.position, session.content.length));
+        const sanitizedContent = validator.escape(operation.content.substring(0, 10000));
+        session.content = session.content.slice(0, pos) + sanitizedContent + session.content.slice(pos);
+      } else if (operation.type === 'delete' && operation.length) {
+        const pos = Math.max(0, Math.min(operation.position, session.content.length));
+        const length = Math.max(0, Math.min(operation.length, session.content.length - pos));
+        session.content = session.content.slice(0, pos) + session.content.slice(pos + length);
+      }
+
+      // Broadcast to other users in real-time
+      socket.to(documentId).emit('operation', {
+        operation: {
+          ...operation,
+          userId: socket.userId,
+          version
+        }
+      });
+
+      // Save to database periodically
+      saveDocumentState(documentId, session);
+    } catch (error) {
+      console.error('Error handling operation:', error);
+    }
   });
 
   // Handle cursor updates
@@ -200,25 +254,44 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-app.post('/api/documents', async (req, res) => {
+app.post('/api/documents', csrfProtection, async (req, res) => {
   try {
     const documentId = uuidv4();
     const { name, content = '', language = 'javascript' } = req.body;
     
-    await dynamodb.put({
+    // Validate inputs
+    if (!name || name.length > 100) {
+      return res.status(400).json({ error: 'Invalid document name' });
+    }
+    
+    if (content.length > 1000000) { // 1MB limit
+      return res.status(400).json({ error: 'Content too large' });
+    }
+    
+    const allowedLanguages = ['javascript', 'python', 'java', 'cpp', 'html', 'css'];
+    if (!allowedLanguages.includes(language)) {
+      return res.status(400).json({ error: 'Invalid language' });
+    }
+    
+    const sanitizedName = validator.escape(name);
+    const sanitizedContent = validator.escape(content);
+    
+    const params = {
       TableName: 'kriya-documents',
       Item: {
         documentId,
-        name,
-        content,
+        name: sanitizedName,
+        content: sanitizedContent,
         language,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         version: 0
       }
-    }).promise();
+    };
 
-    res.json({ documentId, name, content, language });
+    await dynamodb.put(params).promise();
+
+    res.json({ documentId, name: sanitizedName, content: sanitizedContent, language });
   } catch (error) {
     console.error('Error creating document:', error);
     res.status(500).json({ error: 'Failed to create document' });
@@ -228,10 +301,17 @@ app.post('/api/documents', async (req, res) => {
 app.get('/api/documents/:documentId', async (req, res) => {
   try {
     const { documentId } = req.params;
-    const result = await dynamodb.get({
+    
+    if (!validator.isUUID(documentId)) {
+      return res.status(400).json({ error: 'Invalid document ID' });
+    }
+    
+    const params = {
       TableName: 'kriya-documents',
       Key: { documentId }
-    }).promise();
+    };
+    
+    const result = await dynamodb.get(params).promise();
 
     if (!result.Item) {
       return res.status(404).json({ error: 'Document not found' });
@@ -247,10 +327,16 @@ app.get('/api/documents/:documentId', async (req, res) => {
 // Helper functions
 async function getDocumentContent(documentId) {
   try {
-    const result = await dynamodb.get({
+    if (!validator.isUUID(documentId)) {
+      return '';
+    }
+    
+    const params = {
       TableName: 'kriya-documents',
       Key: { documentId }
-    }).promise();
+    };
+    
+    const result = await dynamodb.get(params).promise();
     
     return result.Item?.content || '';
   } catch (error) {
@@ -261,7 +347,11 @@ async function getDocumentContent(documentId) {
 
 async function saveDocumentState(documentId, session) {
   try {
-    await dynamodb.update({
+    if (!validator.isUUID(documentId)) {
+      return;
+    }
+    
+    const params = {
       TableName: 'kriya-documents',
       Key: { documentId },
       UpdateExpression: 'SET content = :content, version = :version, updatedAt = :updatedAt',
@@ -270,7 +360,9 @@ async function saveDocumentState(documentId, session) {
         ':version': session.version,
         ':updatedAt': Date.now()
       }
-    }).promise();
+    };
+    
+    await dynamodb.update(params).promise();
   } catch (error) {
     console.error('Error saving document state:', error);
   }

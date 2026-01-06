@@ -450,43 +450,8 @@ export const useIDEStore = create<IDEState>()(
           activePanel: 'files',
           isRunning: false,
           runningFile: null,
-          activeTab: 'MainEditor.tsx',
-          tabs: [
-            {
-              id: 'MainEditor.tsx',
-              name: 'MainEditor.tsx',
-              path: '/components/MainEditor.tsx',
-              content: `'use client'
-
-import { useEffect, useRef, useCallback, useState } from 'react'
-import { useIDEStore } from '@/stores/ide-store'
-
-export default function MainEditor() {
-  const { 
-    tabs, 
-    activeTab, 
-    setActiveTab, 
-    closeTab, 
-    updateTabContent,
-    fontSize,
-    tabSize,
-    minimap,
-    saveFile
-  } = useIDEStore()
-  
-  // Your editor implementation here
-  return (
-    <div className="flex-1 bg-black text-white p-4">
-      <h1>Welcome to Kriya IDE</h1>
-      <p>This is a sample file to demonstrate the editor.</p>
-    </div>
-  )
-}`,
-              language: 'typescript',
-              isDirty: false,
-              icon: 'ph-fill ph-file-tsx'
-            }
-          ],
+          activeTab: null,
+          tabs: [],
           recentFiles: [],
           fileTree: fileManager.getFileTree(),
           fileTreeVersion: 0,
@@ -901,7 +866,28 @@ context:
               return newState
             })
           },
-          setCollab: (collab) => set({ collab }),
+                    setCollab: (collab) => {
+            set({ collab })
+            
+            // When enabling collaboration, sync current document
+            if (collab && typeof window !== 'undefined') {
+              const state = get()
+              const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
+              if (activeTabData) {
+                const { collaborationService } = require('@/lib/collaboration-service')
+                collaborationService.joinDocument('shared-document', 'live')
+                
+                // Send current content to other tabs
+                setTimeout(() => {
+                  collaborationService.sendOperation({
+                    type: 'replace',
+                    content: activeTabData.content,
+                    position: 0
+                  })
+                }, 200)
+              }
+            }
+          },
           setEnvironment: (environment) => set({ environment }),
           setActivePanel: (panel) => {
             set({ activePanel: panel })
@@ -992,25 +978,28 @@ context:
             })
           },
           
-          updateTabContent: (tabId, content) => {
-            set((state) => {
-              const updatedTabs = state.tabs.map(tab => 
-                tab.id === tabId 
-                  ? { ...tab, content, isDirty: tab.content !== content }
-                  : tab
-              )
-              
-              // Auto-save if enabled
-              if (state.autoSave) {
-                setTimeout(() => {
-                  const { saveFile } = get()
-                  saveFile(tabId)
-                }, 1000) // Auto-save after 1 second of inactivity
-              }
-              
-              return { tabs: updatedTabs }
-            })
-          },
+              updateTabContent: (tabId, content) => {
+    set((state) => {
+      const updatedTabs = state.tabs.map(tab => 
+        tab.id === tabId 
+          ? { ...tab, content, isDirty: false }
+          : tab
+      )
+      
+      return { tabs: updatedTabs }
+    })
+    
+    // Send collaboration update after state update to avoid circular dependency
+    const state = get()
+    if (state.collab && typeof window !== 'undefined') {
+      const { collaborationService } = require('@/lib/collaboration-service')
+      collaborationService.sendOperation({
+        type: 'replace',
+        content: content,
+        position: 0
+      })
+    }
+  },
           
           // Terminal Actions
           addTerminalTab: (tab) => set((state) => ({
@@ -1881,6 +1870,8 @@ context:
           breakpoints: state.breakpoints,
           apiRequests: state.apiRequests,
           activeApiRequest: state.activeApiRequest,
+          yamlFiles: state.yamlFiles,
+          activeYamlFile: state.activeYamlFile,
           fontSize: state.fontSize,
           tabSize: state.tabSize,
           minimap: state.minimap,
@@ -1888,9 +1879,15 @@ context:
           view: state.view,
           activePanel: state.activePanel,
           environment: state.environment,
-          collab: state.collab
+          collab: state.collab,
+          terminalOpen: state.terminalOpen
         })
       }
     )
   )
 )
+
+// Expose store globally for collaboration service
+if (typeof window !== 'undefined') {
+  (window as any).useIDEStore = useIDEStore
+}
