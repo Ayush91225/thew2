@@ -76,76 +76,39 @@ File operations: ls, cat, mkdir, touch, rm, cp, mv`
       
       const processId = `${sessionId}-${Date.now()}`
       
-      return new Promise((resolve) => {
-        const child = spawn(baseCmd, cmdParts.slice(1), {
-          cwd: workingDir,
-          env: { ...process.env, PATH: process.env.PATH },
-          stdio: ['pipe', 'pipe', 'pipe']
-        })
+      const child = spawn(baseCmd, cmdParts.slice(1), {
+        cwd: workingDir,
+        env: { ...process.env, PATH: process.env.PATH },
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
 
-        runningProcesses.set(processId, child)
-        
-        let output = ''
-        let hasResolved = false
-        
-        const resolveOnce = (data: any) => {
-          if (!hasResolved) {
-            hasResolved = true
-            resolve(NextResponse.json({
-              success: true,
-              output: data.output,
-              processId,
-              running: true,
-              exitCode: 0
-            }))
-          }
-        }
+      runningProcesses.set(processId, child)
+      
+      let output = ''
+      
+      child.stdout?.on('data', (data) => {
+        output += data.toString()
+      })
 
-        child.stdout?.on('data', (data) => {
-          output += data.toString()
-          if (output.includes('Ready') || output.includes('Local:') || output.includes('localhost')) {
-            resolveOnce({ output })
-          }
-        })
+      child.stderr?.on('data', (data) => {
+        output += data.toString()
+      })
 
-        child.stderr?.on('data', (data) => {
-          output += data.toString()
-          if (output.includes('Ready') || output.includes('Local:') || output.includes('localhost')) {
-            resolveOnce({ output })
-          }
-        })
+      child.on('error', (error) => {
+        runningProcesses.delete(processId)
+      })
 
-        child.on('error', (error) => {
-          runningProcesses.delete(processId)
-          if (!hasResolved) {
-            hasResolved = true
-            resolve(NextResponse.json({
-              success: false,
-              error: error.message,
-              output,
-              exitCode: 1
-            }))
-          }
-        })
+      child.on('exit', (code) => {
+        runningProcesses.delete(processId)
+      })
 
-        child.on('exit', (code) => {
-          runningProcesses.delete(processId)
-          if (!hasResolved) {
-            hasResolved = true
-            resolve(NextResponse.json({
-              success: code === 0,
-              output,
-              exitCode: code || 0
-            }))
-          }
-        })
-
-        // Timeout for initial response
-        setTimeout(() => {
-          if (!hasResolved) {
-            resolveOnce({ output: output || 'Starting development server...' })
-          }
-        }, 3000)
+      // Return immediate response for long-running processes
+      return NextResponse.json({
+        success: true,
+        output: 'Starting development server...',
+        processId,
+        running: true,
+        exitCode: 0
       })
     }
 
