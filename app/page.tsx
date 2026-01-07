@@ -25,10 +25,13 @@ import { useIDEStore } from '@/stores/ide-store'
 import { useIDEHotkeys } from '@/hooks/useIDEHotkeys'
 
 export default function Home() {
-  const { view, aiChatOpen, previewOpen } = useIDEStore()
+  const { view, aiChatOpen, previewOpen, loadFromURL } = useIDEStore()
   useIDEHotkeys()
 
   useEffect(() => {
+    // Load state from URL parameters
+    loadFromURL()
+    
     // Disable browser right-click context menu
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault()

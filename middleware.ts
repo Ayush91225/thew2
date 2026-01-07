@@ -31,8 +31,11 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
     const authHeader = request.headers.get('authorization')
     
-    // Allow files and server API routes without auth
-    if (!authHeader && pathname !== '/api/search' && pathname !== '/api/files' && pathname !== '/api/server') {
+    // Allow these API routes without auth
+    const publicRoutes = ['/api/search', '/api/files', '/api/server', '/api/execute', '/api/terminal', '/api/packages']
+    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+    
+    if (!authHeader && !isPublicRoute) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
