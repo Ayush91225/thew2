@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    turbo: false,
-  },
+  output: 'standalone',
+  outputFileTracingRoot: __dirname,
   webpack: (config, { dev }) => {
     if (dev) {
       config.devServer = {
