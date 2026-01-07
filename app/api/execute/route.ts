@@ -70,17 +70,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Code and language required' }, { status: 400 })
     }
 
-    const config = LANGUAGE_CONFIGS[language as keyof typeof LANGUAGE_CONFIGS]
-    if (!config) {
-      return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
-    }
-
-    if (language === 'html' || language === 'css' || language === 'typescript' || language === 'ts' || language === 'json' || language === 'markdown' || language === 'md') {
+    // For HTML files, just return success without execution
+    if (language === 'html' || language === 'css' || language === 'json' || language === 'markdown' || language === 'md') {
       return NextResponse.json({
         success: true,
         output: 'File ready for preview. Use live server to view.',
         executionTime: 0
       })
+    }
+
+    // For other languages, check if supported
+    const config = LANGUAGE_CONFIGS[language as keyof typeof LANGUAGE_CONFIGS]
+    if (!config) {
+      return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
     }
 
     const result = await executeCode(code, language, filename || 'temp', config)

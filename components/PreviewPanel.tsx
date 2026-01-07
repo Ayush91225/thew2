@@ -202,13 +202,24 @@ export default function PreviewPanel() {
       setIsLoading(true)
       setError(null)
       
-      // Force reload by adding timestamp
-      const url = new URL(previewUrl.startsWith('blob:') ? previewUrl : previewUrl)
-      if (!previewUrl.startsWith('blob:')) {
-        url.searchParams.set('_t', Date.now().toString())
+      try {
+        let refreshUrl = previewUrl
+        
+        // For blob URLs, just use as-is
+        if (previewUrl.startsWith('blob:')) {
+          refreshUrl = previewUrl
+        } else {
+          // For regular URLs, add timestamp to force reload
+          const url = new URL(previewUrl)
+          url.searchParams.set('_t', Date.now().toString())
+          refreshUrl = url.toString()
+        }
+        
+        iframeRef.current.src = refreshUrl
+      } catch (error) {
+        // If URL construction fails, just reload with original URL
+        iframeRef.current.src = previewUrl + (previewUrl.includes('?') ? '&' : '?') + '_t=' + Date.now()
       }
-      
-      iframeRef.current.src = url.toString()
     }
   }
 

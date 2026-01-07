@@ -12,6 +12,7 @@ import CollaborationManager from '@/components/CollaborationManager'
 import CollaborationStatus from '@/components/CollaborationStatus'
 import SettingsView from '@/components/SettingsView'
 import SettingsModal from '@/components/SettingsModal'
+import Toast from '@/components/Toast'
 import { Sparkle, Terminal, Gear, FileText } from 'phosphor-react'
 
 export default function IDELayout() {
@@ -135,6 +136,9 @@ export default function IDELayout() {
       
       {/* Collaboration Manager */}
       <CollaborationManager />
+      
+      {/* Toast Notifications */}
+      <Toast />
     </div>
   )
 }

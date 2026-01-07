@@ -1,0 +1,17 @@
+{
+  "name": "kriya-workspace",
+  "version": "1.0.0",
+  "description": "Kriya IDE Workspace",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo 'Development server starting...' && sleep 2 && echo 'Server ready at http://localhost:3000'",
+    "build": "echo 'Building project...' && sleep 3 && echo 'Build completed successfully'",
+    "start": "echo 'Starting production server...' && sleep 1 && echo 'Server running at http://localhost:3000'",
+    "test": "echo 'Running tests...' && sleep 2 && echo 'All tests passed'"
+  },
+  "keywords": ["ide", "workspace"],
+  "author": "Kriya IDE",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

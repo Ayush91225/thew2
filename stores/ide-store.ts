@@ -1019,7 +1019,32 @@ context:
             const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
             if (!activeTabData) return
             
-            console.log('Running file:', activeTabData.name, 'Language:', activeTabData.language)
+            // Language mapping to ensure compatibility with API
+            const languageMap: Record<string, string> = {
+              'typescript': 'typescript',
+              'javascript': 'javascript', 
+              'python': 'python',
+              'html': 'html',
+              'css': 'css',
+              'json': 'json',
+              'markdown': 'markdown',
+              'md': 'markdown',
+              'ts': 'typescript',
+              'js': 'javascript',
+              'py': 'python'
+            }
+            
+            // Clean and normalize the language string
+            const cleanLanguage = activeTabData.language.trim().toLowerCase()
+            const mappedLanguage = languageMap[cleanLanguage] || cleanLanguage
+            
+            // Fix for HTML files that might be detected as plaintext
+            let finalLanguage = mappedLanguage
+            if (activeTabData.name.endsWith('.html') && (cleanLanguage === 'plaintext' || cleanLanguage === 'text')) {
+              finalLanguage = 'html'
+            }
+            
+            console.log('Running file:', activeTabData.name, 'Original Language:', activeTabData.language, 'Final Language:', finalLanguage)
             
             set({ isRunning: true, runningFile: activeTabData.id })
             
@@ -1029,7 +1054,7 @@ context:
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 code: activeTabData.content,
-                language: activeTabData.language,
+                language: finalLanguage,
                 filename: activeTabData.name.split('.')[0]
               })
             })
@@ -1042,17 +1067,85 @@ context:
               set({ isRunning: false, runningFile: null })
               
               if (result.success) {
-                get().sendNotification('build', 'Execution Complete', 
-                  `${activeTabData.name} executed in ${result.executionTime}ms`)
+                if (result.output === 'File ready for preview. Use live server to view.') {
+                  // Show toast notification
+                  if (typeof window !== 'undefined') {
+                    console.log('Dispatching toast event for HTML file')
+                    window.dispatchEvent(new CustomEvent('showToast', {
+                      detail: {
+                        type: 'success',
+                        title: 'File Ready',
+                        message: 'HTML file is ready for preview. Use the preview panel to view.'
+                      }
+                    }))
+                    // Clean notification
+                    setTimeout(() => {
+                      const toast = document.createElement('div')
+                      toast.textContent = '✅ HTML file ready for preview'
+                      toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#22c55e;color:white;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform 0.3s ease'
+                      document.body.appendChild(toast)
+                      setTimeout(() => toast.style.transform = 'translateX(0)', 10)
+                      setTimeout(() => toast.remove(), 3000)
+                    }, 100)
+                  }
+                } else {
+                  // Show toast notification
+                  if (typeof window !== 'undefined') {
+                    console.log('Dispatching toast event for execution complete')
+                    window.dispatchEvent(new CustomEvent('showToast', {
+                      detail: {
+                        type: 'success',
+                        title: 'Execution Complete',
+                        message: `${activeTabData.name} executed successfully in ${result.executionTime}ms`
+                      }
+                    }))
+                    // Clean notification
+                    setTimeout(() => {
+                      const toast = document.createElement('div')
+                      toast.textContent = '✅ ' + activeTabData.name + ' executed successfully'
+                      toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#22c55e;color:white;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform 0.3s ease'
+                      document.body.appendChild(toast)
+                      setTimeout(() => toast.style.transform = 'translateX(0)', 10)
+                      setTimeout(() => toast.remove(), 3000)
+                    }, 100)
+                  }
+                }
                 console.log('Output:', result.output)
               } else {
-                get().sendNotification('error', 'Execution Failed', result.error || 'Unknown error')
+                // Professional error notification
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('showToast', {
+                    detail: {
+                      type: 'error',
+                      title: 'Execution Failed',
+                      message: result.error || 'Unknown error occurred'
+                    }
+                  }))
+                  // Clean error notification
+                  setTimeout(() => {
+                    const toast = document.createElement('div')
+                    toast.textContent = '❌ ' + (result.error || 'Execution failed')
+                    toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#ef4444;color:white;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform 0.3s ease'
+                    document.body.appendChild(toast)
+                    setTimeout(() => toast.style.transform = 'translateX(0)', 10)
+                    setTimeout(() => toast.remove(), 4000)
+                  }, 100)
+                }
                 console.error('Error:', result.error)
               }
             })
             .catch(error => {
               set({ isRunning: false, runningFile: null })
-              get().sendNotification('error', 'Execution Failed', 'Network error')
+              // Show error toast notification
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('showToast', {
+                  detail: {
+                    type: 'error',
+                    title: 'Network Error',
+                    message: 'Failed to connect to execution service'
+                  }
+                }))
+              }
               console.error('Network error:', error)
             })
           },
