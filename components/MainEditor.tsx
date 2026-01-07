@@ -27,28 +27,48 @@ export default function MainEditor() {
     }
   }, [activeTab, currentTab?.content, updateTabContent])
 
+  const addKeyboardShortcuts = (editor: any, monaco: any) => {
+    // Select All
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {
+      editor.getAction('editor.action.selectAll').run()
+    })
+    
+    // Save
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      const content = editor.getValue()
+      handleContentChange(content)
+      if (activeTab) {
+        saveFile(activeTab)
+      }
+    })
+    
+    // Undo
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
+      editor.getAction('undo').run()
+    })
+    
+    // Redo
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, () => {
+      editor.getAction('redo').run()
+    })
+    
+    // Find
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+      editor.getAction('actions.find').run()
+    })
+    
+    // Replace
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
+      editor.getAction('editor.action.startFindReplaceAction').run()
+    })
+  }
+
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | undefined
-    
-    // Add keyboard shortcuts
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault()
-        if (activeTab && editorRef.current) {
-          const content = editorRef.current.getValue()
-          updateTabContent(activeTab, content)
-          saveFile(activeTab)
-          console.log('File saved:', currentTab?.name)
-        }
-      }
-    }
-    
-    document.addEventListener('keydown', handleKeyDown)
     
     const loadMonaco = async () => {
       if (typeof window === 'undefined') return
       
-      // Check if Monaco is already loaded
       if ((window as any).monaco) {
         setIsMonacoLoaded(true)
         if (currentTab) {
@@ -58,7 +78,6 @@ export default function MainEditor() {
       }
 
       try {
-        // Load Monaco from CDN with better error handling
         const script = document.createElement('script')
         script.src = 'https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js'
         script.onload = () => {
@@ -73,7 +92,6 @@ export default function MainEditor() {
             monacoRef.current = monaco
             setIsMonacoLoaded(true)
             
-            // Define custom theme
             monaco.editor.defineTheme('kriya-dark', {
               base: 'vs-dark',
               inherit: true,
@@ -102,81 +120,67 @@ export default function MainEditor() {
             }
           })
         }
-        script.onerror = () => {
-          console.error('Failed to load Monaco Editor')
-          setIsMonacoLoaded(false)
-        }
         document.head.appendChild(script)
       } catch (error) {
         console.error('Error loading Monaco:', error)
-        setIsMonacoLoaded(false)
       }
     }
 
     const createEditor = (monaco: any, tab: any) => {
       const container = document.getElementById('editor-container')
-      if (!container) {
-        console.error('Editor container not found')
-        return
-      }
+      if (!container) return
 
       if (editorRef.current) {
         editorRef.current.dispose()
       }
 
-      try {
-        const editor = monaco.editor.create(container, {
-          value: tab.content,
-          language: tab.language,
-          theme: 'kriya-dark',
-          fontSize: fontSize,
-          tabSize: tabSize,
-          minimap: { enabled: minimap },
-          scrollBeyondLastLine: false,
-          lineNumbers: 'on',
-          automaticLayout: true,
-          wordWrap: 'on',
-          scrollbar: {
-            vertical: 'visible',
-            horizontal: 'visible',
-            useShadows: false,
-          },
-          renderWhitespace: 'selection',
-          renderControlCharacters: true,
-          fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-          fontLigatures: true,
-          cursorBlinking: 'smooth',
-          cursorSmoothCaretAnimation: true,
-        })
+      const editor = monaco.editor.create(container, {
+        value: tab.content,
+        language: tab.language,
+        theme: 'kriya-dark',
+        fontSize: fontSize,
+        tabSize: tabSize,
+        minimap: { enabled: minimap },
+        scrollBeyondLastLine: false,
+        lineNumbers: 'on',
+        automaticLayout: true,
+        wordWrap: 'on',
+        scrollbar: {
+          vertical: 'visible',
+          horizontal: 'visible',
+          useShadows: false,
+        },
+        renderWhitespace: 'selection',
+        renderControlCharacters: true,
+        fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+        fontLigatures: true,
+        cursorBlinking: 'smooth',
+        cursorSmoothCaretAnimation: true,
+      })
 
-        // Enable content change tracking
-        editor.onDidChangeModelContent(() => {
-          clearTimeout(timeoutId)
-          timeoutId = setTimeout(() => {
-            const content = editor.getValue()
-            handleContentChange(content)
-          }, 300)
-        })
+      addKeyboardShortcuts(editor, monaco)
 
-        editorRef.current = editor
-        console.log('Monaco editor created successfully')
-      } catch (error) {
-        console.error('Error creating Monaco editor:', error)
-      }
+      editor.onDidChangeModelContent(() => {
+        clearTimeout(timeoutId)
+        timeoutId = setTimeout(() => {
+          const content = editor.getValue()
+          handleContentChange(content)
+        }, 300)
+      })
+
+      editorRef.current = editor
     }
 
     loadMonaco()
     
     return () => {
       clearTimeout(timeoutId)
-      document.removeEventListener('keydown', handleKeyDown)
       if (editorRef.current) {
         editorRef.current.dispose()
       }
     }
   }, [])
 
-  // Update editor when tab changes
   useEffect(() => {
     if (editorRef.current && currentTab && monacoRef.current && isMonacoLoaded) {
       const currentValue = editorRef.current.getValue()
@@ -188,7 +192,6 @@ export default function MainEditor() {
         }
       }
     } else if (isMonacoLoaded && currentTab && monacoRef.current) {
-      // Create editor if it doesn't exist but Monaco is loaded
       const createEditor = (monaco: any, tab: any) => {
         const container = document.getElementById('editor-container')
         if (!container) return
@@ -221,6 +224,8 @@ export default function MainEditor() {
           cursorSmoothCaretAnimation: true,
         })
 
+        addKeyboardShortcuts(editor, monaco)
+
         editor.onDidChangeModelContent(() => {
           const content = editor.getValue()
           handleContentChange(content)
@@ -232,7 +237,6 @@ export default function MainEditor() {
     }
   }, [activeTab, currentTab, isMonacoLoaded, fontSize, tabSize, minimap])
 
-  // Update minimap setting
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.updateOptions({ minimap: { enabled: minimap } })
@@ -241,7 +245,6 @@ export default function MainEditor() {
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-black">
-      {/* Editor Tabs */}
       <div className="h-10 border-b-line flex items-center shrink-0">
         <div className="flex gap-1 px-4 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700">
           {tabs.map((tab) => (
@@ -272,7 +275,6 @@ export default function MainEditor() {
         </div>
       </div>
 
-      {/* Monaco Editor Container */}
       <div id="editor-container" className="flex-1 bg-black relative">
         {!isMonacoLoaded && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -293,7 +295,6 @@ export default function MainEditor() {
         )}
       </div>
 
-      {/* Status Bar */}
       <div className="h-6 border-t-line px-4 flex items-center justify-between text-[10px] mono bg-black shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
@@ -312,7 +313,7 @@ export default function MainEditor() {
           )}
         </div>
         <div className="flex items-center gap-4">
-          <span>⌘S Save • ⌘K Commands • ⌃` Terminal • ⌘⇧F Search</span>
+          <span>⌘A Select All • ⌘S Save • ⌘F Find • ⌘H Replace</span>
         </div>
       </div>
     </main>

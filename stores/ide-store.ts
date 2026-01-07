@@ -1019,36 +1019,36 @@ context:
             const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
             if (!activeTabData) return
             
-            // Check if it's a YAML file
-            const isYamlFile = activeTabData.language === 'yaml' || 
-                              activeTabData.name.endsWith('.yml') || 
-                              activeTabData.name.endsWith('.yaml')
+            set({ isRunning: true, runningFile: activeTabData.id })
             
-            if (isYamlFile) {
-              // Find corresponding YAML file and run it
-              const yamlFile = state.yamlFiles.find(f => f.id === activeTabData.id || f.path === activeTabData.path)
-              if (yamlFile) {
-                get().runYaml(yamlFile.id)
+            // Execute code via API
+            fetch('/api/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                code: activeTabData.content,
+                language: activeTabData.language,
+                filename: activeTabData.name.split('.')[0]
+              })
+            })
+            .then(res => res.json())
+            .then(result => {
+              set({ isRunning: false, runningFile: null })
+              
+              if (result.success) {
+                get().sendNotification('build', 'Execution Complete', 
+                  `${activeTabData.name} executed in ${result.executionTime}ms`)
+                console.log('Output:', result.output)
+              } else {
+                get().sendNotification('error', 'Execution Failed', result.error || 'Unknown error')
+                console.error('Error:', result.error)
               }
-            } else {
-              // Run regular file
-              set({ isRunning: true, runningFile: activeTabData.id })
-              
-              // Send notification
-              get().sendNotification('build', 'Running File', `Executing ${activeTabData.name}`)
-              
-              // Simulate execution
-              setTimeout(() => {
-                const success = Math.random() > 0.2 // 80% success rate
-                set({ isRunning: false, runningFile: null })
-                
-                if (success) {
-                  get().sendNotification('build', 'Execution Complete', `${activeTabData.name} executed successfully`)
-                } else {
-                  get().sendNotification('error', 'Execution Failed', `Error executing ${activeTabData.name}`)
-                }
-              }, 2000)
-            }
+            })
+            .catch(error => {
+              set({ isRunning: false, runningFile: null })
+              get().sendNotification('error', 'Execution Failed', 'Network error')
+              console.error('Network error:', error)
+            })
           },
           
           addTab: (file) => {
