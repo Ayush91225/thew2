@@ -237,7 +237,7 @@ export default function Terminal() {
         {commands.length === 0 && (
           <div className="text-zinc-500 mb-3">
             <div>Kriya IDE Terminal v1.0.0</div>
-            <div>Type 'help' for available commands</div>
+            <div>Type &apos;help&apos; for available commands</div>
             <div>Real terminal with npm, git, and file operations</div>
             <div></div>
           </div>
