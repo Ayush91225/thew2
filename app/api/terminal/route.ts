@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exec, spawn } from 'child_process'
-import { promisify } from 'util'
 import path from 'path'
 import fs from 'fs/promises'
 
-const execAsync = promisify(exec)
 const WORKSPACE_DIR = path.join(process.cwd(), 'workspace')
-const TIMEOUT = 60000
 
-// Store running processes
-const runningProcesses = new Map<string, any>()
+// Simulated file system for web environment
+const simulatedFS = new Map<string, string>()
 
-const ALLOWED_COMMANDS = [
-  'ls', 'pwd', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'cp', 'mv', 'cd',
-  'node', 'python3', 'python', 'npm', 'yarn', 'pnpm', 'git', 'curl', 'wget',
-  'ps', 'kill', 'which', 'whoami', 'date', 'clear', 'help'
-]
+// Initialize with some default files
+if (simulatedFS.size === 0) {
+  simulatedFS.set('/workspace/index.html', '<html><body><h1>Hello World</h1></body></html>')
+  simulatedFS.set('/workspace/package.json', JSON.stringify({ name: 'workspace', version: '1.0.0' }, null, 2))
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { command, cwd, sessionId } = await request.json()
+    const { command, cwd = '/workspace', sessionId } = await request.json()
     
     if (!command) {
       return NextResponse.json({ error: 'Command required' }, { status: 400 })
@@ -27,142 +23,161 @@ export async function POST(request: NextRequest) {
 
     const cmdParts = command.trim().split(' ')
     const baseCmd = cmdParts[0]
+    const args = cmdParts.slice(1)
     
-    // Handle built-in commands
-    if (baseCmd === 'clear') {
-      return NextResponse.json({
-        success: true,
-        output: '',
-        clear: true,
-        exitCode: 0
-      })
-    }
+    let output = ''
+    let success = true
+    let exitCode = 0
 
-    if (baseCmd === 'help') {
-      const helpText = `Available commands:
-${ALLOWED_COMMANDS.join(', ')}
-
-Package managers: npm, yarn, pnpm
-Development: npm run dev, npm start, node <file>
-Version control: git status, git add, git commit
-File operations: ls, cat, mkdir, touch, rm, cp, mv`
-      return NextResponse.json({
-        success: true,
-        output: helpText,
-        exitCode: 0
-      })
-    }
-    
-    if (!ALLOWED_COMMANDS.includes(baseCmd)) {
-      return NextResponse.json({ 
-        success: false,
-        error: `Command '${baseCmd}' not found`,
-        output: `bash: ${baseCmd}: command not found`,
-        exitCode: 127
-      })
-    }
-
-    // Ensure workspace directory exists
-    try {
-      await fs.mkdir(WORKSPACE_DIR, { recursive: true })
-    } catch (e) {}
-
-    const workingDir = cwd ? path.resolve(WORKSPACE_DIR, cwd) : WORKSPACE_DIR
-    
-    // Handle long-running commands (npm run dev, etc.)
-    if ((baseCmd === 'npm' && cmdParts.includes('dev')) || 
-        (baseCmd === 'npm' && cmdParts.includes('start')) ||
-        (baseCmd === 'yarn' && cmdParts.includes('dev'))) {
+    switch (baseCmd) {
+      case 'clear':
+        return NextResponse.json({ success: true, output: '', clear: true, exitCode: 0 })
       
-      const processId = `${sessionId}-${Date.now()}`
+      case 'help':
+        output = `Available commands:
+ls, pwd, cat, echo, mkdir, touch, rm, cd, clear, help
+npm, node, git (simulated)
+
+File operations work with simulated filesystem.
+Use 'ls' to see available files.`
+        break
       
-      const child = spawn(baseCmd, cmdParts.slice(1), {
-        cwd: workingDir,
-        env: { ...process.env, PATH: process.env.PATH },
-        stdio: ['pipe', 'pipe', 'pipe']
-      })
-
-      runningProcesses.set(processId, child)
+      case 'ls':
+        const currentDir = cwd === '/' ? '/workspace' : cwd
+        const files = Array.from(simulatedFS.keys())
+          .filter(path => path.startsWith(currentDir) && path !== currentDir)
+          .map(path => path.replace(currentDir + '/', '').split('/')[0])
+          .filter((file, index, arr) => arr.indexOf(file) === index)
+        
+        output = files.length > 0 ? files.join('\n') : 'No files found'
+        break
       
-      let output = ''
+      case 'pwd':
+        output = cwd || '/workspace'
+        break
       
-      child.stdout?.on('data', (data) => {
-        output += data.toString()
-      })
-
-      child.stderr?.on('data', (data) => {
-        output += data.toString()
-      })
-
-      child.on('error', (error) => {
-        runningProcesses.delete(processId)
-      })
-
-      child.on('exit', (code) => {
-        runningProcesses.delete(processId)
-      })
-
-      // Return immediate response for long-running processes
-      return NextResponse.json({
-        success: true,
-        output: 'Starting development server...',
-        processId,
-        running: true,
-        exitCode: 0
-      })
+      case 'cat':
+        if (args.length === 0) {
+          output = 'cat: missing file operand'
+          success = false
+          exitCode = 1
+        } else {
+          const filePath = args[0].startsWith('/') ? args[0] : `${cwd}/${args[0]}`
+          const content = simulatedFS.get(filePath)
+          if (content !== undefined) {
+            output = content
+          } else {
+            output = `cat: ${args[0]}: No such file or directory`
+            success = false
+            exitCode = 1
+          }
+        }
+        break
+      
+      case 'echo':
+        output = args.join(' ')
+        break
+      
+      case 'touch':
+        if (args.length === 0) {
+          output = 'touch: missing file operand'
+          success = false
+          exitCode = 1
+        } else {
+          const filePath = args[0].startsWith('/') ? args[0] : `${cwd}/${args[0]}`
+          simulatedFS.set(filePath, '')
+          output = ''
+        }
+        break
+      
+      case 'mkdir':
+        if (args.length === 0) {
+          output = 'mkdir: missing operand'
+          success = false
+          exitCode = 1
+        } else {
+          // Simulate directory creation
+          output = ''
+        }
+        break
+      
+      case 'rm':
+        if (args.length === 0) {
+          output = 'rm: missing operand'
+          success = false
+          exitCode = 1
+        } else {
+          const filePath = args[0].startsWith('/') ? args[0] : `${cwd}/${args[0]}`
+          if (simulatedFS.has(filePath)) {
+            simulatedFS.delete(filePath)
+            output = ''
+          } else {
+            output = `rm: cannot remove '${args[0]}': No such file or directory`
+            success = false
+            exitCode = 1
+          }
+        }
+        break
+      
+      case 'npm':
+        if (args[0] === 'install' || args[0] === 'i') {
+          output = 'npm install completed (simulated)'
+        } else if (args[0] === 'run' && args[1] === 'dev') {
+          output = 'Starting development server on http://localhost:3000 (simulated)'
+        } else if (args[0] === 'start') {
+          output = 'Starting production server (simulated)'
+        } else {
+          output = `npm ${args.join(' ')} (simulated)`
+        }
+        break
+      
+      case 'node':
+        if (args.length === 0) {
+          output = 'Welcome to Node.js (simulated)\nType .exit to quit'
+        } else {
+          output = `Running: node ${args.join(' ')} (simulated)`
+        }
+        break
+      
+      case 'git':
+        if (args[0] === 'status') {
+          output = 'On branch main\nnothing to commit, working tree clean (simulated)'
+        } else if (args[0] === 'add') {
+          output = `Added ${args.slice(1).join(' ')} (simulated)`
+        } else if (args[0] === 'commit') {
+          output = 'Commit created (simulated)'
+        } else {
+          output = `git ${args.join(' ')} (simulated)`
+        }
+        break
+      
+      case 'whoami':
+        output = 'dev'
+        break
+      
+      case 'date':
+        output = new Date().toString()
+        break
+      
+      default:
+        output = `bash: ${baseCmd}: command not found`
+        success = false
+        exitCode = 127
     }
 
-    const startTime = Date.now()
-    
-    try {
-      const { stdout, stderr } = await execAsync(command, {
-        cwd: workingDir,
-        timeout: TIMEOUT,
-        env: { ...process.env, PATH: process.env.PATH }
-      })
-
-      return NextResponse.json({
-        success: true,
-        output: stdout || stderr,
-        error: stderr,
-        exitCode: 0,
-        executionTime: Date.now() - startTime
-      })
-
-    } catch (error: any) {
-      return NextResponse.json({
-        success: false,
-        output: error.stdout || '',
-        error: error.stderr || error.message,
-        exitCode: error.code || 1,
-        executionTime: error.killed ? TIMEOUT : Date.now() - startTime
-      })
-    }
+    return NextResponse.json({
+      success,
+      output,
+      exitCode,
+      executionTime: Math.floor(Math.random() * 100) + 50 // Simulate execution time
+    })
 
   } catch (error: any) {
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
-      output: '',
+      output: error.message,
       exitCode: 1
     }, { status: 500 })
-  }
-}
-
-// Kill running process
-export async function DELETE(request: NextRequest) {
-  try {
-    const { processId } = await request.json()
-    
-    const process = runningProcesses.get(processId)
-    if (process) {
-      process.kill('SIGTERM')
-      runningProcesses.delete(processId)
-      return NextResponse.json({ success: true })
-    }
-    
-    return NextResponse.json({ error: 'Process not found' }, { status: 404 })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to kill process' }, { status: 500 })
   }
 }
