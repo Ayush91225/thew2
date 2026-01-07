@@ -20,7 +20,15 @@ const LANGUAGE_CONFIGS = {
     extension: '.js',
     command: (file: string) => `node "${file}"`,
   },
+  js: {
+    extension: '.js',
+    command: (file: string) => `node "${file}"`,
+  },
   python: {
+    extension: '.py',
+    command: (file: string) => `python3 "${file}"`,
+  },
+  py: {
     extension: '.py',
     command: (file: string) => `python3 "${file}"`,
   },
@@ -30,6 +38,26 @@ const LANGUAGE_CONFIGS = {
   },
   css: {
     extension: '.css',
+    command: null,
+  },
+  typescript: {
+    extension: '.ts',
+    command: null,
+  },
+  ts: {
+    extension: '.ts',
+    command: null,
+  },
+  json: {
+    extension: '.json',
+    command: null,
+  },
+  markdown: {
+    extension: '.md',
+    command: null,
+  },
+  md: {
+    extension: '.md',
     command: null,
   }
 }
@@ -47,7 +75,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
     }
 
-    if (language === 'html' || language === 'css') {
+    if (language === 'html' || language === 'css' || language === 'typescript' || language === 'ts' || language === 'json' || language === 'markdown' || language === 'md') {
       return NextResponse.json({
         success: true,
         output: 'File ready for preview. Use live server to view.',

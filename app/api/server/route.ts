@@ -97,6 +97,28 @@ export async function POST(request: NextRequest) {
                      htmlFiles[0] || 
                      'index.html'
     
+    // Inject CSS files into HTML if they exist
+    const cssFiles = Object.keys(files).filter(name => name.endsWith('.css'))
+    if (cssFiles.length > 0 && files[entryFile]) {
+      let htmlContent = files[entryFile] as string
+      
+      // Inject CSS links into HTML head
+      cssFiles.forEach(cssFile => {
+        const cssLink = `<link rel="stylesheet" href="/api/server?file=${cssFile}">`
+        if (htmlContent.includes('</head>')) {
+          htmlContent = htmlContent.replace('</head>', `  ${cssLink}\n</head>`)
+        } else if (htmlContent.includes('<head>')) {
+          htmlContent = htmlContent.replace('<head>', `<head>\n  ${cssLink}`)
+        } else {
+          htmlContent = `<head>\n  ${cssLink}\n</head>\n${htmlContent}`
+        }
+      })
+      
+      // Save updated HTML
+      const htmlPath = path.join(WORKSPACE_DIR, entryFile)
+      await fs.writeFile(htmlPath, htmlContent, 'utf-8')
+    }
+    
     console.log('Entry file determined:', entryFile)
     
     return NextResponse.json({ 
