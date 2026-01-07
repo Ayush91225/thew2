@@ -1019,6 +1019,8 @@ context:
             const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
             if (!activeTabData) return
             
+            console.log('Running file:', activeTabData.name, 'Language:', activeTabData.language)
+            
             set({ isRunning: true, runningFile: activeTabData.id })
             
             // Execute code via API
@@ -1031,8 +1033,12 @@ context:
                 filename: activeTabData.name.split('.')[0]
               })
             })
-            .then(res => res.json())
+            .then(res => {
+              console.log('API Response status:', res.status)
+              return res.json()
+            })
             .then(result => {
+              console.log('API Result:', result)
               set({ isRunning: false, runningFile: null })
               
               if (result.success) {
