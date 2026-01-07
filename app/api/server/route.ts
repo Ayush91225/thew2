@@ -69,6 +69,16 @@ export async function POST(request: NextRequest) {
     const { files } = await request.json()
     console.log('Server POST - received files:', Object.keys(files))
     
+    // Check if there are any HTML files
+    const htmlFiles = Object.keys(files).filter(name => name.endsWith('.html'))
+    
+    if (htmlFiles.length === 0) {
+      console.log('No HTML files found, returning error')
+      return NextResponse.json({ 
+        error: 'No HTML file found. Create an HTML file to preview.' 
+      }, { status: 400 })
+    }
+    
     // Save all files to workspace
     for (const [filePath, content] of Object.entries(files)) {
       const fullPath = path.join(WORKSPACE_DIR, filePath)
@@ -78,8 +88,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Find HTML file to serve as entry point
-    const htmlFiles = Object.keys(files).filter(name => name.endsWith('.html'))
-    const entryFile = htmlFiles.includes('index.html') ? 'index.html' : htmlFiles[0] || 'index.html'
+    const entryFile = htmlFiles.includes('index.html') ? 'index.html' : htmlFiles[0]
     
     console.log('Entry file determined:', entryFile)
     

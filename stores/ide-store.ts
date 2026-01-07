@@ -939,7 +939,7 @@ context:
           debugLogLevel: 'info',
           
           // Preview Settings
-          previewOpen: true,
+          previewOpen: false,
           previewUrl: '',
           previewMode: 'browser',
           
