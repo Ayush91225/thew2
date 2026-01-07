@@ -174,6 +174,15 @@ export default function Terminal() {
         }
         return `cat: ${args[0]}: No such file or directory`
       
+      case 'live-server':
+        return `🚀 Live Server started at http://localhost:3000\n📁 Serving files from: /workspace/kriya-ide\n🔄 Auto-reload enabled\n📱 CORS enabled\n\n[Live Server] Watching for file changes...\n[Live Server] Ready to serve your files!`
+      
+      case 'serve':
+        if (args.includes('-s')) {
+          return `🌐 Static file server started\n📍 Local:    http://localhost:5000\n📍 Network:  http://192.168.1.100:5000\n\n[Serve] Press Ctrl+C to stop`
+        }
+        return `serve - Static file serving and directory listing\n\nUSAGE:\n\n  serve [options] [path]\n\nOPTIONS:\n\n  -s, --single     Serve single page apps with fallback to index.html`
+      
       case 'date':
         return new Date().toString()
       
@@ -219,7 +228,32 @@ export default function Terminal() {
   }
 
   return (
-    <div className="h-80 border-t-line bg-black flex flex-col">
+    <div className="relative bg-black flex flex-col" style={{ height: '320px' }}>
+      {/* Resize Handle */}
+      <div className="absolute top-0 left-0 right-0 h-1 cursor-row-resize bg-transparent hover:bg-zinc-600 transition-colors z-10" 
+           onMouseDown={(e) => {
+             e.preventDefault()
+             const startY = e.clientY
+             const element = e.currentTarget.parentElement as HTMLElement
+             const startHeight = element?.offsetHeight || 320
+             
+             const handleMouseMove = (e: MouseEvent) => {
+               const newHeight = Math.max(200, Math.min(600, startHeight - (e.clientY - startY)))
+               if (element) {
+                 element.style.height = `${newHeight}px`
+               }
+             }
+             
+             const handleMouseUp = () => {
+               document.removeEventListener('mousemove', handleMouseMove)
+               document.removeEventListener('mouseup', handleMouseUp)
+             }
+             
+             document.addEventListener('mousemove', handleMouseMove)
+             document.addEventListener('mouseup', handleMouseUp)
+           }}
+      ></div>
+
       {/* Terminal Header */}
       <div className="h-8 border-b-line flex items-center shrink-0 bg-zinc-950">
         <div className="flex items-center flex-1 overflow-x-auto scrollbar-thin">

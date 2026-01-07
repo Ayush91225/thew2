@@ -1,94 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { promises as fs } from 'fs'
+import path from 'path'
+
+const WORKSPACE_DIR = path.join(process.cwd(), 'workspace')
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const path = searchParams.get('path') || '/'
-
-  // Mock file tree
-  const fileTree = {
-    name: 'kriya-ide',
-    type: 'directory',
-    children: [
-      {
-        name: 'app',
-        type: 'directory',
-        children: [
-          { name: 'layout.tsx', type: 'file', size: 1024 },
-          { name: 'page.tsx', type: 'file', size: 2048 },
-          { name: 'globals.css', type: 'file', size: 512 }
-        ]
-      },
-      {
-        name: 'components',
-        type: 'directory',
-        children: [
-          { name: 'MainEditor.tsx', type: 'file', size: 4096 },
-          { name: 'Sidebar.tsx', type: 'file', size: 3072 },
-          { name: 'Terminal.tsx', type: 'file', size: 2560 }
-        ]
-      },
-      {
-        name: 'stores',
-        type: 'directory',
-        children: [
-          { name: 'ide-store.ts', type: 'file', size: 1536 }
-        ]
-      },
-      { name: 'package.json', type: 'file', size: 768 },
-      { name: 'README.md', type: 'file', size: 1024 }
-    ]
+  try {
+    const { searchParams } = new URL(request.url)
+    const filePath = searchParams.get('path')
+    
+    if (!filePath) {
+      return NextResponse.json({ error: 'File path required' }, { status: 400 })
+    }
+    
+    const fullPath = path.join(WORKSPACE_DIR, filePath)
+    const content = await fs.readFile(fullPath, 'utf-8')
+    
+    return NextResponse.json({ content })
+  } catch (error) {
+    return NextResponse.json({ error: 'File not found' }, { status: 404 })
   }
-
-  return NextResponse.json(fileTree)
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
-  const { path, content, operation } = body
-
-  // Simulate file operation delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-
-  switch (operation) {
-    case 'create':
-      return NextResponse.json({
-        success: true,
-        message: `File created: ${path}`,
-        file: { path, size: content?.length || 0 }
-      })
+  try {
+    const { path: filePath, content } = await request.json()
     
-    case 'update':
-      return NextResponse.json({
-        success: true,
-        message: `File updated: ${path}`,
-        file: { path, size: content?.length || 0 }
-      })
+    if (!filePath || content === undefined) {
+      return NextResponse.json({ error: 'Path and content required' }, { status: 400 })
+    }
     
-    case 'delete':
-      return NextResponse.json({
-        success: true,
-        message: `File deleted: ${path}`
-      })
+    const fullPath = path.join(WORKSPACE_DIR, filePath)
+    await fs.mkdir(path.dirname(fullPath), { recursive: true })
+    await fs.writeFile(fullPath, content, 'utf-8')
     
-    default:
-      return NextResponse.json(
-        { success: false, error: 'Invalid operation' },
-        { status: 400 }
-      )
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to save file' }, { status: 500 })
   }
-}
-
-export async function PUT(request: NextRequest) {
-  const body = await request.json()
-  const { path, content } = body
-
-  // Simulate file save
-  await new Promise(resolve => setTimeout(resolve, 200))
-
-  return NextResponse.json({
-    success: true,
-    message: `File saved: ${path}`,
-    size: content?.length || 0,
-    lastModified: new Date().toISOString()
-  })
 }

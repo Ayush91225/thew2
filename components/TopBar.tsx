@@ -14,7 +14,9 @@ export default function TopBar() {
     tabs,
     updateTabContent,
     isRunning,
-    runCurrentFile
+    runCurrentFile,
+    previewOpen,
+    setPreviewOpen
   } = useIDEStore()
   
   const [collaborationUsers, setCollaborationUsers] = useState<any[]>([])
@@ -258,6 +260,20 @@ export default function TopBar() {
         )}
 
         <div className="flex items-center gap-2">
+          {/* PREVIEW BUTTON */}
+          <button 
+            onClick={() => setPreviewOpen(!previewOpen)}
+            className={`px-2 py-1 font-bold text-xs rounded transition-all duration-200 hover:scale-105 ${
+              previewOpen 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+            }`}
+            title="Toggle preview panel"
+          >
+            <i className={`ph ph-monitor mr-1`}></i>
+            PREVIEW
+          </button>
+          
           {/* RUN BUTTON */}
           <button 
             onClick={runCurrentFile}

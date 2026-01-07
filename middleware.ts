@@ -8,8 +8,10 @@ export function middleware(request: NextRequest) {
   // Security headers
   const response = NextResponse.next()
   
-  // Add security headers
-  response.headers.set('X-Frame-Options', 'DENY')
+  // Add security headers (but not for server API)
+  if (!pathname.startsWith('/api/server')) {
+    response.headers.set('X-Frame-Options', 'DENY')
+  }
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
@@ -29,8 +31,8 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
     const authHeader = request.headers.get('authorization')
     
-    // In production, validate JWT token here
-    if (!authHeader && pathname !== '/api/search' && pathname !== '/api/files') {
+    // Allow files and server API routes without auth
+    if (!authHeader && pathname !== '/api/search' && pathname !== '/api/files' && pathname !== '/api/server') {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
