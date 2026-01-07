@@ -69,6 +69,15 @@ export async function POST(request: NextRequest) {
     const { files } = await request.json()
     console.log('Server POST - received files:', Object.keys(files))
     
+    if (!files || Object.keys(files).length === 0) {
+      return NextResponse.json({ 
+        error: 'No files provided' 
+      }, { status: 400 })
+    }
+    
+    // Ensure workspace directory exists
+    await fs.mkdir(WORKSPACE_DIR, { recursive: true })
+    
     // Check if there are any HTML files or HTML content
     const htmlFiles = Object.keys(files).filter(name => 
       name.endsWith('.html') || 
@@ -85,10 +94,14 @@ export async function POST(request: NextRequest) {
     
     // Save all files to workspace
     for (const [filePath, content] of Object.entries(files)) {
-      const fullPath = path.join(WORKSPACE_DIR, filePath)
-      await fs.mkdir(path.dirname(fullPath), { recursive: true })
-      await fs.writeFile(fullPath, content as string, 'utf-8')
-      console.log('Saved file:', filePath, 'length:', (content as string).length)
+      try {
+        const fullPath = path.join(WORKSPACE_DIR, filePath)
+        await fs.mkdir(path.dirname(fullPath), { recursive: true })
+        await fs.writeFile(fullPath, content as string, 'utf-8')
+        console.log('Saved file:', filePath, 'length:', (content as string).length)
+      } catch (fileError) {
+        console.error('Error saving file:', filePath, fileError)
+      }
     }
     
     // Find HTML file to serve as entry point
@@ -115,8 +128,12 @@ export async function POST(request: NextRequest) {
       })
       
       // Save updated HTML
-      const htmlPath = path.join(WORKSPACE_DIR, entryFile)
-      await fs.writeFile(htmlPath, htmlContent, 'utf-8')
+      try {
+        const htmlPath = path.join(WORKSPACE_DIR, entryFile)
+        await fs.writeFile(htmlPath, htmlContent, 'utf-8')
+      } catch (htmlError) {
+        console.error('Error updating HTML file:', htmlError)
+      }
     }
     
     console.log('Entry file determined:', entryFile)
@@ -128,6 +145,8 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Server POST error:', error)
-    return NextResponse.json({ error: 'Failed to start server' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Failed to start server: ' + (error instanceof Error ? error.message : 'Unknown error')
+    }, { status: 500 })
   }
 }

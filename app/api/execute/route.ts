@@ -59,6 +59,14 @@ const LANGUAGE_CONFIGS = {
   md: {
     extension: '.md',
     command: null,
+  },
+  plaintext: {
+    extension: '.txt',
+    command: null,
+  },
+  text: {
+    extension: '.txt',
+    command: null,
   }
 }
 
@@ -71,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For HTML files, just return success without execution
-    if (language === 'html' || language === 'css' || language === 'json' || language === 'markdown' || language === 'md') {
+    if (language === 'html' || language === 'css' || language === 'json' || language === 'markdown' || language === 'md' || language === 'typescript' || language === 'ts' || language === 'plaintext' || language === 'text') {
       return NextResponse.json({
         success: true,
         output: 'File ready for preview. Use live server to view.',
