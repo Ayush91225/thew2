@@ -138,8 +138,12 @@ export default function PreviewPanel() {
         console.log(`Tab: ${tab.name}, content length: ${tab.content.length}`)
       })
       
-      // Check if we have any HTML files
-      const hasHtml = Object.keys(files).some(name => name.endsWith('.html'))
+      // Check if we have any HTML files or HTML content
+      const hasHtml = Object.keys(files).some(name => 
+        name.endsWith('.html') || 
+        files[name].includes('<!DOCTYPE html>') || 
+        files[name].includes('<html')
+      )
       if (!hasHtml) {
         throw new Error('No HTML file found. Create an HTML file to preview.')
       }

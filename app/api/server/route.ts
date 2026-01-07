@@ -69,8 +69,12 @@ export async function POST(request: NextRequest) {
     const { files } = await request.json()
     console.log('Server POST - received files:', Object.keys(files))
     
-    // Check if there are any HTML files
-    const htmlFiles = Object.keys(files).filter(name => name.endsWith('.html'))
+    // Check if there are any HTML files or HTML content
+    const htmlFiles = Object.keys(files).filter(name => 
+      name.endsWith('.html') || 
+      files[name].includes('<!DOCTYPE html>') || 
+      files[name].includes('<html')
+    )
     
     if (htmlFiles.length === 0) {
       console.log('No HTML files found, returning error')
@@ -88,7 +92,10 @@ export async function POST(request: NextRequest) {
     }
     
     // Find HTML file to serve as entry point
-    const entryFile = htmlFiles.includes('index.html') ? 'index.html' : htmlFiles[0]
+    const entryFile = htmlFiles.find(name => name.endsWith('.html') && name.includes('index')) || 
+                     htmlFiles.find(name => name.endsWith('.html')) || 
+                     htmlFiles[0] || 
+                     'index.html'
     
     console.log('Entry file determined:', entryFile)
     
