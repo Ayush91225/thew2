@@ -1,7 +1,7 @@
 'use client'
 
 import { useIDEStore } from '@/stores/ide-store'
-import { FileTreeManager, FileTreeNode } from '@/lib/file-tree'
+import { APIFileSystem, FileNode } from '@/lib/api-file-system'
 import { DebugPanel, ExtensionsPanel, DatabasePanel, APIPanel } from './SidebarPanels'
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
@@ -32,10 +32,6 @@ export default function Sidebar() {
     gitBranch,
     gitStatus,
     uncommittedChanges,
-    fileTree,
-    createFile,
-    createFolder,
-    refreshFileTree,
     yamlFiles,
     activeYamlFile,
     addYamlFile,
@@ -48,15 +44,20 @@ export default function Sidebar() {
   } = useIDEStore()
   
   const get = useIDEStore.getState
-  
-  const [creatingFile, setCreatingFile] = useState<{ parentId?: string; type: 'file' | 'folder' } | null>(null)
+  const [files, setFiles] = useState<FileNode[]>([])
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
+  const [creatingFile, setCreatingFile] = useState<{ parentPath?: string; type: 'file' | 'directory' } | null>(null)
   const [newItemName, setNewItemName] = useState('')
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileTreeNode } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileNode } | null>(null)
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [renamingNode, setRenamingNode] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const fileManager = FileTreeManager.getInstance()
+  const fileSystem = APIFileSystem.getInstance()
   const contextMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    loadFiles()
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -68,35 +69,29 @@ export default function Sidebar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const getCurrentFolder = (): string | null => {
-    if (!activeTab) return null
-    const activeTabData = tabs.find(tab => tab.id === activeTab)
-    if (!activeTabData) return null
-    const pathParts = activeTabData.path.split('/')
-    pathParts.pop()
-    return pathParts.join('/') || null
-  }
-
-  const findNodeByPath = (node: FileTreeNode, path: string): FileTreeNode | null => {
-    if (node.path === path) return node
-    if (node.children) {
-      for (const child of node.children) {
-        const found = findNodeByPath(child, path)
-        if (found) return found
-      }
+  const loadFiles = async () => {
+    try {
+      const fileList = await fileSystem.listFiles()
+      setFiles(fileList)
+    } catch (error) {
+      console.error('Failed to load files:', error)
     }
-    return null
   }
 
-  const toggleDirectory = (nodeId: string) => {
-    fileManager.toggleDirectory(nodeId)
-    refreshFileTree()
+  const toggleDirectory = (path: string) => {
+    const newExpanded = new Set(expandedDirs)
+    if (newExpanded.has(path)) {
+      newExpanded.delete(path)
+    } else {
+      newExpanded.add(path)
+    }
+    setExpandedDirs(newExpanded)
   }
 
-  const openFile = (node: FileTreeNode) => {
+  const openFile = async (node: FileNode) => {
     if (node.type === 'directory') {
-      setSelectedFolder(node.id)
-      toggleDirectory(node.id)
+      setSelectedFolder(node.path)
+      toggleDirectory(node.path)
       return
     }
 
@@ -105,33 +100,48 @@ export default function Sidebar() {
       return
     }
 
-    const content = getFileContent(node.name)
-    const language = getLanguage(node.name)
+    try {
+      const content = await fileSystem.readFile(node.path)
+      const language = fileSystem.getLanguageFromExtension(node.name)
+      
+      addTab({
+        id: `file-${Date.now()}`,
+        name: node.name,
+        path: node.path,
+        content,
+        language,
+        isDirty: false,
+        icon: fileSystem.getFileIcon(node.name)
+      })
+    } catch (error) {
+      console.error('Failed to open file:', error)
+    }
+  }
+
+  const handleCreateFile = async (fileName: string) => {
+    if (!creatingFile || !fileName.trim()) return
     
-    const { addTab } = useIDEStore.getState()
-    addTab({
-      id: node.id,
-      name: node.name,
-      path: node.path,
-      content,
-      language,
-      isDirty: false,
-      icon: fileManager.getFileIcon(node.name)
-    })
+    try {
+      await fileSystem.createFile(creatingFile.parentPath || '', fileName)
+      await loadFiles()
+      setCreatingFile(null)
+      setNewItemName('')
+    } catch (error) {
+      console.error('Failed to create file:', error)
+    }
   }
 
-  const handleCreateFile = (fileName: string) => {
-    if (!creatingFile) return
-    createFile(creatingFile.parentId || null, fileName)
-    setCreatingFile(null)
-    setNewItemName('')
-  }
-
-  const handleCreateFolder = (folderName: string) => {
-    if (!creatingFile) return
-    createFolder(creatingFile.parentId || null, folderName)
-    setCreatingFile(null)
-    setNewItemName('')
+  const handleCreateFolder = async (folderName: string) => {
+    if (!creatingFile || !folderName.trim()) return
+    
+    try {
+      await fileSystem.createDirectory(creatingFile.parentPath || '', folderName)
+      await loadFiles()
+      setCreatingFile(null)
+      setNewItemName('')
+    } catch (error) {
+      console.error('Failed to create folder:', error)
+    }
   }
 
   const handleCancelCreate = () => {
@@ -139,55 +149,70 @@ export default function Sidebar() {
     setNewItemName('')
   }
 
-  const handleRightClick = (e: React.MouseEvent, node: FileTreeNode) => {
+  const handleRightClick = (e: React.MouseEvent, node: FileNode) => {
     e.preventDefault()
     e.stopPropagation()
     setContextMenu({ x: e.clientX, y: e.clientY, node })
   }
 
-  const handleRename = (node: FileTreeNode) => {
-    setRenamingNode(node.id)
+  const handleRename = (node: FileNode) => {
+    setRenamingNode(node.path)
     setRenameValue(node.name)
     setContextMenu(null)
   }
 
-  const handleRenameSubmit = () => {
+  const handleRenameSubmit = async () => {
     if (!renameValue.trim() || !renamingNode) return
-    console.log(`Renamed to: ${renameValue}`)
-    setRenamingNode(null)
-    setRenameValue('')
+    
+    try {
+      const oldPath = renamingNode
+      const pathParts = oldPath.split('/')
+      pathParts[pathParts.length - 1] = renameValue
+      const newPath = pathParts.join('/')
+      
+      await fileSystem.renameFile(oldPath, newPath)
+      await loadFiles()
+      setRenamingNode(null)
+      setRenameValue('')
+    } catch (error) {
+      console.error('Failed to rename:', error)
+    }
   }
 
-  const handleDelete = (node: FileTreeNode) => {
+  const handleDelete = async (node: FileNode) => {
     if (confirm(`Delete ${node.name}?`)) {
-      console.log(`Deleted: ${node.name}`)
+      try {
+        await fileSystem.deleteFile(node.path)
+        await loadFiles()
+      } catch (error) {
+        console.error('Failed to delete:', error)
+      }
     }
     setContextMenu(null)
   }
 
-  const handleCopyPath = (node: FileTreeNode) => {
+  const handleCopyPath = (node: FileNode) => {
     navigator.clipboard.writeText(node.path)
-    console.log(`Copied path: ${node.path}`)
     setContextMenu(null)
   }
 
   const handleNewFile = () => {
-    setCreatingFile({ parentId: selectedFolder || undefined, type: 'file' })
+    setCreatingFile({ parentPath: selectedFolder || undefined, type: 'file' })
     setContextMenu(null)
   }
 
   const handleNewFolder = () => {
-    setCreatingFile({ parentId: selectedFolder || undefined, type: 'folder' })
+    setCreatingFile({ parentPath: selectedFolder || undefined, type: 'directory' })
     setContextMenu(null)
   }
 
-  const handleNewFileInFolder = (parentNode: FileTreeNode) => {
-    setCreatingFile({ parentId: parentNode.id, type: 'file' })
+  const handleNewFileInFolder = (parentNode: FileNode) => {
+    setCreatingFile({ parentPath: parentNode.path, type: 'file' })
     setContextMenu(null)
   }
 
-  const handleNewFolderInFolder = (parentNode: FileTreeNode) => {
-    setCreatingFile({ parentId: parentNode.id, type: 'folder' })
+  const handleNewFolderInFolder = (parentNode: FileNode) => {
+    setCreatingFile({ parentPath: parentNode.path, type: 'directory' })
     setContextMenu(null)
   }
 
@@ -236,245 +261,128 @@ export default function Sidebar() {
     event.target.value = ''
   }
 
-  const getFileContent = (filename: string): string => {
-    const contentMap: Record<string, string> = {
-      'MainEditor.tsx': `'use client'
+  const renderFileTree = (nodes: FileNode[], depth = 0, parentLines: boolean[] = []): React.ReactNode => {
+    return nodes.map((node, index) => {
+      const isLast = index === nodes.length - 1
+      const isActive = tabs.some(tab => tab.path === node.path && tab.id === activeTab)
+      const isRenaming = renamingNode === node.path
+      const isExpanded = expandedDirs.has(node.path)
+      const indent = depth * 16
 
-import { useEffect, useRef } from 'react'
-import { useIDEStore } from '@/stores/ide-store'
-
-export default function MainEditor() {
-  return <div>Editor</div>
-}`,
-      'layout.tsx': `import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Kriya IDE'
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  )
-}`,
-      'package.json': `{
-  "name": "kriya-ide",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build"
-  }
-}`,
-      'README.md': `# Kriya IDE
-
-A modern, enterprise-level IDE built with Next.js and React.
-
-## Features
-
-- Monaco Editor
-- File Management
-- Terminal Integration
-- Git Integration`
-    }
-    return contentMap[filename] || `// ${filename}
-
-// File content here...`
-  }
-
-  const getLanguage = (filename: string): string => {
-    const ext = filename.split('.').pop()?.toLowerCase()
-    const langMap: Record<string, string> = {
-      'tsx': 'typescript',
-      'ts': 'typescript', 
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'css': 'css',
-      'json': 'json',
-      'md': 'markdown'
-    }
-    return langMap[ext || ''] || 'plaintext'
-  }
-
-  const renderFileTree = (node: FileTreeNode, depth = 0, isLast = false, parentLines: boolean[] = []): React.ReactNode => {
-    const isActive = activeTab === node.id
-    const isRenaming = renamingNode === node.id
-    const indent = depth * 16
-
-    return (
-      <div key={node.id}>
-        <div 
-          onClick={() => !isRenaming && openFile(node)}
-          onContextMenu={(e) => handleRightClick(e, node)}
-          className={`relative flex items-center h-6 text-xs cursor-pointer select-none ${
-            isActive ? 'bg-blue-600/20 text-white' : 
-            selectedFolder === node.id ? 'bg-amber-600/20 text-amber-200' :
-            'text-zinc-300 hover:bg-zinc-800/50'
-          }`}
-        >
-          {/* Tree lines */}
-          {parentLines.map((hasLine, i) => (
-            hasLine && (
-              <div
-                key={i}
-                className="absolute w-px h-full bg-zinc-600/40"
-                style={{ left: `${8 + i * 16}px` }}
-              />
-            )
-          ))}
-          
-          {/* Current level connector */}
-          {depth > 0 && (
-            <>
-              <div
-                className="absolute w-px bg-zinc-600/40"
-                style={{ 
-                  left: `${8 + (depth - 1) * 16}px`,
-                  top: 0,
-                  height: isLast ? '12px' : '100%'
-                }}
-              />
-              <div
-                className="absolute h-px bg-zinc-600/40"
-                style={{ 
-                  left: `${8 + (depth - 1) * 16}px`,
-                  top: '12px',
-                  width: '8px'
-                }}
-              />
-            </>
-          )}
-          
-          <div className="flex items-center gap-1" style={{ paddingLeft: `${indent + 4}px` }}>
-            {node.type === 'directory' && (
-              <div className="w-4 h-4 flex items-center justify-center">
-                <i className={`ph-fill ${node.isExpanded ? 'ph-caret-down' : 'ph-caret-right'} text-[10px] text-zinc-400`}></i>
-              </div>
-            )}
-            
-            <div className="w-4 h-4 flex items-center justify-center">
-              <i className={`${
-                node.type === 'directory' 
-                  ? selectedFolder === node.id ? 'ph-fill ph-folder-open' : 'ph-fill ph-folder'
-                  : fileManager.getFileIcon(node.name)
-              } text-sm`} style={node.type === 'directory' ? { color: selectedFolder === node.id ? '#10B981' : '#059669' } : {}}></i>
-            </div>
-            
-            {isRenaming ? (
-              <input
-                type="text"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRenameSubmit()
-                  if (e.key === 'Escape') { setRenamingNode(null); setRenameValue('') }
-                }}
-                onBlur={handleRenameSubmit}
-                className="bg-zinc-800 border border-zinc-600 text-white text-xs outline-none px-1 py-0 rounded"
-                autoFocus
-              />
-            ) : (
-              <span className="text-xs truncate">{node.name}</span>
-            )}
-          </div>
-        </div>
-        
-        {node.type === 'directory' && node.isExpanded && node.children && (
-          <div>
-            {node.children.map((child, index) => {
-              const isChildLast = index === node.children!.length - 1
-              const newParentLines = [...parentLines]
-              if (depth >= 0) {
-                newParentLines[depth] = !isLast
-              }
-              return renderFileTree(child, depth + 1, isChildLast, newParentLines)
-            })}
-            
-            {creatingFile?.parentId === node.id && (
-              <div className="relative flex items-center h-6 text-xs">
-                {/* Tree lines for new item */}
-                {parentLines.map((hasLine, i) => (
-                  hasLine && (
-                    <div
-                      key={i}
-                      className="absolute w-px h-full bg-zinc-600/40"
-                      style={{ left: `${8 + i * 16}px` }}
-                    />
-                  )
-                ))}
-                
+      return (
+        <div key={node.path}>
+          <div 
+            onClick={() => !isRenaming && openFile(node)}
+            onContextMenu={(e) => handleRightClick(e, node)}
+            className={`relative flex items-center h-6 text-xs cursor-pointer select-none ${
+              isActive ? 'bg-blue-600/20 text-white' : 
+              selectedFolder === node.path ? 'bg-amber-600/20 text-amber-200' :
+              'text-zinc-300 hover:bg-zinc-800/50'
+            }`}
+          >
+            {/* Tree lines */}
+            {parentLines.map((hasLine, i) => (
+              hasLine && (
                 <div
-                  className="absolute w-px h-3 bg-zinc-600/40"
-                  style={{ left: `${8 + depth * 16}px`, top: 0 }}
+                  key={i}
+                  className="absolute w-px h-full bg-zinc-600/40"
+                  style={{ left: `${8 + i * 16}px` }}
+                />
+              )
+            ))}
+            
+            {/* Current level connector */}
+            {depth > 0 && (
+              <>
+                <div
+                  className="absolute w-px bg-zinc-600/40"
+                  style={{ 
+                    left: `${8 + (depth - 1) * 16}px`,
+                    top: 0,
+                    height: isLast ? '12px' : '100%'
+                  }}
                 />
                 <div
-                  className="absolute h-px w-2 bg-zinc-600/40"
-                  style={{ left: `${8 + depth * 16}px`, top: '12px' }}
+                  className="absolute h-px bg-zinc-600/40"
+                  style={{ 
+                    left: `${8 + (depth - 1) * 16}px`,
+                    top: '12px',
+                    width: '8px'
+                  }}
                 />
-                
-                <div className="flex items-center gap-1" style={{ paddingLeft: `${(depth + 1) * 16 + 4}px` }}>
-                  <div className="w-4 h-4 flex items-center justify-center">
-                    <i className={`${
-                      creatingFile.type === 'folder' ? 'ph-fill ph-folder' : 'ph ph-file'
-                    } text-sm text-zinc-500`}></i>
-                  </div>
-                  <input
-                    type="text"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newItemName.trim()) {
-                        if (creatingFile.type === 'file') handleCreateFile(newItemName)
-                        else handleCreateFolder(newItemName)
-                      }
-                      if (e.key === 'Escape') handleCancelCreate()
-                    }}
-                    onBlur={handleCancelCreate}
-                    className="bg-zinc-800 border border-zinc-600 text-white text-xs outline-none px-1 py-0 rounded flex-1"
-                    placeholder={creatingFile.type === 'file' ? 'filename.ext' : ''}
-                    autoFocus
-                  />
+              </>
+            )}
+            
+            <div className="flex items-center gap-1" style={{ paddingLeft: `${indent + 4}px` }}>
+              {node.type === 'directory' && (
+                <div className="w-4 h-4 flex items-center justify-center">
+                  <i className={`ph-fill ${isExpanded ? 'ph-caret-down' : 'ph-caret-right'} text-[10px] text-zinc-400`}></i>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {creatingFile?.parentId === undefined && node === fileTree && (
-          <div className="flex items-center h-6 text-xs">
-            <div className="flex items-center gap-1 pl-1">
+              )}
+              
               <div className="w-4 h-4 flex items-center justify-center">
                 <i className={`${
-                  creatingFile?.type === 'folder' ? 'ph-fill ph-folder' : 'ph ph-file'
-                } text-sm text-zinc-500`}></i>
+                  node.type === 'directory' 
+                    ? selectedFolder === node.path ? 'ph-fill ph-folder-open' : 'ph-fill ph-folder'
+                    : fileSystem.getFileIcon(node.name)
+                } text-sm`} style={node.type === 'directory' ? { color: selectedFolder === node.path ? '#10B981' : '#059669' } : {}}></i>
               </div>
-              <input
-                type="text"
-                value={newItemName}
-                onChange={(e) => setNewItemName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newItemName.trim()) {
-                    if (creatingFile?.type === 'file') handleCreateFile(newItemName)
-                    else handleCreateFolder(newItemName)
-                  }
-                  if (e.key === 'Escape') handleCancelCreate()
-                }}
-                onBlur={handleCancelCreate}
-                className="bg-zinc-800 border border-zinc-600 text-white text-xs outline-none px-1 py-0 rounded flex-1"
-                placeholder={creatingFile?.type === 'file' ? 'filename.ext' : ''}
-                autoFocus
-              />
+              
+              {isRenaming ? (
+                <input
+                  type="text"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleRenameSubmit()
+                    if (e.key === 'Escape') { setRenamingNode(null); setRenameValue('') }
+                  }}
+                  onBlur={handleRenameSubmit}
+                  className="bg-zinc-800 border border-zinc-600 text-white text-xs outline-none px-1 py-0 rounded"
+                  autoFocus
+                />
+              ) : (
+                <span className="text-xs truncate">{node.name}</span>
+              )}
             </div>
           </div>
-        )}
-      </div>
-    )
+          
+          {node.type === 'directory' && isExpanded && node.children && (
+            <div>
+              {renderFileTree(node.children, depth + 1, [...parentLines, !isLast])}
+              
+              {creatingFile?.parentPath === node.path && (
+                <div className="relative flex items-center h-6 text-xs">
+                  <div className="flex items-center gap-1" style={{ paddingLeft: `${(depth + 1) * 16 + 4}px` }}>
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      <i className={`${
+                        creatingFile.type === 'directory' ? 'ph-fill ph-folder' : 'ph ph-file'
+                      } text-sm text-zinc-500`}></i>
+                    </div>
+                    <input
+                      type="text"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newItemName.trim()) {
+                          if (creatingFile.type === 'file') handleCreateFile(newItemName)
+                          else handleCreateFolder(newItemName)
+                        }
+                        if (e.key === 'Escape') handleCancelCreate()
+                      }}
+                      onBlur={handleCancelCreate}
+                      className="bg-zinc-800 border border-zinc-600 text-white text-xs outline-none px-1 py-0 rounded flex-1"
+                      placeholder={creatingFile.type === 'file' ? 'filename.ext' : 'folder name'}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )
+    })
   }
 
   return (
@@ -536,7 +444,7 @@ A modern, enterprise-level IDE built with Next.js and React.
                     <i className="ph ph-folder-plus text-zinc-400 group-hover:text-amber-400 text-sm transition-colors"></i>
                   </button>
                   <button 
-                    onClick={() => refreshFileTree()}
+                    onClick={loadFiles}
                     className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-800 transition-colors group"
                     title="Refresh"
                   >
@@ -545,7 +453,34 @@ A modern, enterprise-level IDE built with Next.js and React.
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto py-1">
-                {fileTree && renderFileTree(fileTree)}
+                {renderFileTree(files)}
+                {creatingFile?.parentPath === undefined && (
+                  <div className="flex items-center h-6 text-xs px-1">
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 flex items-center justify-center">
+                        <i className={`${
+                          creatingFile?.type === 'directory' ? 'ph-fill ph-folder' : 'ph ph-file'
+                        } text-sm text-zinc-500`}></i>
+                      </div>
+                      <input
+                        type="text"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newItemName.trim()) {
+                            if (creatingFile?.type === 'file') handleCreateFile(newItemName)
+                            else handleCreateFolder(newItemName)
+                          }
+                          if (e.key === 'Escape') handleCancelCreate()
+                        }}
+                        onBlur={handleCancelCreate}
+                        className="bg-zinc-800 border border-zinc-600 text-white text-xs outline-none px-1 py-0 rounded flex-1"
+                        placeholder={creatingFile?.type === 'file' ? 'filename.ext' : 'folder name'}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
