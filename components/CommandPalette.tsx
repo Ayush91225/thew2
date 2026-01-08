@@ -4,7 +4,17 @@ import { useIDEStore } from '@/stores/ide-store'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useEffect, useState } from 'react'
 
-const commands = [
+interface Command {
+  id: number
+  icon: string
+  label: string
+  desc: string
+  key: string
+  category: string
+  action?: 'terminal' | 'search' | 'settings' | 'ai' | 'deploy'
+}
+
+const commands: Command[] = [
   { id: 1, icon: 'ph ph-terminal-window', label: 'Toggle Terminal', desc: 'Open/close integrated terminal', key: '⌃`', category: 'General', action: 'terminal' },
   { id: 2, icon: 'ph ph-search', label: 'Global Search', desc: 'Search across project files', key: '⌘⇧F', category: 'General', action: 'search' },
   { id: 3, icon: 'ph ph-gear-six', label: 'Settings', desc: 'Open settings menu', key: '⌘,', category: 'General', action: 'settings' },
@@ -29,127 +39,248 @@ export default function CommandPalette() {
     setSettingsModal, 
     setGlobalSearch,
     setTerminalOpen,
+    setAIChatOpen,
+    loadFromURL,
     setView,
-    loadFromURL
+    terminalOpen
   } = useIDEStore()
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
-  useHotkeys('meta+k', (e) => {
+  // Toggle command palette with Ctrl+K or Cmd+K
+  useHotkeys('ctrl+k, meta+k', (e) => {
     e.preventDefault()
     setCommandPalette(!commandPalette)
-  })
+    setSearchQuery('')
+    setSelectedIndex(0)
+  }, {
+    enabled: true,
+    preventDefault: true,
+  }, [commandPalette])
 
+  // Close with Escape
   useHotkeys('escape', () => {
-    if (commandPalette) setCommandPalette(false)
-  })
+    if (commandPalette) {
+      setCommandPalette(false)
+      setSearchQuery('')
+    }
+  }, { 
+    enabled: commandPalette,
+    preventDefault: true 
+  }, [commandPalette])
 
+  // Toggle terminal with Ctrl+`
   useHotkeys('ctrl+`', (e) => {
     e.preventDefault()
-    const { terminalOpen, setTerminalOpen } = useIDEStore.getState()
     setTerminalOpen(!terminalOpen)
-  })
+    if (commandPalette) {
+      setCommandPalette(false)
+    }
+  }, {
+    enabled: true,
+    preventDefault: true,
+  }, [terminalOpen, commandPalette])
+
+  // Navigate with arrow keys
+  useHotkeys('up, down', (e) => {
+    if (!commandPalette) return
+    
+    e.preventDefault()
+    const filteredCommands = getFilteredCommands()
+    if (filteredCommands.length === 0) return
+    
+    const direction = e.key === 'ArrowUp' ? -1 : 1
+    const newIndex = (selectedIndex + direction + filteredCommands.length) % filteredCommands.length
+    setSelectedIndex(newIndex)
+  }, {
+    enabled: commandPalette,
+    preventDefault: true,
+  }, [commandPalette, selectedIndex, searchQuery])
+
+  // Execute with Enter
+  useHotkeys('enter', (e) => {
+    if (!commandPalette) return
+    
+    e.preventDefault()
+    const filteredCommands = getFilteredCommands()
+    if (filteredCommands.length > 0 && selectedIndex < filteredCommands.length) {
+      executeCommand(filteredCommands[selectedIndex].id)
+    }
+  }, {
+    enabled: commandPalette,
+    preventDefault: true,
+  }, [commandPalette, selectedIndex, searchQuery])
 
   useEffect(() => {
     loadFromURL()
-  }, [loadFromURL])
+  }, [])
+
+  useEffect(() => {
+    // Reset selection when search changes
+    setSelectedIndex(0)
+  }, [searchQuery])
+
+  const getFilteredCommands = () => {
+    return commands.filter(cmd => 
+      searchQuery === '' || 
+      cmd.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cmd.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cmd.category.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }
 
   const executeCommand = (commandId: number) => {
     const command = commands.find(cmd => cmd.id === commandId)
-    if (!command?.action) {
-      console.log('Command executed:', commandId)
+    if (!command) return
+
+    if (!command.action) {
       setCommandPalette(false)
+      setSearchQuery('')
       return
     }
 
     switch (command.action) {
       case 'ai':
-        const { setAIChatOpen } = useIDEStore.getState()
         setAIChatOpen(true)
+        setAIModal(true)
         break
       case 'settings':
         setView('settings')
+        break
+      case 'deploy':
+        setView('deploy')
         break
       case 'search':
         setGlobalSearch(true)
         break
       case 'terminal':
-        const { terminalOpen } = useIDEStore.getState()
         setTerminalOpen(!terminalOpen)
         break
-      case 'deploy':
-        setView('deploy')
-        break
-      case 'openProject':
-        // This would trigger the file system API
-        console.log('Opening project folder...')
-        break
-      default:
-        console.log('Command executed:', commandId)
     }
     setCommandPalette(false)
+    setSearchQuery('')
   }
 
-  const filteredCommands = commands.filter(cmd => 
-    searchQuery === '' || 
-    cmd.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cmd.desc.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
+  const filteredCommands = getFilteredCommands()
   const groupedCommands = filteredCommands.reduce((acc, cmd) => {
     if (!acc[cmd.category]) acc[cmd.category] = []
     acc[cmd.category].push(cmd)
     return acc
-  }, {} as Record<string, typeof commands>)
+  }, {} as Record<string, Command[]>)
 
   if (!commandPalette) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] bg-black/85 backdrop-blur-md">
-      <div className="w-full max-w-2xl glass border-line rounded-xl shadow-2xl overflow-hidden">
+    <div 
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] bg-black/85 backdrop-blur-md"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setCommandPalette(false)
+          setSearchQuery('')
+        }
+      }}
+    >
+      <div className="w-full max-w-2xl glass border-line rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center px-6 py-4 gap-4 border-b-line">
-          <i className="ph ph-terminal-window text-white text-lg"></i>
+          <i className="ph ph-magnifying-glass text-white text-lg"></i>
           <input 
             type="text" 
             placeholder="Search commands, files, actions..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-sm text-white"
+            className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-zinc-500"
             autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setCommandPalette(false)
+                setSearchQuery('')
+              }
+            }}
           />
           <button 
-            onClick={() => setCommandPalette(false)}
-            className="text-zinc-600 hover:text-white transition"
+            onClick={() => {
+              setCommandPalette(false)
+              setSearchQuery('')
+            }}
+            className="text-zinc-400 hover:text-white transition p-1"
+            aria-label="Close"
           >
-            <i className="ph ph-x"></i>
+            <i className="ph ph-x text-lg"></i>
           </button>
         </div>
-        <div className="max-h-96 overflow-y-auto">
-          {Object.entries(groupedCommands).map(([category, cmds]) => (
-            <div key={category}>
-              <div className="label px-6 py-3 bg-black/40">{category}</div>
-              {cmds.map((cmd) => (
-                <div
-                  key={cmd.id}
-                  onClick={() => executeCommand(cmd.id)}
-                  className="hover-item flex items-center justify-between px-6 py-3 cursor-pointer"
-                >
-                  <div className="flex items-center gap-4">
-                    <i className={`${cmd.icon} text-lg text-white`} />
-                    <div>
-                      <div className="text-sm font-semibold text-white">{cmd.label}</div>
-                      <div className="text-xs text-zinc-600">{cmd.desc}</div>
-                    </div>
-                  </div>
-                  {cmd.key && (
-                    <kbd className="px-2 py-1 text-[9px] font-bold text-zinc-600 bg-white/5 rounded">
-                      {cmd.key}
-                    </kbd>
-                  )}
-                </div>
-              ))}
+        <div className="max-h-[60vh] overflow-y-auto">
+          {filteredCommands.length === 0 ? (
+            <div className="px-6 py-8 text-center">
+              <i className="ph ph-magnifying-glass text-3xl text-zinc-600 mb-3"></i>
+              <p className="text-sm text-zinc-400">No commands found</p>
+              <p className="text-xs text-zinc-500 mt-1">Try a different search term</p>
             </div>
-          ))}
+          ) : (
+            Object.entries(groupedCommands).map(([category, cmds]) => (
+              <div key={category}>
+                <div className="px-6 py-2 bg-black/20 text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  {category}
+                </div>
+                {cmds.map((cmd, cmdIndex) => {
+                  const flatIndex = filteredCommands.findIndex(fc => fc.id === cmd.id)
+                  const isSelected = flatIndex === selectedIndex
+                  
+                  return (
+                    <div
+                      key={cmd.id}
+                      onClick={() => executeCommand(cmd.id)}
+                      className={`flex items-center justify-between px-6 py-3 cursor-pointer transition-colors ${
+                        isSelected ? 'bg-white/5' : 'hover:bg-white/5'
+                      }`}
+                      onMouseEnter={() => {
+                        const flatIndex = filteredCommands.findIndex(fc => fc.id === cmd.id)
+                        setSelectedIndex(flatIndex)
+                      }}
+                    >
+                      <div className="flex items-center gap-4">
+                        <i className={`${cmd.icon} text-lg ${isSelected ? 'text-white' : 'text-zinc-300'}`} />
+                        <div>
+                          <div className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-zinc-200'}`}>
+                            {cmd.label}
+                          </div>
+                          <div className="text-xs text-zinc-500">{cmd.desc}</div>
+                        </div>
+                      </div>
+                      {cmd.key && (
+                        <kbd className={`px-2 py-1 text-xs font-mono ${
+                          isSelected ? 'text-zinc-800 bg-white/90' : 'text-zinc-400 bg-white/10'
+                        } rounded`}>
+                          {cmd.key}
+                        </kbd>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))
+          )}
+        </div>
+        
+        {/* Footer with quick tips */}
+        <div className="px-6 py-3 border-t-line bg-black/30 flex items-center justify-between text-xs text-zinc-500">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">↑↓</kbd>
+              <span>Navigate</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">↵</kbd>
+              <span>Select</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">esc</kbd>
+              <span>Close</span>
+            </span>
+          </div>
+          <div className="text-zinc-400">
+            {filteredCommands.length} command{filteredCommands.length !== 1 ? 's' : ''}
+          </div>
         </div>
       </div>
     </div>

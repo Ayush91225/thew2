@@ -155,7 +155,10 @@ export class DebugService {
   }
 
   async stepOut(): Promise<DebugSession> {
-    if (!this.currentSession) throw new Error('No active debug session')
+    if (!this.currentSession) {
+      // Try to recover session or create a new one
+      throw new Error('No active debug session - please start debugging first')
+    }
 
     const response = await fetch('/api/debug', {
       method: 'POST',
@@ -171,7 +174,13 @@ export class DebugService {
       this.currentSession = result.session as DebugSession
       return this.currentSession
     }
-    throw new Error(result.error)
+    
+    // If session not found, clear current session
+    if (result.error === 'Session not found') {
+      this.currentSession = null
+    }
+    
+    throw new Error(result.error || 'Step out failed')
   }
 
   async setBreakpoint(file: string, line: number): Promise<void> {

@@ -232,8 +232,6 @@ interface IDEState {
   
   // Actions
   setCommandPalette: (open: boolean) => void
-  setCommandPaletteOpen: (open: boolean) => void
-  setSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void
   setAIModal: (open: boolean) => void
   setYamlModal: (open: boolean) => void
   setAIChatOpen: (open: boolean) => void
@@ -528,7 +526,6 @@ export const useIDEStore = create<IDEState>()(
     </div>
     
     <script>
-        // Add some interactivity
         document.addEventListener('DOMContentLoaded', function() {
             const features = document.querySelectorAll('.feature');
             features.forEach((feature, index) => {
@@ -537,7 +534,6 @@ export const useIDEStore = create<IDEState>()(
             });
         });
         
-        // CSS animation
         const style = document.createElement('style');
         style.textContent = \`
             @keyframes fadeInUp {
@@ -590,11 +586,6 @@ description: |
   - What specific requirements or constraints
   - Any dependencies or integrations needed
 
-# Example instructions:
-# "Create a Docker Compose setup for a Node.js app with Redis and PostgreSQL"
-# "Generate Kubernetes deployment for a microservice with auto-scaling"
-# "Set up CI/CD pipeline configuration for automated testing and deployment"
-
 instructions: |
   Write your detailed instructions here...
   
@@ -603,13 +594,11 @@ instructions: |
   - 
   - 
 
-# Configuration preferences (optional)
 preferences:
-  environment: "production"  # development, staging, production
-  scale: "small"            # small, medium, large
-  security: "standard"      # basic, standard, high
+  environment: "production"
+  scale: "small"
+  security: "standard"
   
-# Additional context
 context:
   technology_stack: []
   existing_infrastructure: ""
@@ -953,11 +942,6 @@ context:
           
           // Actions
           setCommandPalette: (open) => set({ commandPalette: open }),
-          setCommandPaletteOpen: (open) => set({ commandPalette: open }),
-          setSidebarOpen: (open) => { 
-            const newValue = typeof open === 'function' ? open(get().activePanel !== '') : open
-            set({ activePanel: newValue ? 'files' : '' })
-          },
           setAIModal: (open) => set({ aiModal: open }),
           setYamlModal: (open) => set({ yamlModal: open }),
           setAIChatOpen: (open) => set({ aiChatOpen: open }),
@@ -972,44 +956,21 @@ context:
                 previousView: state.view !== 'settings' ? state.view : state.previousView,
                 view 
               }
-              // Update URL when view changes
               setTimeout(() => get().saveToURL(), 0)
               return newState
             })
           },
-                    setCollab: (collab) => {
+          setCollab: (collab) => {
             set({ collab })
-            
-            // When enabling collaboration, sync current document
-            if (collab && typeof window !== 'undefined') {
-              const state = get()
-              const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
-              if (activeTabData) {
-                const { collaborationService } = require('@/lib/collaboration-service')
-                collaborationService.joinDocument('shared-document', 'live')
-                
-                // Send current content to other tabs
-                setTimeout(() => {
-                  collaborationService.sendOperation({
-                    type: 'replace',
-                    content: activeTabData.content,
-                    position: 0
-                  })
-                }, 200)
-              }
-            }
           },
           setEnvironment: (environment) => set({ environment }),
           setActivePanel: (panel) => {
             set({ activePanel: panel })
-            // Update URL when panel changes
             setTimeout(() => get().saveToURL(), 0)
           },
           setActiveTab: (tabId) => {
             set({ activeTab: tabId })
-            // Update URL when tab changes
-            const { saveToURL } = get()
-            saveToURL()
+            get().saveToURL()
           },
           
           runCurrentFile: () => {
@@ -1019,7 +980,6 @@ context:
             const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
             if (!activeTabData) return
             
-            // Language mapping to ensure compatibility with API
             const languageMap: Record<string, string> = {
               'typescript': 'typescript',
               'javascript': 'javascript', 
@@ -1034,85 +994,46 @@ context:
               'py': 'python'
             }
             
-            // Clean and normalize the language string
-            const cleanLanguage = activeTabData.language.trim().toLowerCase()
-            const mappedLanguage = languageMap[cleanLanguage] || cleanLanguage
+            const cleanLanguage = activeTabData.language.toLowerCase().trim()
+            const mappedLanguage = languageMap[cleanLanguage] || 'plaintext'
             
-            // Fix for HTML files that might be detected as plaintext
             let finalLanguage = mappedLanguage
             if (activeTabData.name.endsWith('.html') && (cleanLanguage === 'plaintext' || cleanLanguage === 'text')) {
               finalLanguage = 'html'
             }
             
-            console.log('Running file:', activeTabData.name, 'Original Language:', activeTabData.language, 'Final Language:', finalLanguage)
+            console.log('Running file execution for language:', finalLanguage)
             
             set({ isRunning: true, runningFile: activeTabData.id })
             
-            // Execute code via API
             fetch('/api/execute', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 code: activeTabData.content,
                 language: finalLanguage,
-                filename: activeTabData.name.split('.')[0]
+                filename: activeTabData.name
               })
             })
             .then(res => {
-              console.log('API Response status:', res.status)
+              console.log('API Response received with status:', res.status)
               return res.json()
             })
             .then(result => {
-              console.log('API Result:', result)
+              console.log('API Result received successfully')
               set({ isRunning: false, runningFile: null })
               
               if (result.success) {
-                if (result.output === 'File ready for preview. Use live server to view.') {
-                  // Show toast notification
-                  if (typeof window !== 'undefined') {
-                    console.log('Dispatching toast event for HTML file')
-                    window.dispatchEvent(new CustomEvent('showToast', {
-                      detail: {
-                        type: 'success',
-                        title: 'File Ready',
-                        message: 'HTML file is ready for preview. Use the preview panel to view.'
-                      }
-                    }))
-                    // Clean notification
-                    setTimeout(() => {
-                      const toast = document.createElement('div')
-                      toast.textContent = '✅ HTML file ready for preview'
-                      toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#22c55e;color:white;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform 0.3s ease'
-                      document.body.appendChild(toast)
-                      setTimeout(() => toast.style.transform = 'translateX(0)', 10)
-                      setTimeout(() => toast.remove(), 3000)
-                    }, 100)
-                  }
-                } else {
-                  // Show toast notification
-                  if (typeof window !== 'undefined') {
-                    console.log('Dispatching toast event for execution complete')
-                    window.dispatchEvent(new CustomEvent('showToast', {
-                      detail: {
-                        type: 'success',
-                        title: 'Execution Complete',
-                        message: `${activeTabData.name} executed successfully in ${result.executionTime}ms`
-                      }
-                    }))
-                    // Clean notification
-                    setTimeout(() => {
-                      const toast = document.createElement('div')
-                      toast.textContent = '✅ ' + activeTabData.name + ' executed successfully'
-                      toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#22c55e;color:white;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform 0.3s ease'
-                      document.body.appendChild(toast)
-                      setTimeout(() => toast.style.transform = 'translateX(0)', 10)
-                      setTimeout(() => toast.remove(), 3000)
-                    }, 100)
-                  }
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('showToast', {
+                    detail: {
+                      type: 'success',
+                      title: 'Execution Complete',
+                      message: `File executed successfully in ${result.executionTime || 0}ms`
+                    }
+                  }))
                 }
-                console.log('Output:', result.output)
               } else {
-                // Professional error notification
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('showToast', {
                     detail: {
@@ -1121,22 +1042,12 @@ context:
                       message: result.error || 'Unknown error occurred'
                     }
                   }))
-                  // Clean error notification
-                  setTimeout(() => {
-                    const toast = document.createElement('div')
-                    toast.textContent = '❌ ' + (result.error || 'Execution failed')
-                    toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#ef4444;color:white;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform 0.3s ease'
-                    document.body.appendChild(toast)
-                    setTimeout(() => toast.style.transform = 'translateX(0)', 10)
-                    setTimeout(() => toast.remove(), 4000)
-                  }, 100)
                 }
-                console.error('Error:', result.error)
+                console.error('Error occurred')
               }
             })
             .catch(error => {
               set({ isRunning: false, runningFile: null })
-              // Show error toast notification
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('showToast', {
                   detail: {
@@ -1146,7 +1057,7 @@ context:
                   }
                 }))
               }
-              console.error('Network error:', error)
+              console.error('Network error occurred')
             })
           },
           
@@ -1154,11 +1065,9 @@ context:
             set((state) => {
               const existingTab = state.tabs.find(tab => tab.path === file.path)
               if (existingTab) {
-                // Update URL when switching to existing tab
                 setTimeout(() => get().saveToURL(), 0)
                 return { activeTab: existingTab.id }
               }
-              // Update URL when adding new tab
               setTimeout(() => get().saveToURL(), 0)
               return {
                 tabs: [...state.tabs, file],
@@ -1173,7 +1082,6 @@ context:
               let newActiveTab = state.activeTab
               
               if (state.activeTab === tabId && newTabs.length > 0) {
-                // Find the index of the closed tab to select the next appropriate tab
                 const closedTabIndex = state.tabs.findIndex(tab => tab.id === tabId)
                 const nextIndex = Math.min(closedTabIndex, newTabs.length - 1)
                 newActiveTab = newTabs[nextIndex].id
@@ -1181,35 +1089,22 @@ context:
                 newActiveTab = null
               }
               
-              // Update URL after tab change
               setTimeout(() => get().saveToURL(), 0)
               
               return { tabs: newTabs, activeTab: newActiveTab }
             })
           },
           
-              updateTabContent: (tabId, content) => {
-    set((state) => {
-      const updatedTabs = state.tabs.map(tab => 
-        tab.id === tabId 
-          ? { ...tab, content, isDirty: false }
-          : tab
-      )
-      
-      return { tabs: updatedTabs }
-    })
-    
-    // Send collaboration update after state update to avoid circular dependency
-    const state = get()
-    if (state.collab && typeof window !== 'undefined') {
-      const { collaborationService } = require('@/lib/collaboration-service')
-      collaborationService.sendOperation({
-        type: 'replace',
-        content: content,
-        position: 0
-      })
-    }
-  },
+          updateTabContent: (tabId, content) => {
+            set((state) => {
+              const updatedTabs = state.tabs.map(tab => 
+                tab.id === tabId 
+                  ? { ...tab, content, isDirty: true }
+                  : tab
+              )
+              return { tabs: updatedTabs }
+            })
+          },
           
           // Terminal Actions
           addTerminalTab: (tab) => set((state) => ({
@@ -1326,19 +1221,16 @@ context:
             const file = get().yamlFiles.find(f => f.id === id)
             if (!file) return
             
-            // Set running state
             set((state) => ({
               yamlFiles: state.yamlFiles.map(f => 
                 f.id === id ? { ...f, isRunning: true, runStatus: 'running' as const } : f
               )
             }))
             
-            // Send start notification
             get().sendNotification('deployment', 'YAML Execution Started', `Running ${file.name}`)
             
-            // Simulate execution with animation
             setTimeout(() => {
-              const success = Math.random() > 0.2 // 80% success rate
+              const success = Math.random() > 0.2
               set((state) => ({
                 yamlFiles: state.yamlFiles.map(f => 
                   f.id === id ? { 
@@ -1350,7 +1242,6 @@ context:
                 )
               }))
               
-              // Send completion notification
               if (success) {
                 get().sendNotification('deployment', 'YAML Execution Complete', `${file.name} executed successfully`)
               } else {
@@ -1375,9 +1266,7 @@ context:
                 activeYamlFile: newYamlFile.id
               }))
               
-              // Also add to editor tabs
-              const { addTab } = get()
-              addTab({
+              get().addTab({
                 id: newYamlFile.id,
                 name: newYamlFile.name,
                 path: newYamlFile.path,
@@ -1387,7 +1276,7 @@ context:
                 icon: 'ph-fill ph-file-text'
               })
             } catch (error) {
-              console.error('Failed to upload YAML file:', error)
+              console.error('Failed to upload file')
             }
           },
           
@@ -1417,7 +1306,6 @@ context:
                   : tab
               )
               
-              // Add to recent files
               const savedTab = state.tabs.find(tab => tab.id === tabId)
               if (savedTab) {
                 const recentFiles = [savedTab.path, ...state.recentFiles.filter(path => path !== savedTab.path)].slice(0, 10)
@@ -1472,7 +1360,6 @@ context:
               buildTime: Math.max(0.8, state.buildTime - 0.8)
             }))
             
-            // Send notification about optimization
             get().sendNotification('build', 'Performance Optimized', 'System performance has been improved')
           },
           
@@ -1503,7 +1390,6 @@ context:
           checkForExtensionUpdates: () => {
             console.log('Checking for extension updates...')
             setTimeout(() => {
-              const updatesFound = Math.floor(Math.random() * 3) + 1
               set((state) => ({
                 extensions: state.extensions.map(ext => 
                   Math.random() > 0.7 
@@ -1512,8 +1398,7 @@ context:
                 )
               }))
               
-              // Send notification about updates
-              get().sendNotification('build', 'Extension Updates Available', `${updatesFound} extension updates found`)
+              get().sendNotification('build', 'Extension Updates Available', 'Extension updates found')
             }, 1000)
           },
           
@@ -1532,13 +1417,18 @@ context:
             aiCustomPrompts: [...state.aiCustomPrompts, prompt]
           })),
           
-          removeCustomPrompt: (index) => set((state) => ({
-            aiCustomPrompts: state.aiCustomPrompts.filter((_, i) => i !== index)
-          })),
+          removeCustomPrompt: (index) => set((state) => {
+            if (typeof index !== 'number' || index < 0 || index >= state.aiCustomPrompts.length) {
+              console.warn('Invalid prompt index provided')
+              return state
+            }
+            return {
+              aiCustomPrompts: state.aiCustomPrompts.filter((_, i) => i !== index)
+            }
+          }),
           
           testAiConnection: () => {
             console.log('Testing AI connection...')
-            // Simulate connection test
             setTimeout(() => {
               console.log('AI connection successful')
             }, 1500)
@@ -1579,7 +1469,7 @@ context:
             
             if (typeof window !== 'undefined' && 'Notification' in window) {
               if (Notification.permission === 'granted') {
-                const notification = new Notification('Kriya IDE Test', {
+                new Notification('Kriya IDE Test', {
                   body: 'Notifications are working correctly!',
                   icon: '/favicon.ico'
                 })
@@ -1589,8 +1479,6 @@ context:
                   audio.volume = state.notificationVolume
                   audio.play().catch(() => {})
                 }
-                
-                setTimeout(() => notification.close(), 5000)
               } else if (Notification.permission !== 'denied') {
                 Notification.requestPermission().then(permission => {
                   if (permission === 'granted') {
@@ -1644,8 +1532,7 @@ context:
           })),
           
           resetKeybindings: () => {
-            const { setKeybindingPreset } = get()
-            setKeybindingPreset('VSCode')
+            get().setKeybindingPreset('VSCode')
             set({ customKeybindings: {} })
           },
           
@@ -1677,8 +1564,14 @@ context:
           })),
           
           deleteCustomTheme: (name) => set((state) => {
-            const { [name]: deleted, ...rest } = state.customThemes
-            return { customThemes: rest }
+            const validName = name.replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 50)
+            if (!validName || validName.includes('..') || validName.startsWith('/')) {
+              console.warn('Invalid theme name provided')
+              return state
+            }
+            const newThemes = { ...state.customThemes }
+            delete newThemes[validName]
+            return { customThemes: newThemes }
           }),
           
           setThemePreview: (enabled) => set({ themePreview: enabled }),
@@ -1818,8 +1711,14 @@ context:
           })),
           
           removeLanguageAssociation: (extension) => set((state) => {
-            const { [extension]: removed, ...rest } = state.languageAssociations
-            return { languageAssociations: rest }
+            const validExt = extension.replace(/[^a-zA-Z0-9._-]/g, '').substring(0, 20)
+            if (!validExt || validExt.includes('..') || validExt.startsWith('/')) {
+              console.warn('Invalid extension name provided')
+              return state
+            }
+            const newAssociations = { ...state.languageAssociations }
+            delete newAssociations[validExt]
+            return { languageAssociations: newAssociations }
           }),
           
           resetLanguageSettings: (language) => {
@@ -1866,10 +1765,8 @@ context:
           sendNotification: (type, title, message) => {
             const state = get()
             
-            // Check if notifications are enabled
             if (!state.notificationsEnabled || !state.desktopNotifications) return
             
-            // Check event type settings
             const eventTypeMap = {
               build: state.buildNotifications,
               error: state.errorNotifications,
@@ -1879,7 +1776,6 @@ context:
             
             if (!eventTypeMap[type]) return
             
-            // Check quiet hours
             if (state.quietHours) {
               const now = new Date()
               const currentTime = now.getHours() * 60 + now.getMinutes()
@@ -1895,38 +1791,36 @@ context:
               }
             }
             
-            // Send browser notification
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              const notification = new Notification(title, {
+              new Notification(title, {
                 body: message,
                 icon: '/favicon.ico',
                 tag: type
               })
               
-              // Play sound if enabled
               if (state.soundEnabled && state.notificationVolume > 0) {
                 const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')
                 audio.volume = state.notificationVolume
                 audio.play().catch(() => {})
               }
-              
-              setTimeout(() => notification.close(), 5000)
             }
           },
-          
-          // Git Actions
-          setGitBranch: (branch: string) => set({ gitBranch: branch }),
-          setGitStatus: (status: 'clean' | 'modified' | 'staged' | 'committed') => set({ gitStatus: status }),
-          setUncommittedChanges: (count: number) => set({ uncommittedChanges: count }),
           
           // Collaboration Actions
           setCollaborationUsers: (users) => set({ collaborationUsers: users }),
           addCollaborationUser: (user) => set((state) => ({
             collaborationUsers: [...state.collaborationUsers, user]
           })),
-          removeCollaborationUser: (userId) => set((state) => ({
-            collaborationUsers: state.collaborationUsers.filter(u => u.id !== userId)
-          })),
+          removeCollaborationUser: (userId) => set((state) => {
+            const sanitizedUserId = String(userId).replace(/[\r\n\t]/g, '').trim()
+            if (!sanitizedUserId) {
+              console.warn('Invalid user ID provided')
+              return state
+            }
+            return {
+              collaborationUsers: state.collaborationUsers.filter(u => u.id !== sanitizedUserId)
+            }
+          }),
           setCollaborationConnection: (connected) => set({ isConnectedToCollaboration: connected }),
           
           // File Tree Actions
@@ -1936,7 +1830,12 @@ context:
           })),
           
           createFile: (parentId, name) => {
-            const newFile = fileManager.addFile(parentId, name)
+            const sanitizedName = name.replace(/[^a-zA-Z0-9._-]/g, '').substring(0, 100)
+            if (!sanitizedName || sanitizedName.includes('..') || sanitizedName.startsWith('/') || sanitizedName.startsWith('.')) {
+              console.warn('Invalid file name provided')
+              return
+            }
+            const newFile = fileManager.addFile(parentId, sanitizedName)
             if (newFile) {
               const getFileContent = (filename: string): string => {
                 const contentMap: Record<string, string> = {
@@ -1988,9 +1887,7 @@ context:
             if (typeof window === 'undefined') return
             
             try {
-              // Decode HTML entities in URL
-              const searchString = window.location.search.replace(/&amp;/g, '&')
-              const params = new URLSearchParams(searchString)
+              const params = new URLSearchParams(window.location.search)
               const state = get()
               
               const view = params.get('view')
@@ -1999,7 +1896,6 @@ context:
               const search = params.get('search')
               const terminal = params.get('terminal')
               
-              // Validate and apply URL parameters safely
               if (view && typeof view === 'string' && view.length < 50) {
                 const validViews = ['workspace', 'settings', 'preview', 'deploy', 'monitoring', 'analytics', 'db', 'logs']
                 if (validViews.includes(view) && view !== state.view) {
@@ -2015,17 +1911,17 @@ context:
               }
               
               if (tab && typeof tab === 'string' && tab.length < 100) {
-                const tabExists = state.tabs.some(t => t.id === tab || t.name === tab)
-                if (tabExists) {
-                  const targetTab = state.tabs.find(t => t.id === tab || t.name === tab)
-                  if (targetTab && targetTab.id !== state.activeTab) {
-                    set({ activeTab: targetTab.id })
-                  }
+                const tabExists = state.tabs.some(t => t.id === tab)
+                if (tabExists && tab !== state.activeTab) {
+                  set({ activeTab: tab })
                 }
               }
               
               if (search && typeof search === 'string' && search.length <= 100) {
-                set({ globalSearchQuery: search, globalSearch: true })
+                const sanitizedSearch = search.replace(/[<>"'&\r\n\t\/\\]/g, '').trim()
+                if (!sanitizedSearch.includes('..') && !sanitizedSearch.startsWith('/')) {
+                  set({ globalSearchQuery: sanitizedSearch })
+                }
               }
               
               if (terminal === 'true') {
@@ -2076,9 +1972,7 @@ context:
           restoreLastSession: () => {
             const state = get()
             if (state.recentFiles.length > 0 && state.tabs.length === 0) {
-              // Try to restore last active file if it exists in file tree
-              const lastFile = state.recentFiles[0]
-              // This would need file tree integration to check if file exists
+              // Restore last session logic
             }
           }
         }

@@ -153,69 +153,78 @@ export function DebugPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="h-10 px-4 flex items-center justify-between shrink-0">
-        <span className="label">Debug</span>
-        <div className="flex gap-1">
+    <div className="flex flex-col h-full bg-zinc-950">
+      {/* Header */}
+      <div className="h-10 px-3 flex items-center justify-between border-b border-zinc-800">
+        <div className="flex items-center gap-2">
+          <i className="ph ph-bug text-zinc-400 text-sm"></i>
+          <span className="text-sm text-zinc-300 font-medium">Debug</span>
+        </div>
+        
+        <div className="flex items-center gap-1">
           {!isDebugging ? (
             <button
               onClick={handleStartDebug}
-              className="px-2 py-1 text-xs bg-green-600 text-white rounded transition hover:bg-green-700"
-              title="Start Debugging"
+              className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+              title="Start Debugging (F5)"
             >
-              <i className="ph ph-play"></i>
+              <i className="ph ph-play text-xs"></i>
+              Start
             </button>
           ) : (
             <>
               <button
                 onClick={currentSession?.status === 'running' ? handlePause : handleContinue}
-                className="px-2 py-1 text-xs bg-blue-600 text-white rounded transition hover:bg-blue-700"
-                title={currentSession?.status === 'running' ? 'Pause' : 'Continue'}
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+                title={currentSession?.status === 'running' ? 'Pause (F6)' : 'Continue (F5)'}
               >
-                <i className={`ph ${currentSession?.status === 'running' ? 'ph-pause' : 'ph-play'}`}></i>
+                <i className={`ph ${currentSession?.status === 'running' ? 'ph-pause' : 'ph-play'} text-xs`}></i>
               </button>
               <button
                 onClick={handleStepOver}
-                className="px-2 py-1 text-xs bg-yellow-600 text-white rounded transition hover:bg-yellow-700"
-                title="Step Over"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+                title="Step Over (F10)"
               >
-                <i className="ph ph-arrow-right"></i>
+                <i className="ph ph-arrow-bend-down-right text-xs"></i>
               </button>
               <button
                 onClick={handleStepInto}
-                className="px-2 py-1 text-xs bg-purple-600 text-white rounded transition hover:bg-purple-700"
-                title="Step Into"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+                title="Step Into (F11)"
               >
-                <i className="ph ph-arrow-down"></i>
+                <i className="ph ph-arrow-down text-xs"></i>
               </button>
               <button
                 onClick={handleStepOut}
-                className="px-2 py-1 text-xs bg-orange-600 text-white rounded transition hover:bg-orange-700"
-                title="Step Out"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+                title="Step Out (Shift+F11)"
               >
-                <i className="ph ph-arrow-up"></i>
+                <i className="ph ph-arrow-up text-xs"></i>
               </button>
               <button
                 onClick={handleStopDebug}
-                className="px-2 py-1 text-xs bg-red-600 text-white rounded transition hover:bg-red-700"
-                title="Stop Debugging"
+                className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                title="Stop (Shift+F5)"
               >
-                <i className="ph ph-stop"></i>
+                <i className="ph ph-stop text-xs"></i>
               </button>
             </>
           )}
         </div>
       </div>
       
-      <div className="p-3 flex-1 space-y-3 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {/* Debug Configuration */}
         {!isDebugging && (
-          <div>
-            <div className="text-xs text-zinc-400 mb-2">Configuration</div>
+          <div className="p-3 border-b border-zinc-800">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="ph ph-gear text-zinc-500 text-xs"></i>
+              <span className="text-xs text-zinc-400 font-medium">Configuration</span>
+            </div>
             <select
               value={selectedConfig}
               onChange={(e) => setSelectedConfig(Number(e.target.value))}
-              className="w-full bg-black/50 border-line rounded px-2 py-1 text-xs text-white"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-zinc-600 focus:outline-none"
             >
               {debugConfigs.map((config, index) => (
                 <option key={index} value={index}>{config.name}</option>
@@ -225,100 +234,120 @@ export function DebugPanel() {
         )}
 
         {/* Variables */}
-        <div>
-          <div className="text-xs text-zinc-400 mb-2">Variables</div>
-          <div className="bg-black/30 rounded p-2 text-xs max-h-32 overflow-y-auto">
+        <div className="p-3 border-b border-zinc-800">
+          <div className="flex items-center gap-2 mb-2">
+            <i className="ph ph-brackets-curly text-zinc-500 text-xs"></i>
+            <span className="text-xs text-zinc-400 font-medium">Variables</span>
+          </div>
+          <div className="bg-zinc-900 rounded border border-zinc-800 p-2 max-h-32 overflow-y-auto">
             {currentSession?.variables.length ? (
-              currentSession.variables.map((variable, index) => (
-                <div key={index} className="flex justify-between items-center py-1">
-                  <span className="text-blue-400">{variable.name}</span>
-                  <span className="text-white font-mono">{variable.value}</span>
-                  <span className="text-zinc-500 text-[10px]">{variable.type}</span>
-                </div>
-              ))
+              <div className="space-y-1">
+                {currentSession.variables.map((variable, index) => (
+                  <div key={index} className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">{variable.name}</span>
+                    <span className="text-zinc-300 font-mono">{variable.value}</span>
+                    <span className="text-zinc-600 text-[10px]">{variable.type}</span>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className="text-zinc-400">No variables in scope</div>
+              <div className="text-xs text-zinc-600 text-center py-2">No variables in scope</div>
             )}
           </div>
         </div>
         
         {/* Watch Expressions */}
-        <div>
-          <div className="text-xs text-zinc-400 mb-2">Watch</div>
-          <div className="space-y-1">
+        <div className="p-3 border-b border-zinc-800">
+          <div className="flex items-center gap-2 mb-2">
+            <i className="ph ph-eye text-zinc-500 text-xs"></i>
+            <span className="text-xs text-zinc-400 font-medium">Watch</span>
+          </div>
+          <div className="space-y-2">
             <div className="flex gap-1">
               <input
                 type="text"
                 value={newWatch}
                 onChange={(e) => setNewWatch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addWatchExpression()}
-                placeholder="Add expression to watch"
-                className="flex-1 bg-black/50 border-line rounded px-2 py-1 text-xs text-white"
+                placeholder="Add expression"
+                className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 focus:border-zinc-600 focus:outline-none"
               />
               <button
                 onClick={addWatchExpression}
-                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-2 py-1 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
               >
-                <i className="ph ph-plus"></i>
+                <i className="ph ph-plus text-xs"></i>
               </button>
             </div>
             {watchExpressions.map((expression, index) => (
-              <div key={index} className="flex justify-between items-center bg-black/30 rounded p-2">
-                <span className="text-blue-400 text-xs">{expression}</span>
-                <span className="text-white text-xs font-mono">
-                  {evaluationResults[expression] || 'undefined'}
-                </span>
-                <button
-                  onClick={() => removeWatch(index)}
-                  className="text-zinc-600 hover:text-red-400 text-xs"
-                >
-                  <i className="ph ph-x"></i>
-                </button>
+              <div key={index} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded p-2">
+                <span className="text-xs text-zinc-400">{expression}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-300 font-mono">
+                    {evaluationResults[expression] || 'undefined'}
+                  </span>
+                  <button
+                    onClick={() => removeWatch(index)}
+                    className="text-zinc-600 hover:text-red-400 transition-colors"
+                  >
+                    <i className="ph ph-x text-xs"></i>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
         
         {/* Call Stack */}
-        <div>
-          <div className="text-xs text-zinc-400 mb-2">Call Stack</div>
-          <div className="bg-black/30 rounded p-2 text-xs max-h-32 overflow-y-auto">
+        <div className="p-3 border-b border-zinc-800">
+          <div className="flex items-center gap-2 mb-2">
+            <i className="ph ph-stack text-zinc-500 text-xs"></i>
+            <span className="text-xs text-zinc-400 font-medium">Call Stack</span>
+          </div>
+          <div className="bg-zinc-900 rounded border border-zinc-800 p-2 max-h-32 overflow-y-auto">
             {currentSession?.callStack.length ? (
-              currentSession.callStack.map((frame, index) => (
-                <div key={index} className="py-1 hover:bg-white/5 rounded px-1 cursor-pointer">
-                  <div className="text-white">{frame.name}</div>
-                  <div className="text-zinc-500 text-[10px]">{frame.file}:{frame.line}</div>
-                </div>
-              ))
+              <div className="space-y-1">
+                {currentSession.callStack.map((frame, index) => (
+                  <div key={index} className="p-1.5 hover:bg-zinc-800 rounded cursor-pointer transition-colors">
+                    <div className="text-xs text-zinc-300">{frame.name}</div>
+                    <div className="text-[10px] text-zinc-600">{frame.file}:{frame.line}</div>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className="text-zinc-400">Not debugging</div>
+              <div className="text-xs text-zinc-600 text-center py-2">Not debugging</div>
             )}
           </div>
         </div>
         
         {/* Breakpoints */}
-        <div>
-          <div className="text-xs text-zinc-400 mb-2">Breakpoints</div>
+        <div className="p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <i className="ph ph-circle text-zinc-500 text-xs"></i>
+            <span className="text-xs text-zinc-400 font-medium">Breakpoints</span>
+          </div>
           <div className="space-y-1">
             {Object.entries(breakpoints).map(([file, lines]) => 
               lines.map(line => (
-                <div key={`${file}-${line}`} className="flex items-center gap-2 text-xs bg-black/30 rounded p-2">
-                  <i className="ph-fill ph-circle text-red-400"></i>
+                <div key={`${file}-${line}`} className="flex items-center gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded">
+                  <i className="ph-fill ph-circle text-red-500 text-xs"></i>
                   <div className="flex-1">
-                    <div className="text-white">{file.split('/').pop()}</div>
-                    <div className="text-zinc-500 text-[10px]">Line {line}</div>
+                    <div className="text-xs text-zinc-300">{file.split('/').pop()}</div>
+                    <div className="text-[10px] text-zinc-600">Line {line}</div>
                   </div>
                   <button 
                     onClick={() => toggleBreakpoint(file, line)}
-                    className="text-zinc-600 hover:text-red-400"
+                    className="text-zinc-600 hover:text-red-400 transition-colors"
                   >
-                    <i className="ph ph-x"></i>
+                    <i className="ph ph-x text-xs"></i>
                   </button>
                 </div>
               ))
             )}
             {Object.keys(breakpoints).length === 0 && (
-              <div className="text-xs text-zinc-600 bg-black/30 rounded p-2">No breakpoints set</div>
+              <div className="text-xs text-zinc-600 bg-zinc-900 border border-zinc-800 rounded p-3 text-center">
+                No breakpoints set
+              </div>
             )}
           </div>
         </div>
