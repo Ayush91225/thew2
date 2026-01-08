@@ -1988,7 +1988,9 @@ context:
             if (typeof window === 'undefined') return
             
             try {
-              const params = new URLSearchParams(window.location.search)
+              // Decode HTML entities in URL
+              const searchString = window.location.search.replace(/&amp;/g, '&')
+              const params = new URLSearchParams(searchString)
               const state = get()
               
               const view = params.get('view')
@@ -1997,20 +1999,32 @@ context:
               const search = params.get('search')
               const terminal = params.get('terminal')
               
-              // Validate and apply URL parameters
-              if (view && ['workspace', 'settings', 'preview'].includes(view) && view !== state.view) {
-                set({ view })
+              // Validate and apply URL parameters safely
+              if (view && typeof view === 'string' && view.length < 50) {
+                const validViews = ['workspace', 'settings', 'preview', 'deploy', 'monitoring', 'analytics', 'db', 'logs']
+                if (validViews.includes(view) && view !== state.view) {
+                  set({ view })
+                }
               }
               
-              if (panel && ['files', 'search', 'git', 'debug', 'extensions', 'docker', 'database', 'api', 'yaml'].includes(panel) && panel !== state.activePanel) {
-                set({ activePanel: panel })
+              if (panel && typeof panel === 'string' && panel.length < 50) {
+                const validPanels = ['files', 'search', 'git', 'debug', 'extensions', 'docker', 'database', 'api', 'yaml']
+                if (validPanels.includes(panel) && panel !== state.activePanel) {
+                  set({ activePanel: panel })
+                }
               }
               
-              if (tab && state.tabs.find(t => t.id === tab) && tab !== state.activeTab) {
-                set({ activeTab: tab })
+              if (tab && typeof tab === 'string' && tab.length < 100) {
+                const tabExists = state.tabs.some(t => t.id === tab || t.name === tab)
+                if (tabExists) {
+                  const targetTab = state.tabs.find(t => t.id === tab || t.name === tab)
+                  if (targetTab && targetTab.id !== state.activeTab) {
+                    set({ activeTab: targetTab.id })
+                  }
+                }
               }
               
-              if (search && search.length <= 100) { // Prevent excessively long search queries
+              if (search && typeof search === 'string' && search.length <= 100) {
                 set({ globalSearchQuery: search, globalSearch: true })
               }
               

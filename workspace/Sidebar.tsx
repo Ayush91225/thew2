@@ -1,3 +1,0 @@
-// Sidebar.tsx
-
-// File content here...

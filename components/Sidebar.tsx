@@ -184,6 +184,13 @@ export default function Sidebar() {
       try {
         await fileSystem.deleteFile(node.path)
         await loadFiles()
+        
+        // Close any open tabs for the deleted file
+        const { tabs, closeTab } = useIDEStore.getState()
+        const tabToClose = tabs.find(tab => tab.path === node.path)
+        if (tabToClose) {
+          closeTab(tabToClose.id)
+        }
       } catch (error) {
         console.error('Failed to delete:', error)
       }
