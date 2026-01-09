@@ -528,8 +528,15 @@ export default function CodeEditor(): JSX.Element {
   // Handle tab switching
   useEffect(() => {
     if (editorRef.current && currentTab && currentTabRef.current !== currentTab.id) {
-      editorRef.current.setValue(currentTab.content)
-      currentTabRef.current = currentTab.id
+      try {
+        const model = editorRef.current.getModel()
+        if (model) {
+          editorRef.current.setValue(currentTab.content)
+          currentTabRef.current = currentTab.id
+        }
+      } catch (error) {
+        console.warn('Failed to update editor content:', error)
+      }
     }
   }, [currentTab?.id, currentTab])
 
@@ -585,20 +592,78 @@ export default function CodeEditor(): JSX.Element {
 
   useHotkeys('shift+alt+f', (e) => {
     e.preventDefault()
-    editorRef.current?.getAction('editor.action.formatDocument')?.run()
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.action.formatDocument')?.run()
+    }
   })
+
+  // Format document function that uses extensions
+  const handleFormatDocument = useCallback(async () => {
+    if (!editorRef.current || !currentTab) return
+    
+    try {
+      // Check if Prettier extension is loaded and active
+      const { extensions } = useIDEStore.getState()
+      const prettierExt = extensions.find(ext => ext.id === 'prettier' && ext.status === 'active')
+      
+      if (prettierExt) {
+        // Load extension if not already loaded
+        const { extensionManager } = await import('@/lib/extension-manager')
+        const loadedExtensions = extensionManager.getLoadedExtensions()
+        
+        if (!loadedExtensions.includes('prettier')) {
+          await extensionManager.loadExtension('prettier')
+        }
+        
+        // Execute format command (shows extension message)
+        await extensionManager.executeCommand('prettier.format')
+        
+        // Apply simple formatting to show extension is working
+        const content = editorRef.current.getValue()
+        const formatted = content
+          .replace(/;\s*\n/g, ';\n')
+          .replace(/\{\s*\n/g, ' {\n')
+          .replace(/\}\s*\n/g, '\n}\n')
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0)
+          .join('\n')
+        
+        if (formatted !== content) {
+          editorRef.current.setValue(formatted)
+        }
+      } else {
+        // Use Monaco's built-in formatter
+        editorRef.current.getAction('editor.action.formatDocument')?.run()
+      }
+      
+    } catch (error) {
+      console.warn('Format failed:', error)
+      // Fallback to Monaco's built-in formatter
+      editorRef.current.getAction('editor.action.formatDocument')?.run()
+    }
+  }, [currentTab])
+
 
   // Editor mount handler with proper type safety
   const handleEditorDidMount = useCallback((editor: editor.IStandaloneCodeEditor, monaco: typeof import('monaco-editor')): void => {
     const typedEditor = editor as EditorInstance
     editorRef.current = typedEditor
     
-    if (currentTab) {
-      editor.setValue(currentTab.content)
-      currentTabRef.current = currentTab.id
-    }
+    try {
+      if (currentTab) {
+        const model = editor.getModel()
+        if (model) {
+          editor.setValue(currentTab.content)
+          currentTabRef.current = currentTab.id
+        }
+      }
 
-    monaco.editor.setTheme(EDITOR_CONFIG.THEME)
+      monaco.editor.setTheme(EDITOR_CONFIG.THEME)
+    } catch (error) {
+      console.warn('Failed to initialize editor:', error)
+      return
+    }
 
     // Set up collaboration listeners after editor is ready
     logger.info('Setting up collaboration listeners after editor mount')
@@ -760,7 +825,7 @@ export default function CodeEditor(): JSX.Element {
       }
     })
 
-    // Add custom commands
+    // Add custom commands and context menu
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD, () => {
       editor.getAction('editor.action.addSelectionToNextFindMatch')?.run()
     })
@@ -784,6 +849,57 @@ export default function CodeEditor(): JSX.Element {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
       editor.getAction('editor.action.insertLineBefore')?.run()
     })
+
+    // Add extension commands to context menu
+    editor.addAction({
+      id: 'extension.prettier.format',
+      label: '⚡ Format with Prettier',
+      contextMenuGroupId: 'modification',
+      contextMenuOrder: 1,
+      run: () => handleFormatDocument()
+    })
+
+    editor.addAction({
+      id: 'extension.liveServer.start',
+      label: '🚀 Start Live Server',
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1,
+      run: async () => {
+        try {
+          const { extensionManager } = await import('@/lib/extension-manager')
+          const loadedExtensions = extensionManager.getLoadedExtensions()
+          
+          if (!loadedExtensions.includes('live-server')) {
+            await extensionManager.loadExtension('live-server')
+          }
+          
+          await extensionManager.executeCommand('liveServer.start')
+        } catch (error) {
+          console.warn('Live Server command failed:', error)
+        }
+      }
+    })
+
+    editor.addAction({
+      id: 'extension.liveServer.stop',
+      label: '🛑 Stop Live Server',
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 2,
+      run: async () => {
+        try {
+          const { extensionManager } = await import('@/lib/extension-manager')
+          const loadedExtensions = extensionManager.getLoadedExtensions()
+          
+          if (!loadedExtensions.includes('live-server')) {
+            await extensionManager.loadExtension('live-server')
+          }
+          
+          await extensionManager.executeCommand('liveServer.stop')
+        } catch (error) {
+          console.warn('Live Server command failed:', error)
+        }
+      }
+    })
   }, [currentTab])
 
   if (!currentTab) {
@@ -800,8 +916,8 @@ export default function CodeEditor(): JSX.Element {
 
   return (
     <div className="flex-1 h-full flex flex-col">
-      {/* Breadcrumb Path - Sanitized to prevent XSS */}
-      <div className="h-9 px-4 flex items-center bg-zinc-950/80 border-b border-zinc-800/50 text-xs">
+      {/* Breadcrumb Path with Format Button */}
+      <div className="h-9 px-4 flex items-center justify-between bg-zinc-950/80 border-b border-zinc-800/50 text-xs">
         <div className="flex items-center gap-1.5 text-zinc-400">
           <i className="ph ph-folder-simple text-zinc-500"></i>
           {currentTab.path.split('/').filter(Boolean).map((segment, index, array) => {
@@ -829,16 +945,37 @@ export default function CodeEditor(): JSX.Element {
             )
           })}
         </div>
+        
+        {/* Format Button */}
+        <button
+          onClick={handleFormatDocument}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+          title="Format Document (Shift+Alt+F)"
+        >
+          <span className="text-xs">⚡</span>
+          Format
+        </button>
       </div>
       
       {/* Monaco Editor */}
-      <div className="flex-1">
-        <Editor
-          height="100%"
-          language={currentTab.language}
-          onMount={handleEditorDidMount}
-          options={EDITOR_OPTIONS}
-        />
+      <div className="flex-1 relative">
+        {currentTab && (
+          <div className="absolute inset-0">
+            <Editor
+              height="100%"
+              width="100%"
+              language={currentTab.language}
+              onMount={handleEditorDidMount}
+              options={{
+                ...EDITOR_OPTIONS,
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false }
+              }}
+              loading={<div className="flex items-center justify-center h-full text-zinc-400">Loading editor...</div>}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

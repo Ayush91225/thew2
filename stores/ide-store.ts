@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { FileTreeManager, FileTreeNode } from '@/lib/file-tree'
+import { extensionService, Extension as ExtensionType } from '@/lib/extension-service'
+import { extensionManager } from '@/lib/extension-manager'
 
 export interface FileTab {
   id: string
@@ -147,6 +149,9 @@ interface IDEState {
   autoUpdateExtensions: boolean
   trustedExtensionsOnly: boolean
   extensionSandbox: boolean
+  marketplaceExtensions: ExtensionType[]
+  marketplaceLoading: boolean
+  marketplaceCategories: string[]
   
   // AI Assistant Settings
   aiEnabled: boolean
@@ -307,12 +312,16 @@ interface IDEState {
   // Extension Actions
   setExtensionSearchQuery: (query: string) => void
   setExtensionFilter: (filter: string) => void
-  toggleExtension: (id: string) => void
-  updateExtension: (id: string) => void
+  toggleExtension: (id: string) => Promise<void>
+  updateExtension: (id: string) => Promise<void>
+  installExtension: (extension: ExtensionType) => Promise<void>
+  uninstallExtension: (id: string) => Promise<void>
+  searchMarketplaceExtensions: (query?: string, category?: string) => Promise<void>
   setAutoUpdateExtensions: (enabled: boolean) => void
   setTrustedExtensionsOnly: (enabled: boolean) => void
   setExtensionSandbox: (enabled: boolean) => void
-  checkForExtensionUpdates: () => void
+  checkForExtensionUpdates: () => Promise<void>
+  executeExtensionCommand: (command: string, ...args: any[]) => Promise<void>
   
   // AI Assistant Actions
   setAiEnabled: (enabled: boolean) => void
@@ -681,6 +690,9 @@ context:
           autoUpdateExtensions: true,
           trustedExtensionsOnly: true,
           extensionSandbox: true,
+          marketplaceExtensions: [],
+          marketplaceLoading: false,
+          marketplaceCategories: ['All'],
           aiEnabled: true,
           aiModel: 'GPT-4',
           aiTemperature: 0.7,
@@ -1367,39 +1379,148 @@ context:
           setExtensionSearchQuery: (query) => set({ extensionSearchQuery: query }),
           setExtensionFilter: (filter) => set({ extensionFilter: filter }),
           
-          toggleExtension: (id) => set((state) => ({
-            extensions: state.extensions.map(ext => 
-              ext.id === id 
-                ? { ...ext, status: ext.status === 'active' ? 'disabled' : 'active' }
-                : ext
-            )
-          })),
+          toggleExtension: async (id) => {
+            if (typeof window === 'undefined') return
+            
+            const state = get()
+            const extension = state.extensions.find(ext => ext.id === id)
+            if (!extension) return
+            
+            try {
+              const action = extension.status === 'active' ? 'disable' : 'enable'
+              const result = await extensionService[action === 'enable' ? 'enableExtension' : 'disableExtension'](id)
+              
+              if (result.success) {
+                set((state) => ({
+                  extensions: state.extensions.map(ext => 
+                    ext.id === id 
+                      ? { ...ext, status: ext.status === 'active' ? 'disabled' : 'active' }
+                      : ext
+                  )
+                }))
+                get().sendNotification('build', 'Extension Updated', result.message)
+              }
+            } catch (error) {
+              console.error('Failed to toggle extension:', error)
+            }
+          },
           
-          updateExtension: (id) => set((state) => ({
-            extensions: state.extensions.map(ext => 
-              ext.id === id 
-                ? { ...ext, status: 'active', version: '(updated)' }
-                : ext
-            )
-          })),
+          updateExtension: async (id) => {
+            if (typeof window === 'undefined') return
+            
+            try {
+              const result = await extensionService.updateExtension(id)
+              
+              if (result.success) {
+                set((state) => ({
+                  extensions: state.extensions.map(ext => 
+                    ext.id === id 
+                      ? { ...ext, status: 'active', version: '(updated)' }
+                      : ext
+                  )
+                }))
+                get().sendNotification('build', 'Extension Updated', result.message)
+              }
+            } catch (error) {
+              console.error('Failed to update extension:', error)
+            }
+          },
           
           setAutoUpdateExtensions: (enabled) => set({ autoUpdateExtensions: enabled }),
           setTrustedExtensionsOnly: (enabled) => set({ trustedExtensionsOnly: enabled }),
           setExtensionSandbox: (enabled) => set({ extensionSandbox: enabled }),
           
-          checkForExtensionUpdates: () => {
-            console.log('Checking for extension updates...')
-            setTimeout(() => {
+          checkForExtensionUpdates: async () => {
+            const updates = await extensionService.checkForUpdates()
+            
+            if (updates.length > 0) {
               set((state) => ({
-                extensions: state.extensions.map(ext => 
-                  Math.random() > 0.7 
-                    ? { ...ext, status: 'update-available' }
-                    : ext
-                )
+                extensions: state.extensions.map(ext => {
+                  const hasUpdate = updates.find(u => u.id === ext.id)
+                  return hasUpdate ? { ...ext, status: 'update-available' } : ext
+                })
               }))
               
-              get().sendNotification('build', 'Extension Updates Available', 'Extension updates found')
-            }, 1000)
+              get().sendNotification('build', 'Extension Updates Available', `${updates.length} extension(s) have updates`)
+            }
+          },
+          
+          installExtension: async (extension) => {
+            if (typeof window === 'undefined') return
+            
+            try {
+              const result = await extensionService.installExtension(extension.id)
+              
+              if (result.success) {
+                // Actually load the extension
+                const loaded = await extensionManager.loadExtension(extension.id)
+                if (loaded) {
+                  set((state) => ({
+                    extensions: [...state.extensions, { ...extension, status: 'active' }]
+                  }))
+                  get().sendNotification('build', 'Extension Installed', `${extension.name} is now active and functional`)
+                } else {
+                  get().sendNotification('error', 'Extension Error', `Failed to activate ${extension.name}`)
+                }
+              }
+            } catch (error) {
+              console.error('Failed to install extension:', error)
+            }
+          },
+          
+          uninstallExtension: async (id) => {
+            if (typeof window === 'undefined') return
+            
+            try {
+              const result = await extensionService.uninstallExtension(id)
+              
+              if (result.success) {
+                set((state) => ({
+                  extensions: state.extensions.filter(ext => ext.id !== id)
+                }))
+                get().sendNotification('build', 'Extension Uninstalled', result.message)
+              }
+            } catch (error) {
+              console.error('Failed to uninstall extension:', error)
+            }
+          },
+          
+          searchMarketplaceExtensions: async (query, category) => {
+            if (typeof window === 'undefined') return
+            
+            set({ marketplaceLoading: true })
+            
+            try {
+              const response = await extensionService.searchExtensions({
+                query,
+                category,
+                sort: 'downloads'
+              })
+              
+              if (response.success) {
+                set({
+                  marketplaceExtensions: response.extensions,
+                  marketplaceCategories: response.categories,
+                  marketplaceLoading: false
+                })
+              } else {
+                set({ marketplaceLoading: false })
+              }
+            } catch (error) {
+              console.error('Failed to search marketplace:', error)
+              set({ marketplaceLoading: false })
+            }
+          },
+          
+          executeExtensionCommand: async (command: string, ...args: any[]) => {
+            if (typeof window === 'undefined') return
+            
+            try {
+              await extensionManager.executeCommand(command, ...args)
+            } catch (error) {
+              console.error('Failed to execute extension command:', error)
+              get().sendNotification('error', 'Command Failed', `Failed to execute ${command}`)
+            }
           },
           
           // AI Assistant Actions

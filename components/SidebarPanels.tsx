@@ -357,34 +357,228 @@ export function DebugPanel() {
 }
 
 export function ExtensionsPanel() {
-  const extensions = [
-    { id: 'prettier', name: 'Prettier', description: 'Code formatter', enabled: true },
-    { id: 'eslint', name: 'ESLint', description: 'JavaScript linter', enabled: true },
-    { id: 'typescript', name: 'TypeScript', description: 'TypeScript support', enabled: true },
-    { id: 'tailwind', name: 'Tailwind CSS', description: 'CSS framework', enabled: false },
-  ]
+  const {
+    extensions,
+    extensionSearchQuery,
+    marketplaceExtensions,
+    marketplaceLoading,
+    marketplaceCategories,
+    setExtensionSearchQuery,
+    toggleExtension,
+    updateExtension,
+    installExtension,
+    uninstallExtension,
+    searchMarketplaceExtensions,
+    checkForExtensionUpdates
+  } = useIDEStore()
+
+  const [activeTab, setActiveTab] = useState<'installed' | 'marketplace'>('installed')
+  const [selectedCategory, setSelectedCategory] = useState('All')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      searchMarketplaceExtensions('', 'All')
+    }
+  }, [searchMarketplaceExtensions])
+
+  useEffect(() => {
+    if (activeTab === 'marketplace' && typeof window !== 'undefined') {
+      searchMarketplaceExtensions(extensionSearchQuery, selectedCategory)
+    }
+  }, [extensionSearchQuery, selectedCategory, activeTab, searchMarketplaceExtensions])
+
+  const filteredExtensions = extensions.filter(ext => {
+    return !extensionSearchQuery || 
+      ext.name.toLowerCase().includes(extensionSearchQuery.toLowerCase()) ||
+      ext.category.toLowerCase().includes(extensionSearchQuery.toLowerCase())
+  })
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="h-10 px-4 flex items-center justify-between shrink-0">
-        <span className="label">Extensions</span>
-        <button className="text-xs text-zinc-600 hover:text-white">
-          <i className="ph ph-plus"></i>
+    <div className="flex flex-col h-full bg-zinc-950">
+      {/* Header */}
+      <div className="h-10 px-3 flex items-center justify-between border-b border-zinc-800">
+        <div className="flex items-center gap-2">
+          <i className="ph ph-puzzle-piece text-zinc-400 text-sm"></i>
+          <span className="text-sm text-zinc-300 font-medium">Extensions</span>
+        </div>
+        <button 
+          onClick={() => checkForExtensionUpdates()}
+          className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+        >
+          <i className="ph ph-arrow-clockwise text-xs"></i>
         </button>
       </div>
-      <div className="p-3 flex-1 space-y-2">
-        {extensions.map(ext => (
-          <div key={ext.id} className="flex items-center gap-3 p-2 rounded hover:bg-white/5">
-            <div className={`w-2 h-2 rounded-full ${ext.enabled ? 'bg-green-400' : 'bg-zinc-600'}`}></div>
-            <div className="flex-1">
-              <div className="text-xs font-semibold text-white">{ext.name}</div>
-              <div className="text-xs text-zinc-600">{ext.description}</div>
-            </div>
-            <button className="text-xs text-zinc-600 hover:text-white">
-              {ext.enabled ? 'Disable' : 'Enable'}
-            </button>
+
+      {/* Search */}
+      <div className="p-3 border-b border-zinc-800">
+        <input
+          type="text"
+          placeholder="Search extensions..."
+          value={extensionSearchQuery}
+          onChange={(e) => setExtensionSearchQuery(e.target.value)}
+          className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-xs text-zinc-300 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none"
+        />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-zinc-800">
+        <button
+          onClick={() => setActiveTab('installed')}
+          className={`flex-1 px-3 py-2 text-xs font-medium ${
+            activeTab === 'installed' 
+              ? 'text-white border-b-2 border-blue-500 bg-zinc-900' 
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Installed ({extensions.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('marketplace')}
+          className={`flex-1 px-3 py-2 text-xs font-medium ${
+            activeTab === 'marketplace' 
+              ? 'text-white border-b-2 border-blue-500 bg-zinc-900' 
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Marketplace
+        </button>
+      </div>
+
+      {/* Category Filter */}
+      {activeTab === 'marketplace' && (
+        <div className="p-3 border-b border-zinc-800">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-xs text-zinc-300 focus:outline-none"
+          >
+            {marketplaceCategories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Extensions List */}
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'installed' ? (
+          <div className="p-3">
+            {filteredExtensions.length > 0 ? (
+              <div className="space-y-2">
+                {filteredExtensions.map(ext => (
+                  <div key={ext.id} className="p-3 border border-zinc-800 rounded hover:border-zinc-700">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-zinc-800 rounded flex items-center justify-center">
+                        <i className={`ph ${ext.icon} text-zinc-400`}></i>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm font-medium text-white">{ext.name}</h3>
+                          <div className={`w-2 h-2 rounded-full ${
+                            ext.status === 'active' ? 'bg-green-400' :
+                            ext.status === 'update-available' ? 'bg-yellow-400' : 'bg-zinc-600'
+                          }`}></div>
+                        </div>
+                        <p className="text-xs text-zinc-500 mb-2">{ext.category}</p>
+                        <div className="flex items-center gap-2">
+                          {ext.status === 'update-available' && (
+                            <button
+                              onClick={() => updateExtension(ext.id)}
+                              className="px-2 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                            >
+                              Update
+                            </button>
+                          )}
+                          <button
+                            onClick={() => toggleExtension(ext.id)}
+                            className={`px-2 py-1 text-xs rounded ${
+                              ext.status === 'active'
+                                ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                            }`}
+                          >
+                            {ext.status === 'active' ? 'Disable' : 'Enable'}
+                          </button>
+                          <button
+                            onClick={() => uninstallExtension(ext.id)}
+                            className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <i className="ph ph-puzzle-piece text-4xl text-zinc-600 mb-3"></i>
+                <p className="text-sm text-zinc-400">No extensions installed</p>
+                <p className="text-xs text-zinc-500 mt-1">Browse marketplace to install extensions</p>
+              </div>
+            )}
           </div>
-        ))}
+        ) : (
+          <div className="p-3">
+            {marketplaceLoading ? (
+              <div className="text-center py-12">
+                <i className="ph ph-spinner animate-spin text-3xl text-zinc-400 mb-3"></i>
+                <p className="text-sm text-zinc-400">Loading extensions...</p>
+              </div>
+            ) : marketplaceExtensions.length > 0 ? (
+              <div className="space-y-2">
+                {marketplaceExtensions.map(ext => {
+                  const isInstalled = extensions.some(installed => installed.id === ext.id)
+                  return (
+                    <div key={ext.id} className="p-3 border border-zinc-800 rounded hover:border-zinc-700">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-zinc-800 rounded flex items-center justify-center">
+                          <i className={`ph ${ext.icon} text-zinc-400`}></i>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-sm font-medium text-white">{ext.name}</h3>
+                            {ext.rating && (
+                              <div className="flex items-center gap-1">
+                                <i className="ph-fill ph-star text-yellow-400 text-xs"></i>
+                                <span className="text-xs text-zinc-400">{ext.rating}</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-zinc-400 mb-2">{ext.description}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-zinc-500">
+                              {ext.category} • v{ext.version} • {ext.downloads}
+                            </div>
+                            {isInstalled ? (
+                              <span className="px-2 py-1 text-xs bg-green-600 text-white rounded">
+                                Installed
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => installExtension(ext)}
+                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                              >
+                                Install
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <i className="ph ph-magnifying-glass text-4xl text-zinc-600 mb-3"></i>
+                <p className="text-sm text-zinc-400">No extensions found</p>
+                <p className="text-xs text-zinc-500 mt-1">Try different search terms</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

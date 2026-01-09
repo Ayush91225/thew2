@@ -82,6 +82,19 @@ export default function CommandPalette() {
     preventDefault: true,
   }, [terminalOpen, commandPalette])
 
+  // Format document with Shift+Alt+F (Prettier)
+  useHotkeys('shift+alt+f', async (e) => {
+    e.preventDefault()
+    try {
+      await useIDEStore.getState().executeExtensionCommand('prettier.format')
+    } catch (error) {
+      console.log('Prettier extension not available')
+    }
+  }, {
+    enabled: true,
+    preventDefault: true,
+  }, [])
+
   // Navigate with arrow keys
   useHotkeys('up, down', (e) => {
     if (!commandPalette) return
@@ -113,8 +126,10 @@ export default function CommandPalette() {
   }, [commandPalette, selectedIndex, searchQuery])
 
   useEffect(() => {
-    loadFromURL()
-  }, [])
+    if (typeof window !== 'undefined') {
+      loadFromURL()
+    }
+  }, [loadFromURL])
 
   useEffect(() => {
     // Reset selection when search changes
