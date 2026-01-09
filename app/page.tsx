@@ -29,9 +29,18 @@ export default function Home() {
   useIDEHotkeys()
 
   useEffect(() => {
-    // Load state from URL parameters
-    loadFromURL()
-    
+    // Load state from URL parameters only on client side
+    if (typeof window !== 'undefined') {
+      // Delay to ensure hydration is complete
+      const timer = setTimeout(() => {
+        loadFromURL()
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [])
+  
+  useEffect(() => {
     // Disable browser right-click context menu
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault()

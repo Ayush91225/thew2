@@ -969,8 +969,7 @@ export default function CodeEditor(): JSX.Element {
               options={{
                 ...EDITOR_OPTIONS,
                 automaticLayout: true,
-                scrollBeyondLastLine: false,
-                minimap: { enabled: false }
+                scrollBeyondLastLine: false
               }}
               loading={<div className="flex items-center justify-center h-full text-zinc-400">Loading editor...</div>}
             />

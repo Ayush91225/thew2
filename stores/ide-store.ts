@@ -2157,36 +2157,43 @@ context:
               const search = params.get('search')
               const terminal = params.get('terminal')
               
+              const updates: Partial<IDEState> = {}
+              
               if (view && typeof view === 'string' && view.length < 50) {
                 const validViews = ['workspace', 'settings', 'preview', 'deploy', 'monitoring', 'analytics', 'db', 'logs']
                 if (validViews.includes(view) && view !== state.view) {
-                  set({ view })
+                  updates.view = view
                 }
               }
               
               if (panel && typeof panel === 'string' && panel.length < 50) {
                 const validPanels = ['files', 'search', 'git', 'debug', 'extensions', 'docker', 'database', 'api', 'yaml']
                 if (validPanels.includes(panel) && panel !== state.activePanel) {
-                  set({ activePanel: panel })
+                  updates.activePanel = panel
                 }
               }
               
               if (tab && typeof tab === 'string' && tab.length < 100) {
                 const tabExists = state.tabs.some(t => t.id === tab)
                 if (tabExists && tab !== state.activeTab) {
-                  set({ activeTab: tab })
+                  updates.activeTab = tab
                 }
               }
               
               if (search && typeof search === 'string' && search.length <= 100) {
                 const sanitizedSearch = search.replace(/[<>"'&\r\n\t\/\\]/g, '').trim()
                 if (!sanitizedSearch.includes('..') && !sanitizedSearch.startsWith('/')) {
-                  set({ globalSearchQuery: sanitizedSearch })
+                  updates.globalSearchQuery = sanitizedSearch
                 }
               }
               
               if (terminal === 'true') {
-                set({ terminalOpen: true })
+                updates.terminalOpen = true
+              }
+              
+              // Apply all updates at once to prevent multiple re-renders
+              if (Object.keys(updates).length > 0) {
+                set(updates)
               }
             } catch (error) {
               console.warn('Failed to load state from URL:', error)
