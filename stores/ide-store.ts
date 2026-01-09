@@ -62,6 +62,24 @@ interface YamlFile {
   runStatus?: 'success' | 'error' | 'running'
 }
 
+interface DatabaseConnection {
+  id: string
+  name: string
+  type: 'mysql' | 'postgresql' | 'sqlite' | 'mongodb'
+  host: string
+  port?: number
+  database: string
+  username: string
+  isConnected: boolean
+  createdAt: Date
+}
+
+interface QueryResult {
+  rows: any[]
+  rowCount: number
+  executionTime: number
+}
+
 interface AIMessage {
   id: string
   type: 'user' | 'assistant'
@@ -116,6 +134,14 @@ interface IDEState {
   // YAML State
   yamlFiles: YamlFile[]
   activeYamlFile: string | null
+  
+  // Database State
+  databaseConnections: DatabaseConnection[]
+  activeDatabaseConnection: string | null
+  databaseQuery: string
+  queryResults: QueryResult | null
+  queryLoading: boolean
+  databaseTables: string[]
   
   // Project State
   projectRoot: string | null
@@ -284,6 +310,14 @@ interface IDEState {
   validateYaml: (id: string) => void
   runYaml: (id: string) => void
   uploadYamlFile: (file: File) => Promise<void>
+  
+  // Database Actions
+  connectToDatabase: (config: any) => Promise<void>
+  disconnectFromDatabase: (connectionId: string) => Promise<void>
+  executeQuery: (connectionId: string, sql: string) => Promise<void>
+  setDatabaseQuery: (query: string) => void
+  setActiveDatabaseConnection: (connectionId: string | null) => void
+  refreshDatabaseTables: (connectionId: string) => Promise<void>
   
   setFontSize: (size: number) => void
   setTabSize: (size: number) => void
@@ -630,6 +664,14 @@ context:
             }
           ],
           activeYamlFile: null,
+          
+          // Database State
+          databaseConnections: [],
+          activeDatabaseConnection: null,
+          databaseQuery: '',
+          queryResults: null,
+          queryLoading: false,
+          databaseTables: [],
           projectRoot: null,
           projectFiles: [],
           fontSize: 14,
@@ -1289,6 +1331,104 @@ context:
               })
             } catch (error) {
               console.error('Failed to upload file')
+            }
+          },
+          
+          // Database Actions
+          connectToDatabase: async (config) => {
+            try {
+              const { databaseService } = await import('@/lib/database-service')
+              const result = await databaseService.connect(config)
+              
+              if (result.success && result.connectionId) {
+                const connection: DatabaseConnection = {
+                  id: result.connectionId,
+                  name: `${config.type}://${config.host}/${config.database}`,
+                  type: config.type,
+                  host: config.host,
+                  port: config.port,
+                  database: config.database,
+                  username: config.username,
+                  isConnected: true,
+                  createdAt: new Date()
+                }
+                
+                set((state) => ({
+                  databaseConnections: [...state.databaseConnections, connection],
+                  activeDatabaseConnection: connection.id
+                }))
+                
+                get().sendNotification('build', 'Database Connected', `Connected to ${connection.name}`)
+              } else {
+                get().sendNotification('error', 'Connection Failed', result.error || 'Unknown error')
+              }
+            } catch (error) {
+              get().sendNotification('error', 'Connection Error', 'Failed to connect to database')
+            }
+          },
+          
+          disconnectFromDatabase: async (connectionId) => {
+            try {
+              const { databaseService } = await import('@/lib/database-service')
+              const result = await databaseService.disconnect(connectionId)
+              
+              if (result.success) {
+                set((state) => ({
+                  databaseConnections: state.databaseConnections.filter(conn => conn.id !== connectionId),
+                  activeDatabaseConnection: state.activeDatabaseConnection === connectionId ? null : state.activeDatabaseConnection
+                }))
+                
+                get().sendNotification('build', 'Database Disconnected', 'Connection closed successfully')
+              } else {
+                get().sendNotification('error', 'Disconnect Failed', result.error || 'Unknown error')
+              }
+            } catch (error) {
+              get().sendNotification('error', 'Disconnect Error', 'Failed to disconnect from database')
+            }
+          },
+          
+          executeQuery: async (connectionId, sql) => {
+            set({ queryLoading: true, queryResults: null })
+            
+            try {
+              const { databaseService } = await import('@/lib/database-service')
+              const result = await databaseService.executeQuery(connectionId, sql)
+              
+              if (result.success) {
+                set({
+                  queryResults: {
+                    rows: result.data || [],
+                    rowCount: result.rowCount || 0,
+                    executionTime: result.executionTime || 0
+                  },
+                  queryLoading: false
+                })
+                
+                get().sendNotification('build', 'Query Executed', `Query completed in ${result.executionTime}ms`)
+              } else {
+                set({ queryLoading: false })
+                get().sendNotification('error', 'Query Failed', result.error || 'Unknown error')
+              }
+            } catch (error) {
+              set({ queryLoading: false })
+              get().sendNotification('error', 'Query Error', 'Failed to execute query')
+            }
+          },
+          
+          setDatabaseQuery: (query) => set({ databaseQuery: query }),
+          
+          setActiveDatabaseConnection: (connectionId) => set({ activeDatabaseConnection: connectionId }),
+          
+          refreshDatabaseTables: async (connectionId) => {
+            try {
+              const { databaseService } = await import('@/lib/database-service')
+              const result = await databaseService.getTables(connectionId)
+              
+              if (result.success) {
+                set({ databaseTables: result.tables || [] })
+              }
+            } catch (error) {
+              console.error('Failed to refresh tables:', error)
             }
           },
           

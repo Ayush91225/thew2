@@ -585,49 +585,313 @@ export function ExtensionsPanel() {
 }
 
 export function DatabasePanel() {
-  const [selectedDb, setSelectedDb] = useState('postgres')
-  const databases = [
-    { id: 'postgres', name: 'PostgreSQL', status: 'connected' },
-    { id: 'redis', name: 'Redis', status: 'disconnected' },
-    { id: 'mongo', name: 'MongoDB', status: 'connected' },
-  ]
+  const {
+    databaseConnections,
+    activeDatabaseConnection,
+    databaseQuery,
+    queryResults,
+    queryLoading,
+    databaseTables,
+    connectToDatabase,
+    disconnectFromDatabase,
+    executeQuery,
+    setDatabaseQuery,
+    setActiveDatabaseConnection,
+    refreshDatabaseTables
+  } = useIDEStore()
+  
+  const [activeTab, setActiveTab] = useState<'connections' | 'query' | 'results'>('connections')
+  const [showConnectionForm, setShowConnectionForm] = useState(false)
+  const [connectionForm, setConnectionForm] = useState({
+    type: 'postgresql' as 'mysql' | 'postgresql' | 'sqlite' | 'mongodb',
+    host: 'localhost',
+    port: 5432,
+    database: '',
+    username: '',
+    password: ''
+  })
+
+  const handleConnect = async () => {
+    await connectToDatabase(connectionForm)
+    setShowConnectionForm(false)
+    setConnectionForm({
+      type: 'postgresql',
+      host: 'localhost',
+      port: 5432,
+      database: '',
+      username: '',
+      password: ''
+    })
+  }
+
+  const handleExecuteQuery = async () => {
+    if (!activeDatabaseConnection || !databaseQuery.trim()) return
+    await executeQuery(activeDatabaseConnection, databaseQuery)
+    setActiveTab('results')
+  }
+
+  const handleDisconnect = async (connectionId: string) => {
+    await disconnectFromDatabase(connectionId)
+  }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="h-10 px-4 flex items-center justify-between shrink-0">
-        <span className="label">Database</span>
-        <button className="text-xs text-zinc-600 hover:text-white">
-          <i className="ph ph-plus"></i>
+      {/* Header */}
+      <div className="h-10 px-3 flex items-center justify-between border-b border-zinc-800">
+        <span className="text-sm text-white font-medium">Database</span>
+        <button 
+          onClick={() => setShowConnectionForm(true)}
+          className="p-1.5 text-zinc-500 hover:text-white rounded text-xs"
+        >
+          +
         </button>
       </div>
-      <div className="p-3 flex-1 space-y-3">
-        <div className="space-y-1">
-          {databases.map(db => (
-            <div 
-              key={db.id}
-              onClick={() => setSelectedDb(db.id)}
-              className={`flex items-center gap-2 p-2 rounded cursor-pointer transition ${
-                selectedDb === db.id ? 'bg-white/10' : 'hover:bg-white/5'
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full ${
-                db.status === 'connected' ? 'bg-green-400' : 'bg-red-400'
-              }`}></div>
-              <span className="text-xs text-white">{db.name}</span>
+
+      {/* Connection Form Modal */}
+      {showConnectionForm && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-700 rounded p-4 w-80">
+            <h3 className="text-sm font-medium text-white mb-3">New Database Connection</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Type</label>
+                <select
+                  value={connectionForm.type}
+                  onChange={(e) => setConnectionForm(prev => ({ 
+                    ...prev, 
+                    type: e.target.value as any,
+                    port: e.target.value === 'mysql' ? 3306 : 
+                          e.target.value === 'postgresql' ? 5432 :
+                          e.target.value === 'mongodb' ? 27017 : 3306
+                  }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
+                >
+                  <option value="postgresql">PostgreSQL</option>
+                  <option value="mysql">MySQL</option>
+                  <option value="sqlite">SQLite</option>
+                  <option value="mongodb">MongoDB</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Host</label>
+                  <input
+                    type="text"
+                    value={connectionForm.host}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, host: e.target.value }))}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Port</label>
+                  <input
+                    type="number"
+                    value={connectionForm.port}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, port: parseInt(e.target.value) }))}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Database</label>
+                <input
+                  type="text"
+                  value={connectionForm.database}
+                  onChange={(e) => setConnectionForm(prev => ({ ...prev, database: e.target.value }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Username</label>
+                <input
+                  type="text"
+                  value={connectionForm.username}
+                  onChange={(e) => setConnectionForm(prev => ({ ...prev, username: e.target.value }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Password</label>
+                <input
+                  type="password"
+                  value={connectionForm.password}
+                  onChange={(e) => setConnectionForm(prev => ({ ...prev, password: e.target.value }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
+                />
+              </div>
             </div>
-          ))}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleConnect}
+                className="flex-1 px-3 py-2 text-xs bg-white text-black rounded hover:bg-zinc-200"
+              >
+                Connect
+              </button>
+              <button
+                onClick={() => setShowConnectionForm(false)}
+                className="flex-1 px-3 py-2 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
-        
-        <div className="border-t border-zinc-800 pt-3">
-          <div className="text-xs text-zinc-400 mb-2">Query</div>
-          <textarea 
-            placeholder="SELECT * FROM users;"
-            className="w-full h-20 bg-black/50 border-line rounded p-2 text-xs text-white resize-none"
-          />
-          <button className="btn-primary text-xs mt-2 w-full">
-            Execute Query
-          </button>
-        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex border-b border-zinc-800">
+        <button
+          onClick={() => setActiveTab('connections')}
+          className={`flex-1 px-3 py-2 text-xs font-medium ${
+            activeTab === 'connections' 
+              ? 'text-white border-b border-white' 
+              : 'text-zinc-500 hover:text-white'
+          }`}
+        >
+          Connections
+        </button>
+        <button
+          onClick={() => setActiveTab('query')}
+          className={`flex-1 px-3 py-2 text-xs font-medium ${
+            activeTab === 'query' 
+              ? 'text-white border-b border-white' 
+              : 'text-zinc-500 hover:text-white'
+          }`}
+        >
+          Query
+        </button>
+        <button
+          onClick={() => setActiveTab('results')}
+          className={`flex-1 px-3 py-2 text-xs font-medium ${
+            activeTab === 'results' 
+              ? 'text-white border-b border-white' 
+              : 'text-zinc-500 hover:text-white'
+          }`}
+        >
+          Results
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'connections' && (
+          <div className="p-3">
+            {databaseConnections.length > 0 ? (
+              <div className="space-y-2">
+                {databaseConnections.map(conn => (
+                  <div 
+                    key={conn.id}
+                    onClick={() => setActiveDatabaseConnection(conn.id)}
+                    className={`p-3 border border-zinc-800 rounded hover:border-zinc-700 cursor-pointer ${
+                      activeDatabaseConnection === conn.id ? 'border-zinc-600' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        conn.isConnected ? 'bg-white' : 'bg-zinc-600'
+                      }`}></div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-white">{conn.name}</h3>
+                        <p className="text-xs text-zinc-500">{conn.type} • {conn.host}:{conn.port}</p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDisconnect(conn.id)
+                        }}
+                        className="text-xs text-zinc-500 hover:text-red-400"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl text-zinc-600 mb-3">🗄️</div>
+                <p className="text-sm text-zinc-500">No database connections</p>
+                <p className="text-xs text-zinc-600 mt-1">Click + to add a connection</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'query' && (
+          <div className="p-3 space-y-3">
+            {activeDatabaseConnection ? (
+              <>
+                <div>
+                  <label className="text-xs text-zinc-500 mb-2 block">SQL Query</label>
+                  <textarea 
+                    value={databaseQuery}
+                    onChange={(e) => setDatabaseQuery(e.target.value)}
+                    placeholder="SELECT * FROM users WHERE id = 1;"
+                    className="w-full h-32 bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none resize-none"
+                  />
+                </div>
+                <button 
+                  onClick={handleExecuteQuery}
+                  disabled={queryLoading || !databaseQuery.trim()}
+                  className="w-full px-3 py-2 text-xs bg-white text-black rounded hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {queryLoading ? 'Executing...' : 'Execute Query'}
+                </button>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl text-zinc-600 mb-3">⚡</div>
+                <p className="text-sm text-zinc-500">No active connection</p>
+                <p className="text-xs text-zinc-600 mt-1">Select a connection to run queries</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'results' && (
+          <div className="p-3">
+            {queryResults ? (
+              <div className="space-y-2">
+                <div className="text-xs text-zinc-500 mb-2">
+                  {queryResults.rowCount} rows returned in {queryResults.executionTime}ms
+                </div>
+                {queryResults.rows.length > 0 ? (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded overflow-hidden">
+                    {/* Header */}
+                    <div className="flex bg-zinc-800 border-b border-zinc-700">
+                      {Object.keys(queryResults.rows[0]).map(key => (
+                        <div key={key} className="flex-1 px-3 py-2 text-xs font-medium text-zinc-300 border-r border-zinc-700 last:border-r-0">
+                          {key}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Rows */}
+                    {queryResults.rows.map((row, index) => (
+                      <div key={index} className="flex border-b border-zinc-800 last:border-b-0">
+                        {Object.values(row).map((value, i) => (
+                          <div key={i} className="flex-1 px-3 py-2 text-xs text-white border-r border-zinc-800 last:border-r-0">
+                            {String(value)}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded p-4 text-center">
+                    <p className="text-xs text-zinc-500">Query executed successfully</p>
+                    <p className="text-xs text-zinc-600">No rows returned</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl text-zinc-600 mb-3">📊</div>
+                <p className="text-sm text-zinc-500">No query results</p>
+                <p className="text-xs text-zinc-600 mt-1">Execute a query to see results</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
