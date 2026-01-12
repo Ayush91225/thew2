@@ -75,6 +75,27 @@ const MARKETPLACE_EXTENSIONS: Extension[] = [
   }
 ]
 
+const CATEGORIES = ['All', 'Code formatting', 'Git integration', 'Development', 'Editor Enhancement', 'Theme', 'Linting']
+
+const handleError = (message: string, status = 500) => 
+  NextResponse.json({ success: false, error: message }, { status })
+
+function parseDownloads(downloads: string): number {
+  const num = parseFloat(downloads.replace(/[KM]/g, ''))
+  return downloads.includes('M') ? num * 1000000 : num * 1000
+}
+
+function sortExtensions(extensions: Extension[], sort: string): Extension[] {
+  switch (sort) {
+    case 'name':
+      return extensions.sort((a, b) => a.name.localeCompare(b.name))
+    case 'rating':
+      return extensions.sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    default:
+      return extensions.sort((a, b) => parseDownloads(b.downloads) - parseDownloads(a.downloads))
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -95,32 +116,16 @@ export async function GET(request: NextRequest) {
       extensions = extensions.filter(ext => ext.category === category)
     }
 
-    switch (sort) {
-      case 'name':
-        extensions.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case 'rating':
-        extensions.sort((a, b) => (b.rating || 0) - (a.rating || 0))
-        break
-      default:
-        extensions.sort((a, b) => {
-          const aDownloads = parseFloat(a.downloads.replace(/[KM]/g, '')) * (a.downloads.includes('M') ? 1000000 : 1000)
-          const bDownloads = parseFloat(b.downloads.replace(/[KM]/g, '')) * (b.downloads.includes('M') ? 1000000 : 1000)
-          return bDownloads - aDownloads
-        })
-    }
+    extensions = sortExtensions(extensions, sort)
 
     return NextResponse.json({
       success: true,
       extensions,
       total: extensions.length,
-      categories: ['All', 'Code formatting', 'Git integration', 'Development', 'Editor Enhancement', 'Theme', 'Linting']
+      categories: CATEGORIES
     })
-  } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch extensions'
-    }, { status: 500 })
+  } catch {
+    return handleError('Failed to fetch extensions')
   }
 }
 
@@ -129,59 +134,44 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, extensionId } = body
 
-    switch (action) {
-      case 'install':
-        const installSuccess = await extensionManager.loadExtension(extensionId)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        return NextResponse.json({
-          success: installSuccess,
-          message: installSuccess ? 'Extension installed and activated successfully' : 'Failed to install extension',
-          extensionId
-        })
-
-      case 'uninstall':
-        const uninstallSuccess = await extensionManager.unloadExtension(extensionId)
-        await new Promise(resolve => setTimeout(resolve, 500))
-        return NextResponse.json({
-          success: uninstallSuccess,
-          message: uninstallSuccess ? 'Extension uninstalled successfully' : 'Failed to uninstall extension',
-          extensionId
-        })
-
-      case 'enable':
-        const enableSuccess = await extensionManager.loadExtension(extensionId)
-        return NextResponse.json({
-          success: enableSuccess,
-          message: enableSuccess ? 'Extension enabled successfully' : 'Failed to enable extension',
-          extensionId
-        })
-
-      case 'disable':
-        const disableSuccess = await extensionManager.unloadExtension(extensionId)
-        return NextResponse.json({
-          success: disableSuccess,
-          message: disableSuccess ? 'Extension disabled successfully' : 'Failed to disable extension',
-          extensionId
-        })
-
-      case 'update':
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        return NextResponse.json({
-          success: true,
-          message: 'Extension updated successfully',
-          extensionId
-        })
-
-      default:
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid action'
-        }, { status: 400 })
+    if (!action || !extensionId) {
+      return handleError('Action and extension ID required', 400)
     }
-  } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to process extension action'
-    }, { status: 500 })
+
+    const actions = {
+      install: async () => {
+        const success = await extensionManager.loadExtension(extensionId)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        return { success, message: success ? 'Extension installed successfully' : 'Installation failed' }
+      },
+      uninstall: async () => {
+        const success = await extensionManager.unloadExtension(extensionId)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        return { success, message: success ? 'Extension uninstalled successfully' : 'Uninstall failed' }
+      },
+      enable: async () => {
+        const success = await extensionManager.loadExtension(extensionId)
+        return { success, message: success ? 'Extension enabled successfully' : 'Enable failed' }
+      },
+      disable: async () => {
+        const success = await extensionManager.unloadExtension(extensionId)
+        return { success, message: success ? 'Extension disabled successfully' : 'Disable failed' }
+      },
+      update: async () => {
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        return { success: true, message: 'Extension updated successfully' }
+      }
+    }
+
+    const handler = actions[action as keyof typeof actions]
+    if (!handler) {
+      return handleError('Invalid action', 400)
+    }
+
+    const result = await handler()
+    return NextResponse.json({ ...result, extensionId })
+
+  } catch {
+    return handleError('Failed to process extension action')
   }
 }

@@ -31,10 +31,14 @@ export default function Home() {
   useEffect(() => {
     // Load state from URL parameters only on client side
     if (typeof window !== 'undefined') {
-      // Delay to ensure hydration is complete
+      // Delay to ensure hydration is complete and prevent 500 errors
       const timer = setTimeout(() => {
-        loadFromURL()
-      }, 100)
+        try {
+          loadFromURL()
+        } catch (error) {
+          console.warn('Failed to load from URL:', error)
+        }
+      }, 200)
       
       return () => clearTimeout(timer)
     }

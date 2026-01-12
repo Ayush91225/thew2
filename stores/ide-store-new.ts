@@ -3,9 +3,138 @@ import { devtools, persist } from 'zustand/middleware'
 import { EditorSlice, createEditorSlice } from './slices/editor-slice'
 import { UISlice, createUISlice } from './slices/ui-slice'
 import { DatabaseSlice, createDatabaseSlice } from './slices/database-slice'
+import { APISlice, createAPISlice } from './slices/api-slice'
+
+// Additional interfaces for compatibility
+interface Extension {
+  id: string
+  name: string
+  version: string
+  category: string
+  downloads: string
+  status: 'active' | 'disabled' | 'update-available'
+  icon: string
+}
+
+interface DatabaseConnection {
+  id: string
+  name: string
+  type: 'mysql' | 'postgresql' | 'sqlite' | 'mongodb'
+  host: string
+  port?: number
+  database: string
+  username: string
+  isConnected: boolean
+  createdAt: Date
+}
+
+interface QueryResult {
+  rows: any[]
+  rowCount: number
+  executionTime: number
+}
+
+// Additional slices for compatibility
+interface CompatibilitySlice {
+  // Debug state
+  breakpoints: Record<string, number[]>
+  debugSession: boolean
+  
+  // Extensions state
+  extensions: Extension[]
+  extensionSearchQuery: string
+  marketplaceExtensions: any[]
+  marketplaceLoading: boolean
+  marketplaceCategories: string[]
+  
+  // Database state (additional properties)
+  databaseConnections: DatabaseConnection[]
+  activeDatabaseConnection: string | null
+  databaseQuery: string
+  queryResults: QueryResult | null
+  queryLoading: boolean
+  databaseTables: string[]
+  
+  // Debug actions
+  toggleBreakpoint: (file: string, line: number) => void
+  startDebugSession: () => void
+  stopDebugSession: () => void
+  
+  // Extension actions
+  setExtensionSearchQuery: (query: string) => void
+  toggleExtension: (id: string) => void
+  updateExtension: (id: string) => void
+  installExtension: (extension: any) => void
+  uninstallExtension: (id: string) => void
+  searchMarketplaceExtensions: (query?: string, category?: string) => void
+  checkForExtensionUpdates: () => void
+  
+  // Database actions (additional)
+  connectToDatabase: (config: any) => Promise<void>
+  disconnectFromDatabase: (connectionId: string) => Promise<void>
+  executeQuery: (connectionId: string, sql: string) => Promise<void>
+  setDatabaseQuery: (query: string) => void
+  setActiveDatabaseConnection: (connectionId: string | null) => void
+  refreshDatabaseTables: (connectionId: string) => Promise<void>
+}
+
+const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
+  // Debug state
+  breakpoints: {},
+  debugSession: false,
+  
+  // Extensions state
+  extensions: [],
+  extensionSearchQuery: '',
+  marketplaceExtensions: [],
+  marketplaceLoading: false,
+  marketplaceCategories: ['All'],
+  
+  // Database state
+  databaseConnections: [],
+  activeDatabaseConnection: null,
+  databaseQuery: '',
+  queryResults: null,
+  queryLoading: false,
+  databaseTables: [],
+  
+  // Debug actions
+  toggleBreakpoint: (file: string, line: number) => set((state: any) => {
+    const fileBreakpoints = state.breakpoints[file] || []
+    const hasBreakpoint = fileBreakpoints.includes(line)
+    return {
+      breakpoints: {
+        ...state.breakpoints,
+        [file]: hasBreakpoint 
+          ? fileBreakpoints.filter((l: number) => l !== line)
+          : [...fileBreakpoints, line].sort((a: number, b: number) => a - b)
+      }
+    }
+  }),
+  
+  startDebugSession: () => set({ debugSession: true }),
+  stopDebugSession: () => set({ debugSession: false }),
+  
+  // Extension actions
+  setExtensionSearchQuery: (query: string) => set({ extensionSearchQuery: query }),
+  toggleExtension: async (id: string) => {},
+  updateExtension: async (id: string) => {},
+  installExtension: async (extension: any) => {},
+  uninstallExtension: async (id: string) => {},
+  searchMarketplaceExtensions: async (query?: string, category?: string) => {},
+  checkForExtensionUpdates: async () => {},
+  
+  // Database actions
+  connectToDatabase: async (config: any) => {},
+  disconnectFromDatabase: async (connectionId: string) => {},
+  executeQuery: async (connectionId: string, sql: string) => {},
+  setDatabaseQuery: (query: string) => set({ databaseQuery: query }),
+  setActiveDatabaseConnection: (connectionId: string | null) => set({ activeDatabaseConnection: connectionId }),
+  refreshDatabaseTables: async (connectionId: string) => {}
+})
 
 // Combined store type
-export type IDEStore = EditorSlice & UISlice & DatabaseSlice & {
+export type IDEStore = EditorSlice & UISlice & DatabaseSlice & APISlice & CompatibilitySlice & {
   // URL persistence
   loadFromURL: () => void
   saveToURL: () => void
@@ -14,10 +143,12 @@ export type IDEStore = EditorSlice & UISlice & DatabaseSlice & {
 export const useIDEStore = create<IDEStore>()(
   devtools(
     persist(
-      (...args) => ({
-        ...createEditorSlice(...args),
-        ...createUISlice(...args),
-        ...createDatabaseSlice(...args),
+      (set, get, store) => ({
+        ...createEditorSlice(set, get, store),
+        ...createUISlice(set, get, store),
+        ...createDatabaseSlice(set, get, store),
+        ...createAPISlice(set, get, store),
+        ...createCompatibilitySlice(set, get),
         
         // URL persistence methods
         loadFromURL: () => {
@@ -36,11 +167,11 @@ export const useIDEStore = create<IDEStore>()(
               updates.view = view
             }
             
-            if (panel && ['files', 'search', 'git', 'debug', 'database'].includes(panel)) {
+            if (panel && ['files', 'search', 'git', 'debug', 'database', 'api', 'yaml', 'extensions'].includes(panel)) {
               updates.activePanel = panel
             }
             
-            if (tab) {
+            if (tab && tab.length < 100) {
               const state = useIDEStore.getState()
               if (state.tabs.some(t => t.id === tab)) {
                 updates.activeTab = tab
@@ -48,7 +179,10 @@ export const useIDEStore = create<IDEStore>()(
             }
             
             if (search && search.length <= 100) {
-              updates.globalSearchQuery = search.trim()
+              const sanitized = search.replace(/[<>"'&\r\n\t]/g, '').trim()
+              if (sanitized && !sanitized.includes('..')) {
+                updates.globalSearchQuery = sanitized
+              }
             }
             
             if (Object.keys(updates).length > 0) {
@@ -66,16 +200,29 @@ export const useIDEStore = create<IDEStore>()(
             const state = useIDEStore.getState()
             const params = new URLSearchParams()
             
-            if (state.view !== 'workspace') params.set('view', state.view)
-            if (state.activePanel !== 'files') params.set('panel', state.activePanel)
-            if (state.activeTab) params.set('tab', state.activeTab)
-            if (state.globalSearchQuery) params.set('search', state.globalSearchQuery)
+            if (state.view && state.view !== 'workspace') {
+              params.set('view', state.view)
+            }
+            
+            if (state.activePanel && state.activePanel !== 'files') {
+              params.set('panel', state.activePanel)
+            }
+            
+            if (state.activeTab && state.activeTab.length < 100) {
+              params.set('tab', state.activeTab)
+            }
+            
+            if (state.globalSearchQuery && state.globalSearchQuery.trim() && state.globalSearchQuery.length <= 100) {
+              params.set('search', state.globalSearchQuery.trim())
+            }
             
             const newURL = params.toString() 
               ? `${window.location.pathname}?${params.toString()}` 
               : window.location.pathname
               
-            window.history.replaceState({}, '', newURL)
+            if (newURL !== window.location.href) {
+              window.history.replaceState({}, '', newURL)
+            }
           } catch (error) {
             console.warn('Failed to save to URL:', error)
           }

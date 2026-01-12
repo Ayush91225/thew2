@@ -33,69 +33,8 @@ export class APIService {
   }
 
   private initializeDefaultCollections() {
-    this.collections = [
-      {
-        id: 'kriya-api',
-        name: 'Kriya IDE API',
-        baseUrl: 'https://api.kriya-ide.com',
-        endpoints: [
-          {
-            id: 'auth-login',
-            name: 'User Login',
-            method: 'POST',
-            url: '/auth/login',
-            description: 'Authenticate user credentials',
-            headers: { 'Content-Type': 'application/json' },
-            body: { email: 'user@example.com', password: 'password' },
-            response: { token: 'jwt-token', user: { id: 1, name: 'John Doe' } }
-          },
-          {
-            id: 'projects-list',
-            name: 'List Projects',
-            method: 'GET',
-            url: '/projects',
-            description: 'Get user projects',
-            headers: { 'Authorization': 'Bearer <token>' },
-            response: [{ id: 1, name: 'My Project', status: 'active' }]
-          },
-          {
-            id: 'deploy-create',
-            name: 'Create Deployment',
-            method: 'POST',
-            url: '/deployments',
-            description: 'Deploy project to environment',
-            headers: { 'Authorization': 'Bearer <token>', 'Content-Type': 'application/json' },
-            body: { projectId: 1, environment: 'production', branch: 'main' },
-            response: { deploymentId: 'dep_123', status: 'pending' }
-          }
-        ]
-      },
-      {
-        id: 'github-api',
-        name: 'GitHub API',
-        baseUrl: 'https://api.github.com',
-        endpoints: [
-          {
-            id: 'repos-list',
-            name: 'List Repositories',
-            method: 'GET',
-            url: '/user/repos',
-            description: 'Get user repositories',
-            headers: { 'Authorization': 'token <github-token>' },
-            response: [{ id: 1, name: 'repo-name', full_name: 'user/repo-name' }]
-          },
-          {
-            id: 'repo-contents',
-            name: 'Get Repository Contents',
-            method: 'GET',
-            url: '/repos/{owner}/{repo}/contents/{path}',
-            description: 'Get repository file contents',
-            headers: { 'Authorization': 'token <github-token>' },
-            response: { name: 'file.js', content: 'base64-content' }
-          }
-        ]
-      }
-    ]
+    // Start with empty collections - will be loaded from backend
+    this.collections = []
   }
 
   getCollections(): APICollection[] {

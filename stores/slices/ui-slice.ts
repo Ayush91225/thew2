@@ -22,7 +22,7 @@ export interface UISlice {
   setCollab: (collab: boolean) => void
 }
 
-export const createUISlice: StateCreator<UISlice> = (set) => ({
+export const createUISlice: StateCreator<any, [], [], UISlice> = (set, get, store) => ({
   view: 'workspace',
   activePanel: 'files',
   commandPalette: false,

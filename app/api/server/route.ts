@@ -3,150 +3,145 @@ import { promises as fs } from 'fs'
 import path from 'path'
 
 const WORKSPACE_DIR = path.join(process.cwd(), 'workspace')
+const MAX_FILE_SIZE = 1000000 // 1MB
+const MAX_FILES = 50
 
-const getMimeType = (filePath: string) => {
-  const ext = path.extname(filePath).toLowerCase()
-  const mimeTypes: Record<string, string> = {
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.js': 'application/javascript',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.ico': 'image/x-icon'
-  }
-  return mimeTypes[ext] || 'text/plain'
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
 }
+
+function sanitizeFilePath(filePath: string): string {
+  return filePath.replace(/[^a-zA-Z0-9._/-]/g, '').replace(/\.\./g, '')
+}
+
+function isValidFilePath(filePath: string): boolean {
+  const sanitized = sanitizeFilePath(filePath)
+  return sanitized.length > 0 && sanitized.length <= 100 && !sanitized.includes('..')
+}
+
+function getSafePath(filePath: string): string | null {
+  if (!isValidFilePath(filePath)) return null
+  const safePath = path.join(WORKSPACE_DIR, sanitizeFilePath(filePath))
+  if (!safePath.startsWith(WORKSPACE_DIR)) return null
+  return safePath
+}
+
+function getMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase()
+  return MIME_TYPES[ext] || 'text/plain'
+}
+
+function sanitizeForLog(input: string): string {
+  return input.replace(/[\r\n\t]/g, '_').slice(0, 100)
+}
+
+const handleError = (message: string, status = 500) => 
+  new NextResponse(message, { status })
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const filePath = searchParams.get('file') || 'index.html'
     
-    console.log('Server GET request for file:', filePath)
+    const safePath = getSafePath(filePath)
+    if (!safePath) {
+      return handleError('Invalid file path', 400)
+    }
     
-    const fullPath = path.join(WORKSPACE_DIR, filePath)
-    
-    // Check if file exists, if not create a default
     try {
-      await fs.access(fullPath)
+      await fs.access(safePath)
     } catch {
-      console.log('File not found, creating default:', filePath)
       if (filePath === 'index.html') {
-        const defaultContent = `<!DOCTYPE html>
-<html><head><title>Kriya IDE</title></head><body><h1>Welcome to Kriya IDE</h1><p>Start editing to see changes!</p></body></html>`
-        await fs.mkdir(path.dirname(fullPath), { recursive: true })
-        await fs.writeFile(fullPath, defaultContent, 'utf-8')
+        const defaultContent = `<!DOCTYPE html>\n<html><head><title>Kriya IDE</title></head><body><h1>Welcome to Kriya IDE</h1><p>Start editing to see changes!</p></body></html>`
+        await fs.mkdir(path.dirname(safePath), { recursive: true })
+        await fs.writeFile(safePath, defaultContent, 'utf-8')
       } else {
-        console.log('File not found and not index.html:', filePath)
-        return new NextResponse('File not found', { status: 404 })
+        return handleError('File not found', 404)
       }
     }
     
-    const content = await fs.readFile(fullPath, 'utf-8')
-    console.log('Serving file content length:', content.length)
+    const stats = await fs.stat(safePath)
+    if (stats.size > MAX_FILE_SIZE) {
+      return handleError('File too large', 413)
+    }
+    
+    const content = await fs.readFile(safePath, 'utf-8')
     const mimeType = getMimeType(filePath)
     
     return new NextResponse(content, {
       headers: {
         'Content-Type': mimeType,
         'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*',
-        'X-Frame-Options': 'ALLOWALL'
+        'Access-Control-Allow-Origin': '*'
       }
     })
-  } catch (error) {
-    console.error('Server GET error:', error)
-    return new NextResponse('Server error', { status: 500 })
+  } catch {
+    return handleError('Server error')
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const { files } = await request.json()
-    console.log('Server POST - received files:', Object.keys(files))
     
-    if (!files || Object.keys(files).length === 0) {
-      return NextResponse.json({ 
-        error: 'No files provided' 
-      }, { status: 400 })
+    if (!files || typeof files !== 'object') {
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 })
     }
     
-    // Ensure workspace directory exists
+    const fileEntries = Object.entries(files)
+    if (fileEntries.length === 0 || fileEntries.length > MAX_FILES) {
+      return NextResponse.json({ error: 'Invalid number of files' }, { status: 400 })
+    }
+    
     await fs.mkdir(WORKSPACE_DIR, { recursive: true })
     
-    // Check if there are any HTML files or HTML content
-    const htmlFiles = Object.keys(files).filter(name => 
-      name.endsWith('.html') || 
-      files[name].includes('<!DOCTYPE html>') || 
-      files[name].includes('<html')
-    )
+    const htmlFiles: string[] = []
+    const validFiles: Array<[string, string]> = []
+    
+    for (const [filePath, content] of fileEntries) {
+      if (typeof content !== 'string' || content.length > MAX_FILE_SIZE) continue
+      if (!isValidFilePath(filePath)) continue
+      
+      validFiles.push([filePath, content])
+      
+      if (filePath.endsWith('.html') || content.includes('<!DOCTYPE html>') || content.includes('<html')) {
+        htmlFiles.push(filePath)
+      }
+    }
     
     if (htmlFiles.length === 0) {
-      console.log('No HTML files found, returning error')
-      return NextResponse.json({ 
-        error: 'No HTML file found. Create an HTML file to preview.' 
-      }, { status: 400 })
+      return NextResponse.json({ error: 'No HTML file found' }, { status: 400 })
     }
     
-    // Save all files to workspace
-    for (const [filePath, content] of Object.entries(files)) {
+    for (const [filePath, content] of validFiles) {
+      const safePath = getSafePath(filePath)
+      if (!safePath) continue
+      
       try {
-        const fullPath = path.join(WORKSPACE_DIR, filePath)
-        await fs.mkdir(path.dirname(fullPath), { recursive: true })
-        await fs.writeFile(fullPath, content as string, 'utf-8')
-        console.log('Saved file:', filePath, 'length:', (content as string).length)
-      } catch (fileError) {
-        console.error('Error saving file:', filePath, fileError)
+        await fs.mkdir(path.dirname(safePath), { recursive: true })
+        await fs.writeFile(safePath, content, 'utf-8')
+      } catch {
+        continue
       }
     }
     
-    // Find HTML file to serve as entry point
-    const entryFile = htmlFiles.find(name => name.endsWith('.html') && name.includes('index')) || 
-                     htmlFiles.find(name => name.endsWith('.html')) || 
-                     htmlFiles[0] || 
-                     'index.html'
-    
-    // Inject CSS files into HTML if they exist
-    const cssFiles = Object.keys(files).filter(name => name.endsWith('.css'))
-    if (cssFiles.length > 0 && files[entryFile]) {
-      let htmlContent = files[entryFile] as string
-      
-      // Inject CSS links into HTML head
-      cssFiles.forEach(cssFile => {
-        const cssLink = `<link rel="stylesheet" href="/api/server?file=${cssFile}">`
-        if (htmlContent.includes('</head>')) {
-          htmlContent = htmlContent.replace('</head>', `  ${cssLink}\n</head>`)
-        } else if (htmlContent.includes('<head>')) {
-          htmlContent = htmlContent.replace('<head>', `<head>\n  ${cssLink}`)
-        } else {
-          htmlContent = `<head>\n  ${cssLink}\n</head>\n${htmlContent}`
-        }
-      })
-      
-      // Save updated HTML
-      try {
-        const htmlPath = path.join(WORKSPACE_DIR, entryFile)
-        await fs.writeFile(htmlPath, htmlContent, 'utf-8')
-      } catch (htmlError) {
-        console.error('Error updating HTML file:', htmlError)
-      }
-    }
-    
-    console.log('Entry file determined:', entryFile)
+    const entryFile = htmlFiles.find(name => name.includes('index')) || htmlFiles[0]
     
     return NextResponse.json({ 
       success: true, 
-      url: `/api/server?file=${entryFile}`,
+      url: `/api/server?file=${encodeURIComponent(entryFile)}`,
       entryFile
     })
-  } catch (error) {
-    console.error('Server POST error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to start server: ' + (error instanceof Error ? error.message : 'Unknown error')
-    }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Failed to start server' }, { status: 500 })
   }
 }

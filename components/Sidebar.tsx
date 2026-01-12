@@ -3,7 +3,7 @@
 import { useIDEStore } from '@/stores/ide-store'
 import { APIFileSystem, FileNode } from '@/lib/api-file-system'
 import { DebugPanel, ExtensionsPanel, DatabasePanel, APIPanel } from './SidebarPanels'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 
 const sidebarTabs = [
@@ -52,11 +52,33 @@ export default function Sidebar() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [renamingNode, setRenamingNode] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [sidebarWidth, setSidebarWidth] = useState(320)
+  const [isResizing, setIsResizing] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const fileSystem = APIFileSystem.getInstance()
   const contextMenuRef = useRef<HTMLDivElement>(null)
+  const sidebarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadFiles()
+    
+    // Check screen size and set responsive behavior
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile) {
+        setSidebarWidth(280) // Smaller width on mobile
+        setSidebarCollapsed(true) // Auto-collapse on mobile
+      } else {
+        setSidebarWidth(320) // Default width on desktop
+        setSidebarCollapsed(false)
+      }
+    }
+    
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    return () => window.removeEventListener('resize', checkScreenSize)
   }, [])
 
   useEffect(() => {
@@ -68,6 +90,47 @@ export default function Sidebar() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isMobile) return // Disable resize on mobile
+    setIsResizing(true)
+    e.preventDefault()
+  }, [isMobile])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || isMobile) return
+    
+    const newWidth = e.clientX - 48 // 48px is the width of the icon sidebar
+    const minWidth = isMobile ? 250 : 200
+    const maxWidth = isMobile ? 350 : 600
+    
+    setSidebarWidth(Math.max(minWidth, Math.min(maxWidth, newWidth)))
+  }, [isResizing, isMobile])
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false)
+  }, [])
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp])
 
   const loadFiles = async () => {
     try {
@@ -398,10 +461,17 @@ export default function Sidebar() {
         {sidebarTabs.map(tab => (
           <i 
             key={tab.id}
-            onClick={() => setActivePanel(tab.id)} 
+            onClick={() => {
+              if (isMobile && activePanel === tab.id) {
+                setActivePanel('')
+              } else {
+                setActivePanel(tab.id)
+              }
+            }} 
             className={`${tab.icon} text-lg cursor-pointer transition ${
               activePanel === tab.id ? 'icon-active' : 'text-zinc-700 hover:text-white'
             }`}
+            title={tab.label}
           ></i>
         ))}
         <i 
@@ -430,7 +500,25 @@ export default function Sidebar() {
       </aside>
 
       {activePanel && (
-        <aside className="w-64 border-r-line bg-black shrink-0 flex flex-col overflow-hidden">
+        <>
+          {/* Mobile Overlay */}
+          {isMobile && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setActivePanel('')}
+            />
+          )}
+          
+          <aside 
+            ref={sidebarRef}
+            className={`border-r-line bg-black shrink-0 flex flex-col overflow-hidden relative transition-transform duration-200 ${
+              isMobile ? 'fixed left-12 top-0 h-full z-50 shadow-2xl' : ''
+            }`}
+            style={{ 
+              width: `${sidebarWidth}px`,
+              transform: isMobile && !activePanel ? 'translateX(-100%)' : 'translateX(0)'
+            }}
+          >
           {activePanel === 'files' && (
             <div className="flex flex-col h-full">
               <div className="h-11 px-4 flex items-center justify-between shrink-0 border-b border-zinc-800/50">
@@ -611,7 +699,18 @@ export default function Sidebar() {
               </div>
             </div>
           )}
+          
+          {/* Resize Handle - Desktop Only */}
+          {!isMobile && (
+            <div
+              className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors group"
+              onMouseDown={handleMouseDown}
+            >
+              <div className="w-full h-full group-hover:bg-blue-500/20" />
+            </div>
+          )}
         </aside>
+        </>
       )}
       
       {contextMenu && (

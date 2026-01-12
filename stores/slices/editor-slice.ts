@@ -26,7 +26,7 @@ export interface EditorSlice {
   setAutoSave: (enabled: boolean) => void
 }
 
-export const createEditorSlice: StateCreator<EditorSlice> = (set) => ({
+export const createEditorSlice: StateCreator<any, [], [], EditorSlice> = (set, get, store) => ({
   activeTab: 'sample-html',
   tabs: [{
     id: 'sample-html',

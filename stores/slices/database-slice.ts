@@ -34,7 +34,7 @@ export interface DatabaseSlice {
   refreshTables: (connectionId: string) => Promise<void>
 }
 
-export const createDatabaseSlice: StateCreator<DatabaseSlice> = (set, get) => ({
+export const createDatabaseSlice: StateCreator<any, [], [], DatabaseSlice> = (set, get, store) => ({
   connections: [],
   activeConnection: null,
   query: '',
@@ -64,7 +64,7 @@ export const createDatabaseSlice: StateCreator<DatabaseSlice> = (set, get) => ({
           createdAt: new Date()
         }
         
-        set((state) => ({
+        set((state: DatabaseSlice) => ({
           connections: [...state.connections, connection],
           activeConnection: connection.id
         }))
@@ -84,8 +84,8 @@ export const createDatabaseSlice: StateCreator<DatabaseSlice> = (set, get) => ({
       const result = await response.json()
       
       if (result.success) {
-        set((state) => ({
-          connections: state.connections.filter(conn => conn.id !== connectionId),
+        set((state: DatabaseSlice) => ({
+          connections: state.connections.filter((conn: DatabaseConnection) => conn.id !== connectionId),
           activeConnection: state.activeConnection === connectionId ? null : state.activeConnection
         }))
       }

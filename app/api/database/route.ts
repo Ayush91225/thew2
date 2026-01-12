@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getTables, createConnection, executeQuery as runQuery, closeConnection } from '@/lib/database-manager'
+
+const handleError = (message: string, status = 500) => 
+  NextResponse.json({ success: false, error: message }, { status })
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,29 +11,25 @@ export async function GET(request: NextRequest) {
 
     switch (action) {
       case 'connections':
-        return NextResponse.json({
-          success: true,
-          connections: []
-        })
+        const { getConnections } = await import('@/lib/database-manager')
+        return NextResponse.json({ success: true, connections: getConnections() })
 
       case 'tables':
         const connectionId = searchParams.get('connectionId')
-        if (!connectionId) {
-          return NextResponse.json({ success: false, error: 'Connection ID required' }, { status: 400 })
+        if (!connectionId) return handleError('Connection ID required', 400)
+        
+        try {
+          const tables = await getTables(connectionId)
+          return NextResponse.json({ success: true, tables })
+        } catch {
+          return handleError('Failed to get tables')
         }
-        return NextResponse.json({
-          success: true,
-          tables: []
-        })
 
       default:
-        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 })
+        return handleError('Invalid action', 400)
     }
-  } catch (error) {
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
+  } catch {
+    return handleError('Request failed')
   }
 }
 
@@ -42,88 +42,55 @@ export async function POST(request: NextRequest) {
       case 'connect':
         const { host, port, database, username, password, type } = body
         if (!host || !database || !username || !type) {
-          return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
+          return handleError('Missing required fields', 400)
         }
-        
-        const connectionResult = await testConnection({ host, port, database, username, password, type })
-        return NextResponse.json(connectionResult)
+        return NextResponse.json(await testConnection({ host, port, database, username, password, type }))
 
       case 'query':
         const { connectionId, sql } = body
         if (!connectionId || !sql) {
-          return NextResponse.json({ success: false, error: 'Connection ID and SQL required' }, { status: 400 })
+          return handleError('Connection ID and SQL required', 400)
         }
-        
-        const queryResult = await executeQuery(connectionId, sql)
-        return NextResponse.json(queryResult)
+        return NextResponse.json(await executeQuery(connectionId, sql))
 
       case 'disconnect':
         const { connectionId: disconnectId } = body
         if (!disconnectId) {
-          return NextResponse.json({ success: false, error: 'Connection ID required' }, { status: 400 })
+          return handleError('Connection ID required', 400)
         }
-        
-        const disconnectResult = await disconnectDatabase(disconnectId)
-        return NextResponse.json(disconnectResult)
+        return NextResponse.json(await disconnectDatabase(disconnectId))
 
       default:
-        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 })
+        return handleError('Invalid action', 400)
     }
-  } catch (error) {
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
+  } catch {
+    return handleError('Request failed')
   }
 }
 
 async function testConnection(config: any) {
   try {
-    const { createConnection } = await import('@/lib/database-manager')
     const connection = await createConnection(config)
-    return {
-      success: true,
-      connectionId: connection.id,
-      message: 'Connected successfully'
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Connection failed'
-    }
+    return { success: true, connectionId: connection.id, message: 'Connected successfully' }
+  } catch {
+    return { success: false, error: 'Connection failed' }
   }
 }
 
 async function executeQuery(connectionId: string, sql: string) {
   try {
-    const { executeQuery: runQuery } = await import('@/lib/database-manager')
     const result = await runQuery(connectionId, sql)
-    return {
-      success: true,
-      data: result.rows,
-      rowCount: result.rowCount,
-      executionTime: result.executionTime
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Query execution failed'
-    }
+    return { success: true, data: result.rows, rowCount: result.rowCount, executionTime: result.executionTime }
+  } catch {
+    return { success: false, error: 'Query execution failed' }
   }
 }
 
 async function disconnectDatabase(connectionId: string) {
   try {
-    const { closeConnection } = await import('@/lib/database-manager')
     await closeConnection(connectionId)
-    return {
-      success: true,
-      message: 'Disconnected successfully'
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Disconnect failed'
-    }
+    return { success: true, message: 'Disconnected successfully' }
+  } catch {
+    return { success: false, error: 'Disconnect failed' }
   }
 }

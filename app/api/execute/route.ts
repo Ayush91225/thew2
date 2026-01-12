@@ -6,7 +6,8 @@ import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 const WORKSPACE_DIR = path.join(process.cwd(), 'workspace')
-const TIMEOUT = 10000
+const TIMEOUT = 5000
+const MAX_CODE_SIZE = 50000
 
 interface ExecutionResult {
   success: boolean
@@ -15,114 +16,96 @@ interface ExecutionResult {
   executionTime?: number
 }
 
-const LANGUAGE_CONFIGS = {
-  javascript: {
-    extension: '.js',
-    command: (file: string) => `node "${file}"`,
-  },
-  js: {
-    extension: '.js',
-    command: (file: string) => `node "${file}"`,
-  },
-  python: {
-    extension: '.py',
-    command: (file: string) => `python3 "${file}"`,
-  },
-  py: {
-    extension: '.py',
-    command: (file: string) => `python3 "${file}"`,
-  },
-  html: {
-    extension: '.html',
-    command: null,
-  },
-  css: {
-    extension: '.css',
-    command: null,
-  },
-  typescript: {
-    extension: '.ts',
-    command: null,
-  },
-  ts: {
-    extension: '.ts',
-    command: null,
-  },
-  json: {
-    extension: '.json',
-    command: null,
-  },
-  markdown: {
-    extension: '.md',
-    command: null,
-  },
-  md: {
-    extension: '.md',
-    command: null,
-  },
-  plaintext: {
-    extension: '.txt',
-    command: null,
-  },
-  text: {
-    extension: '.txt',
-    command: null,
-  }
+const SAFE_LANGUAGES = {
+  javascript: { extension: '.js', runtime: 'node' },
+  js: { extension: '.js', runtime: 'node' },
+  python: { extension: '.py', runtime: 'python3' },
+  py: { extension: '.py', runtime: 'python3' }
 }
+
+const NON_EXECUTABLE = ['html', 'css', 'json', 'markdown', 'md', 'typescript', 'ts', 'plaintext', 'text']
+
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 50) || 'temp'
+}
+
+function validateCode(code: string): boolean {
+  if (!code || typeof code !== 'string' || code.length > MAX_CODE_SIZE) return false
+  
+  // Block dangerous patterns
+  const dangerousPatterns = [
+    /require\s*\(\s*['"]child_process['"]/,
+    /import.*child_process/,
+    /exec\s*\(/,
+    /spawn\s*\(/,
+    /eval\s*\(/,
+    /Function\s*\(/,
+    /process\s*\./,
+    /__dirname/,
+    /__filename/,
+    /fs\./,
+    /require\s*\(\s*['"]fs['"]/
+  ]
+  
+  return !dangerousPatterns.some(pattern => pattern.test(code))
+}
+
+const handleError = (message: string, status = 500) => 
+  NextResponse.json({ success: false, error: message }, { status })
 
 export async function POST(request: NextRequest) {
   try {
     const { code, language, filename } = await request.json()
     
     if (!code || !language) {
-      return NextResponse.json({ error: 'Code and language required' }, { status: 400 })
+      return handleError('Code and language required', 400)
     }
 
-    // For HTML files, just return success without execution
-    if (language === 'html' || language === 'css' || language === 'json' || language === 'markdown' || language === 'md' || language === 'typescript' || language === 'ts' || language === 'plaintext' || language === 'text') {
+    if (!validateCode(code)) {
+      return handleError('Invalid or unsafe code', 400)
+    }
+
+    if (NON_EXECUTABLE.includes(language)) {
       return NextResponse.json({
         success: true,
-        output: 'File ready for preview. Use live server to view.',
+        output: 'File ready for preview',
         executionTime: 0
       })
     }
 
-    // For other languages, check if supported
-    const config = LANGUAGE_CONFIGS[language as keyof typeof LANGUAGE_CONFIGS]
+    const config = SAFE_LANGUAGES[language as keyof typeof SAFE_LANGUAGES]
     if (!config) {
-      return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
+      return handleError('Unsupported language', 400)
     }
 
-    const result = await executeCode(code, language, filename || 'temp', config)
+    const result = await executeCode(code, config, sanitizeFilename(filename || 'temp'))
     return NextResponse.json(result)
 
-  } catch (error) {
-    console.error('Execution error:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Execution failed' 
-    }, { status: 500 })
+  } catch {
+    return handleError('Execution failed')
   }
 }
 
 async function executeCode(
   code: string, 
-  language: string, 
-  filename: string, 
-  config: any
+  config: { extension: string; runtime: string },
+  filename: string
 ): Promise<ExecutionResult> {
   const startTime = Date.now()
   
   try {
+    await fs.mkdir(WORKSPACE_DIR, { recursive: true })
+    
     const tempFile = path.join(WORKSPACE_DIR, `${filename}${config.extension}`)
-    await fs.mkdir(path.dirname(tempFile), { recursive: true })
+    
+    // Ensure file is within workspace
+    if (!tempFile.startsWith(WORKSPACE_DIR)) {
+      throw new Error('Invalid file path')
+    }
+    
     await fs.writeFile(tempFile, code, 'utf-8')
 
-    if (!config.command) {
-      return { success: true, output: 'File saved successfully', executionTime: Date.now() - startTime }
-    }
-
-    const { stdout, stderr } = await execAsync(config.command(tempFile), {
+    const { stdout, stderr } = await execAsync(`${config.runtime} "${path.basename(tempFile)}"`, {
       timeout: TIMEOUT,
       cwd: WORKSPACE_DIR
     })
@@ -131,14 +114,14 @@ async function executeCode(
 
     return {
       success: !stderr,
-      output: stdout || stderr,
+      output: (stdout || stderr).slice(0, 10000),
       executionTime: Date.now() - startTime
     }
 
-  } catch (error: any) {
+  } catch {
     return {
       success: false,
-      error: error.message || 'Execution failed',
+      error: 'Execution failed',
       executionTime: Date.now() - startTime
     }
   }
