@@ -48,18 +48,18 @@ export const createEditorSlice: StateCreator<any, [], [], EditorSlice> = (set, g
   
   setActiveTab: (tabId) => set({ activeTab: tabId }),
   
-  addTab: (tab) => set((state) => {
-    const exists = state.tabs.find(t => t.path === tab.path)
+  addTab: (tab) => set((state: any) => {
+    const exists = state.tabs.find((t: any) => t.path === tab.path)
     if (exists) return { activeTab: exists.id }
     return { tabs: [...state.tabs, tab], activeTab: tab.id }
   }),
   
-  closeTab: (tabId) => set((state) => {
-    const newTabs = state.tabs.filter(t => t.id !== tabId)
+  closeTab: (tabId) => set((state: any) => {
+    const newTabs = state.tabs.filter((t: any) => t.id !== tabId)
     let newActiveTab = state.activeTab
     
     if (state.activeTab === tabId && newTabs.length > 0) {
-      const index = state.tabs.findIndex(t => t.id === tabId)
+      const index = state.tabs.findIndex((t: any) => t.id === tabId)
       newActiveTab = newTabs[Math.min(index, newTabs.length - 1)].id
     } else if (newTabs.length === 0) {
       newActiveTab = null
@@ -68,8 +68,8 @@ export const createEditorSlice: StateCreator<any, [], [], EditorSlice> = (set, g
     return { tabs: newTabs, activeTab: newActiveTab }
   }),
   
-  updateTabContent: (tabId, content) => set((state) => ({
-    tabs: state.tabs.map(tab => 
+  updateTabContent: (tabId, content) => set((state: any) => ({
+    tabs: state.tabs.map((tab: any) => 
       tab.id === tabId ? { ...tab, content, isDirty: true } : tab
     )
   })),

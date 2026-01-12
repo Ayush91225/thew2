@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useIDEStore } from '@/stores/ide-store-new'
+import { useIDEStore } from '@/stores/ide-store'
 
 // Debug Service placeholder interface
 interface DebugSession {
@@ -40,7 +40,7 @@ class DebugService {
       status: 'running',
       variables: [
         { name: 'counter', value: '5', type: 'number' },
-        { name: 'name', value: '"Kriya IDE"', type: 'string' },
+        { name: 'name', value: '&quot;Kriya IDE&quot;', type: 'string' },
         { name: 'isRunning', value: 'true', type: 'boolean' }
       ],
       callStack: [
@@ -88,7 +88,7 @@ class DebugService {
 
   async evaluateExpression(expression: string): Promise<{ result: string }> {
     // Simulate expression evaluation
-    return { result: `${expression} = "evaluated"` }
+    return { result: `${expression} = &quot;evaluated&quot;` }
   }
 }
 
@@ -386,18 +386,20 @@ export function DebugPanel() {
             </div>
             {watchExpressions.map((expression, index) => (
               <div key={index} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded p-2">
-                <span className="text-xs text-zinc-400">{expression}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-300 font-mono">
-                    {evaluationResults[expression] || 'undefined'}
-                  </span>
-                  <button
-                    onClick={() => removeWatch(index)}
-                    className="text-zinc-600 hover:text-red-400 transition-colors"
-                  >
-                    <i className="ph ph-x text-xs"></i>
-                  </button>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-400">{expression}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-300 font-mono">
+                        {evaluationResults[expression] || 'undefined'}
+                      </span>
+                      <button
+                        onClick={() => removeWatch(index)}
+                        className="text-zinc-600 hover:text-red-400 transition-colors"
+                      >
+                        <i className="ph ph-x text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
               </div>
             ))}
           </div>
@@ -1081,16 +1083,18 @@ export function APIPanel() {
   const { 
     apiRequests, 
     activeApiRequest, 
-    collections = [] as Collection[],
     addApiRequest, 
     setActiveApiRequest,
     deleteApiRequest,
-    updateApiRequest,
-    loadCollections = () => {},
-    saveCollection = async () => {},
-    loadCollection = () => {},
-    deleteCollection = () => {}
+    updateApiRequest
   } = useIDEStore()
+  
+  // Local state for collections since they're not in the store yet
+  const [collections] = useState<Collection[]>([])
+  const loadCollections = () => {}
+  const saveCollection = async () => {}
+  const loadCollection = () => {}
+  const deleteCollection = () => {}
   
   const [newRequest, setNewRequest] = useState({
     name: '',
@@ -1376,7 +1380,7 @@ export function APIPanel() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
-                          loadCollection(collection.id)
+                          // loadCollection(collection.id)
                           setShowCollections(false)
                         }}
                         className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -1384,7 +1388,9 @@ export function APIPanel() {
                         Load
                       </button>
                       <button
-                        onClick={() => deleteCollection(collection.id)}
+                        onClick={() => {
+                          // deleteCollection(collection.id)
+                        }}
                         className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
                       >
                         Delete
@@ -1419,7 +1425,7 @@ export function APIPanel() {
               <button
                 onClick={async () => {
                   if (collectionName.trim()) {
-                    await saveCollection(collectionName.trim())
+                    // await saveCollection(collectionName.trim())
                     setCollectionName('')
                     setShowSaveCollection(false)
                   }
@@ -1584,7 +1590,7 @@ export function APIPanel() {
                         <div className="text-center py-8">
                           <i className="ph ph-list-bullets text-3xl text-zinc-600 mb-2"></i>
                           <p className="text-xs text-zinc-500">No parameters added</p>
-                          <p className="text-xs text-zinc-600 mt-1">Click "Add" to add query parameters</p>
+                          <p className="text-xs text-zinc-600 mt-1">Click &quot;Add&quot; to add query parameters</p>
                         </div>
                       )}
                     </div>

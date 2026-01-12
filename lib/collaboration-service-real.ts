@@ -1,1 +1,153 @@
-import backendClient from './backend-client'\n\ninterface CollaborationUser {\n  id: string\n  name: string\n  avatar: string\n  cursor?: { line: number; column: number }\n}\n\ninterface Operation {\n  type: 'insert' | 'delete'\n  position: number\n  content?: string\n  length?: number\n  range?: {\n    startLine: number\n    startColumn: number\n    endLine: number\n    endColumn: number\n  }\n}\n\nclass CollaborationService {\n  private documentId: string | null = null\n  private mode: 'solo' | 'live' = 'solo'\n  private users: Map<string, CollaborationUser> = new Map()\n  private callbacks: Map<string, Function[]> = new Map()\n  private connected = false\n\n  async connect(token?: string) {\n    try {\n      await backendClient.connect(token)\n      this.connected = true\n      this.setupMessageHandlers()\n    } catch (error) {\n      console.error('Failed to connect to collaboration service:', error)\n      throw error\n    }\n  }\n\n  disconnect() {\n    backendClient.disconnect()\n    this.connected = false\n    this.documentId = null\n    this.users.clear()\n  }\n\n  async joinDocument(documentId: string, mode: 'solo' | 'live' = 'live') {\n    if (!this.connected) {\n      throw new Error('Not connected to collaboration service')\n    }\n\n    this.documentId = documentId\n    this.mode = mode\n    \n    backendClient.joinDocument(documentId, mode)\n  }\n\n  sendOperation(operation: Operation) {\n    if (!this.documentId || this.mode !== 'live') return\n    \n    backendClient.sendOperation(this.documentId, operation)\n  }\n\n  sendCursorUpdate(cursor: { line: number; column: number }) {\n    if (!this.documentId || this.mode !== 'live') return\n    \n    backendClient.sendCursorUpdate(this.documentId, cursor)\n  }\n\n  getUsers(): CollaborationUser[] {\n    return Array.from(this.users.values())\n  }\n\n  on(event: string, callback: Function) {\n    if (!this.callbacks.has(event)) {\n      this.callbacks.set(event, [])\n    }\n    this.callbacks.get(event)!.push(callback)\n  }\n\n  off(event: string, callback: Function) {\n    const callbacks = this.callbacks.get(event)\n    if (callbacks) {\n      const index = callbacks.indexOf(callback)\n      if (index > -1) {\n        callbacks.splice(index, 1)\n      }\n    }\n  }\n\n  private emit(event: string, data: any) {\n    const callbacks = this.callbacks.get(event)\n    if (callbacks) {\n      callbacks.forEach(callback => callback(data))\n    }\n  }\n\n  private setupMessageHandlers() {\n    backendClient.onMessage((message) => {\n      switch (message.type) {\n        case 'document-joined':\n          if (message.data.users) {\n            this.users.clear()\n            message.data.users.forEach((user: CollaborationUser) => {\n              this.users.set(user.id, user)\n            })\n          }\n          this.emit('document-joined', message.data)\n          break\n\n        case 'operation':\n          this.emit('operation', message.data.operation)\n          break\n\n        case 'operation-confirmed':\n          this.emit('operation-confirmed', message.data.operation)\n          break\n\n        case 'cursor-update':\n          const user = this.users.get(message.data.userId)\n          if (user) {\n            user.cursor = message.data.cursor\n            this.users.set(message.data.userId, user)\n          }\n          this.emit('cursor-update', message.data)\n          break\n\n        case 'user-joined':\n          if (message.data.user) {\n            this.users.set(message.data.user.id, message.data.user)\n            this.emit('user-joined', message.data.user)\n          }\n          break\n\n        case 'user-left':\n          this.users.delete(message.data.userId)\n          this.emit('user-left', { userId: message.data.userId })\n          break\n\n        case 'error':\n          this.emit('error', message.data)\n          break\n      }\n    })\n  }\n}\n\n// Create singleton instance\nconst collaborationService = new CollaborationService()\n\nexport default collaborationService\nexport { CollaborationService }\nexport type { CollaborationUser, Operation }
+import backendClient from './backend-client'
+
+interface CollaborationUser {
+  id: string
+  name: string
+  avatar: string
+  cursor?: { line: number; column: number }
+}
+
+interface Operation {
+  type: 'insert' | 'delete'
+  position: number
+  content?: string
+  length?: number
+  range?: {
+    startLine: number
+    startColumn: number
+    endLine: number
+    endColumn: number
+  }
+}
+
+class CollaborationService {
+  private documentId: string | null = null
+  private mode: 'solo' | 'live' = 'solo'
+  private users: Map<string, CollaborationUser> = new Map()
+  private callbacks: Map<string, Function[]> = new Map()
+  private connected = false
+
+  async connect(token?: string) {
+    try {
+      await backendClient.connect(token)
+      this.connected = true
+      this.setupMessageHandlers()
+    } catch (error) {
+      console.error('Failed to connect to collaboration service:', error)
+      throw error
+    }
+  }
+
+  disconnect() {
+    backendClient.disconnect()
+    this.connected = false
+    this.documentId = null
+    this.users.clear()
+  }
+
+  async joinDocument(documentId: string, mode: 'solo' | 'live' = 'live') {
+    if (!this.connected) {
+      throw new Error('Not connected to collaboration service')
+    }
+
+    this.documentId = documentId
+    this.mode = mode
+    
+    backendClient.joinDocument(documentId, mode)
+  }
+
+  sendOperation(operation: Operation) {
+    if (!this.documentId || this.mode !== 'live') return
+    
+    backendClient.sendOperation(this.documentId, operation)
+  }
+
+  sendCursorUpdate(cursor: { line: number; column: number }) {
+    if (!this.documentId || this.mode !== 'live') return
+    
+    backendClient.sendCursorUpdate(this.documentId, cursor)
+  }
+
+  getUsers(): CollaborationUser[] {
+    return Array.from(this.users.values())
+  }
+
+  on(event: string, callback: Function) {
+    if (!this.callbacks.has(event)) {
+      this.callbacks.set(event, [])
+    }
+    this.callbacks.get(event)!.push(callback)
+  }
+
+  off(event: string, callback: Function) {
+    const callbacks = this.callbacks.get(event)
+    if (callbacks) {
+      const index = callbacks.indexOf(callback)
+      if (index > -1) {
+        callbacks.splice(index, 1)
+      }
+    }
+  }
+
+  private emit(event: string, data: any) {
+    const callbacks = this.callbacks.get(event)
+    if (callbacks) {
+      callbacks.forEach(callback => callback(data))
+    }
+  }
+
+  private setupMessageHandlers() {
+    backendClient.onMessage((message) => {
+      switch (message.type) {
+        case 'document-joined':
+          if (message.data.users) {
+            this.users.clear()
+            message.data.users.forEach((user: CollaborationUser) => {
+              this.users.set(user.id, user)
+            })
+          }
+          this.emit('document-joined', message.data)
+          break
+
+        case 'operation':
+          this.emit('operation', message.data.operation)
+          break
+
+        case 'operation-confirmed':
+          this.emit('operation-confirmed', message.data.operation)
+          break
+
+        case 'cursor-update':
+          const user = this.users.get(message.data.userId)
+          if (user) {
+            user.cursor = message.data.cursor
+            this.users.set(message.data.userId, user)
+          }
+          this.emit('cursor-update', message.data)
+          break
+
+        case 'user-joined':
+          if (message.data.user) {
+            this.users.set(message.data.user.id, message.data.user)
+            this.emit('user-joined', message.data.user)
+          }
+          break
+
+        case 'user-left':
+          this.users.delete(message.data.userId)
+          this.emit('user-left', { userId: message.data.userId })
+          break
+
+        case 'error':
+          this.emit('error', message.data)
+          break
+      }
+    })
+  }
+}
+
+const collaborationService = new CollaborationService()
+
+export default collaborationService
+export { CollaborationService }
+export type { CollaborationUser, Operation }

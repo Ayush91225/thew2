@@ -3,6 +3,9 @@ const { v4: uuidv4 } = require('uuid');
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
+// In-memory database connections for demo
+const connections = new Map();
+
 exports.handler = async (event) => {
   const { httpMethod, path, body, pathParameters } = event;
 
@@ -17,6 +20,12 @@ exports.handler = async (event) => {
       case 'GET /api/documents':
         return await listDocuments();
       
+      case 'POST /api/database':
+        return await handleDatabaseRequest(JSON.parse(body));
+      
+      case 'GET /api/database':
+        return await handleDatabaseGet(event.queryStringParameters);
+      
       default:
         if (httpMethod === 'GET' && path.startsWith('/api/documents/')) {
           const documentId = pathParameters.proxy;
@@ -29,6 +38,102 @@ exports.handler = async (event) => {
     return response(500, { error: 'Internal server error' });
   }
 };
+
+async function handleDatabaseRequest(data) {
+  const { action } = data;
+  
+  switch (action) {
+    case 'connect':
+      const { host, port, database, username, password, type } = data;
+      if (!host || !database || !username || !type) {
+        return response(400, { success: false, error: 'Missing required fields' });
+      }
+      
+      const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      connections.set(connectionId, {
+        id: connectionId,
+        type,
+        host,
+        port,
+        database,
+        username,
+        isConnected: true,
+        createdAt: new Date()
+      });
+      
+      return response(200, {
+        success: true,
+        connectionId,
+        message: 'Connected successfully'
+      });
+    
+    case 'query':
+      const { connectionId, sql } = data;
+      if (!connectionId || !sql) {
+        return response(400, { success: false, error: 'Connection ID and SQL required' });
+      }
+      
+      const connection = connections.get(connectionId);
+      if (!connection) {
+        return response(400, { success: false, error: 'Connection not found' });
+      }
+      
+      const startTime = Date.now();
+      
+      // Mock query results
+      const mockRows = sql.toLowerCase().includes('select') ? [
+        { id: 1, name: 'John Doe', email: 'john@example.com', created_at: '2024-01-15' },
+        { id: 2, name: 'Jane Smith', email: 'jane@example.com', created_at: '2024-01-16' }
+      ] : [];
+      
+      return response(200, {
+        success: true,
+        data: mockRows,
+        rowCount: mockRows.length,
+        executionTime: Date.now() - startTime
+      });
+    
+    case 'disconnect':
+      const { connectionId: disconnectId } = data;
+      if (!disconnectId) {
+        return response(400, { success: false, error: 'Connection ID required' });
+      }
+      
+      connections.delete(disconnectId);
+      return response(200, {
+        success: true,
+        message: 'Disconnected successfully'
+      });
+    
+    default:
+      return response(400, { success: false, error: 'Invalid action' });
+  }
+}
+
+async function handleDatabaseGet(params) {
+  const action = params?.action;
+  
+  switch (action) {
+    case 'connections':
+      return response(200, {
+        success: true,
+        connections: Array.from(connections.values())
+      });
+    
+    case 'tables':
+      const connectionId = params?.connectionId;
+      if (!connectionId) {
+        return response(400, { success: false, error: 'Connection ID required' });
+      }
+      return response(200, {
+        success: true,
+        tables: ['users', 'products', 'orders']
+      });
+    
+    default:
+      return response(400, { success: false, error: 'Invalid action' });
+  }
+}
 
 async function createDocument(data) {
   const documentId = uuidv4();

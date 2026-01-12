@@ -69,7 +69,7 @@ class DatabaseManager {
       this.connections.set(id, connection)
       return connection
     } catch (error) {
-      throw new Error(`Failed to connect to ${config.type}: ${error.message}`)
+      throw new Error(`Failed to connect to ${config.type}: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -112,7 +112,7 @@ class DatabaseManager {
         executionTime: Date.now() - startTime
       }
     } catch (error) {
-      throw new Error(`Query execution failed: ${error.message}`)
+      throw new Error(`Query execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -167,19 +167,19 @@ class DatabaseManager {
         tables = (rows as any[]).map(row => Object.values(row)[0] as string)
       } else if (connection.type === 'postgresql') {
         const result = await connection.client.query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
-        tables = result.rows.map(row => row.tablename)
+        tables = result.rows.map((row: any) => row.tablename)
       } else if (connection.type === 'sqlite') {
         const rows = await connection.client.all("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = rows.map(row => row.name)
+        tables = rows.map((row: any) => row.name)
       } else if (connection.type === 'mongodb') {
         const db = connection.client.db(connection.database)
         const collections = await db.listCollections().toArray()
-        tables = collections.map(col => col.name)
+        tables = collections.map((col: any) => col.name)
       }
       
       return tables
     } catch (error) {
-      throw new Error(`Failed to get tables: ${error.message}`)
+      throw new Error(`Failed to get tables: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 }

@@ -19,9 +19,10 @@ function getSafePath(id: string): string | null {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const filePath = getSafePath(params.id)
     if (!filePath) {
       return NextResponse.json({ error: 'Invalid collection ID' }, { status: 400 })
@@ -41,9 +42,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const filePath = getSafePath(params.id)
     if (!filePath) {
       return NextResponse.json({ error: 'Invalid collection ID' }, { status: 400 })
@@ -89,9 +91,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const filePath = getSafePath(params.id)
     if (!filePath) {
       return NextResponse.json({ error: 'Invalid collection ID' }, { status: 400 })

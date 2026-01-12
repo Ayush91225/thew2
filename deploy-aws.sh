@@ -67,7 +67,10 @@ serverless deploy --stage $BACKEND_STAGE --region $AWS_REGION
 # Get WebSocket URL
 echo -e "${YELLOW}🔗 Retrieving WebSocket endpoint...${NC}"
 WEBSOCKET_URL=$(serverless info --stage $BACKEND_STAGE | grep -o 'wss://[^[:space:]]*' | head -1)
-API_URL=$(serverless info --stage $BACKEND_STAGE | grep -o 'https://[^[:space:]]*/dev' | head -1)
+
+# Get API URL  
+echo -e "${YELLOW}🔗 Retrieving API endpoint...${NC}"
+API_URL=$(serverless info --stage $BACKEND_STAGE | grep -o 'https://[^[:space:]]*/prod' | head -1)
 
 if [ -z "$WEBSOCKET_URL" ]; then
     echo -e "${RED}❌ Failed to get WebSocket URL${NC}"
