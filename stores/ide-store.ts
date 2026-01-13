@@ -1056,17 +1056,24 @@ context:
               finalLanguage = 'html'
             }
             
-            console.log('Running file execution for language:', finalLanguage)
+            console.log('Running file execution for language:', finalLanguage.replace(/[\r\n\t]/g, '_'))
             
             set({ isRunning: true, runningFile: activeTabData.id })
             
             fetch('/api/execute', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              const sanitizedCode = activeTabData.content.replace(/[<>"'&]/g, (match) => {
+                const entities: Record<string, string> = {
+                  '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '&': '&amp;'
+                }
+                return entities[match] || match
+              })
+              
               body: JSON.stringify({
-                code: activeTabData.content,
+                code: sanitizedCode,
                 language: finalLanguage,
-                filename: activeTabData.name
+                filename: activeTabData.name.replace(/[<>"'&]/g, '')
               })
             })
             .then(res => {
@@ -1246,7 +1253,14 @@ context:
             if (!file) return state
             
             try {
-              const lines = file.content.split('\n')
+              const sanitizedContent = file.content.replace(/[<>"'&]/g, (match) => {
+                const entities: Record<string, string> = {
+                  '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '&': '&amp;'
+                }
+                return entities[match] || match
+              })
+              
+              const lines = sanitizedContent.split('\n')
               const errors: string[] = []
               
               lines.forEach((line, index) => {
@@ -1306,12 +1320,19 @@ context:
           
           uploadYamlFile: async (file: File) => {
             try {
-              const content = await file.text()
+              const sanitizedContent = await file.text()
+                .then(content => content.replace(/[<>"'&]/g, (match) => {
+                  const entities: Record<string, string> = {
+                    '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '&': '&amp;'
+                  }
+                  return entities[match] || match
+                }))
+              
               const newYamlFile = {
                 id: `uploaded-${Date.now()}`,
-                name: file.name,
-                path: `/${file.name}`,
-                content,
+                name: file.name.replace(/[<>"'&]/g, ''),
+                path: `/${file.name.replace(/[<>"'&]/g, '')}`,
+                content: sanitizedContent,
                 isValid: true
               }
               
@@ -2053,8 +2074,11 @@ context:
             }
             
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              new Notification(title, {
-                body: message,
+              const sanitizedTitle = title.replace(/[<>"'&\r\n\t]/g, '')
+              const sanitizedMessage = message.replace(/[<>"'&\r\n\t]/g, '')
+              
+              new Notification(sanitizedTitle, {
+                body: sanitizedMessage,
                 icon: '/favicon.ico',
                 tag: type
               })
