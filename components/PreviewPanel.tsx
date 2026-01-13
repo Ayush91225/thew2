@@ -3,15 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useIDEStore } from '@/stores/ide-store'
 
-interface LiveServerConfig {
-  port: number
-  host: string
-  root: string
-  open: boolean
-  cors: boolean
-  https: boolean
-}
-
 export default function PreviewPanel() {
   const { 
     previewOpen, 
@@ -21,31 +12,20 @@ export default function PreviewPanel() {
     setPreviewUrl, 
     setPreviewMode,
     tabs,
-    activeTab,
-    terminalOpen,
-    setTerminalOpen
+    activeTab
   } = useIDEStore()
   
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isServerRunning, setIsServerRunning] = useState(false)
-  const [serverPort, setServerPort] = useState(3000)
   const [autoReload, setAutoReload] = useState(true)
   const [isBlocked, setIsBlocked] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
   const [alertUrl, setAlertUrl] = useState('')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [urlInput, setUrlInput] = useState(previewUrl)
-  const [serverConfig, setServerConfig] = useState<LiveServerConfig>({
-    port: 3000,
-    host: 'localhost',
-    root: '/',
-    open: true,
-    cors: true,
-    https: false
-  })
-
   const [isResizing, setIsResizing] = useState(false)
+  
   const displayAlert = (url: string) => {
     setAlertUrl(url)
     setShowAlert(true)
@@ -57,85 +37,51 @@ export default function PreviewPanel() {
     setIsLoading(false)
   }
 
-  // Auto-update preview when content changes
+  // Auto-update preview when active tab content changes
   useEffect(() => {
-    const activeTabData = tabs.find(tab => tab.id === activeTab)
-    if (activeTabData && isServerRunning && (activeTabData.language === 'html' || activeTabData.name.endsWith('.html'))) {
-      let content = activeTabData.content
-      
-      // Inject live reload for HTML files
-      if (activeTabData.language === 'html' || activeTabData.name.endsWith('.html')) {
-        const liveReloadScript = `
-<script>
-(function() {
-  console.log('Live reload active');
-})();
-</script>`
-        
-        if (content.includes('</body>')) {
-          content = content.replace('</body>', liveReloadScript + '\n</body>')
-        } else if (content.includes('</html>')) {
-          content = content.replace('</html>', liveReloadScript + '\n</html>')
-        } else {
-          content += liveReloadScript
-        }
+    if (isServerRunning && autoReload) {
+      const activeTabData = tabs.find(tab => tab.id === activeTab)
+      if (activeTabData) {
+        updatePreview()
       }
-      
-      const blob = new Blob([content], { type: 'text/html' })
-      const url = URL.createObjectURL(blob)
-      
-      // Clean up previous URL
-      if (previewUrl && previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl)
-      }
-      
-      setPreviewUrl(url)
     }
-  }, [activeTab, tabs, isServerRunning, setPreviewUrl])
+  }, [activeTab, tabs, isServerRunning, autoReload])
 
-  // Auto-update server when content changes
-  useEffect(() => {
-    if (isServerRunning && tabs.length > 0) {
-      const updateServer = async () => {
-        const files: Record<string, string> = {}
-        tabs.forEach(tab => {
-          files[tab.name] = tab.content
-        })
-        
-        try {
-          const response = await fetch('/api/server', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ files })
-          })
-          
-          if (response.ok && autoReload) {
-            const { entryFile } = await response.json()
-            const newUrl = `/api/server?file=${entryFile}&t=${Date.now()}`
-            setPreviewUrl(newUrl)
-          }
-        } catch (error) {
-          console.error('Failed to update server:', error)
-        }
-      }
+  const updatePreview = useCallback(async () => {
+    if (!isServerRunning) return
+    
+    try {
+      // Get all tab contents
+      const files: Record<string, string> = {}
+      tabs.forEach(tab => {
+        files[tab.name] = tab.content
+      })
       
-      const timer = setTimeout(updateServer, 500)
-      return () => clearTimeout(timer)
+      // Update server with current files
+      const response = await fetch('/api/server', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files })
+      })
+      
+      if (response.ok) {
+        const { url } = await response.json()
+        setPreviewUrl(url + '&t=' + Date.now()) // Add timestamp to force reload
+      }
+    } catch (error) {
+      console.error('Failed to update preview:', error)
     }
-  }, [tabs, isServerRunning, autoReload, setPreviewUrl])
+  }, [tabs, isServerRunning, setPreviewUrl])
 
   const startLiveServer = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     
     try {
-      console.log('Starting live server with tabs:', tabs.map(t => t.name))
-      
-      // Prepare files from IDE tabs
+      // Get all tab contents
       const files: Record<string, string> = {}
       tabs.forEach(tab => {
         files[tab.name] = tab.content
-        console.log(`Tab: ${tab.name}, content length: ${tab.content.length}`)
       })
       
       // Check if we have any HTML files or HTML content
@@ -144,11 +90,52 @@ export default function PreviewPanel() {
         files[name].includes('<!DOCTYPE html>') || 
         files[name].includes('<html')
       )
-      if (!hasHtml) {
-        throw new Error('No HTML file found. Create an HTML file to preview.')
-      }
       
-      console.log('Sending files to server:', Object.keys(files))
+      if (!hasHtml) {
+        // Create a default HTML file if none exists
+        const activeTabData = tabs.find(tab => tab.id === activeTab)
+        if (activeTabData && (activeTabData.language === 'javascript' || activeTabData.language === 'typescript')) {
+          // Create HTML wrapper for JS/TS files
+          files['index.html'] = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview - ${activeTabData.name}</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+${activeTabData.content}
+    </script>
+</body>
+</html>`
+        } else if (activeTabData && activeTabData.language === 'css') {
+          // Create HTML wrapper for CSS files
+          files['index.html'] = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Preview - ${activeTabData.name}</title>
+    <style>
+${activeTabData.content}
+    </style>
+</head>
+<body>
+    <h1>CSS Preview</h1>
+    <p>This is a preview of your CSS styles.</p>
+    <div class="demo-content">
+        <button>Button</button>
+        <input type="text" placeholder="Input field">
+        <div class="card">Card element</div>
+    </div>
+</body>
+</html>`
+        } else {
+          throw new Error('No HTML file found. Create an HTML file or switch to an HTML tab to preview.')
+        }
+      }
       
       // Start server with files
       const response = await fetch('/api/server', {
@@ -158,23 +145,15 @@ export default function PreviewPanel() {
       })
       
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Server response error:', response.status, errorText)
-        throw new Error(`Server error: ${response.status}`)
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to start server')
       }
       
       const result = await response.json()
-      console.log('Server response:', result)
       
       setIsServerRunning(true)
       setPreviewUrl(result.url)
-      setUrlInput(`localhost:${serverPort}/${result.entryFile}`)
-      
-      console.log('Preview URL set to:', result.url)
-      
-      if (!terminalOpen) {
-        setTerminalOpen(true)
-      }
+      setUrlInput(result.url)
       
     } catch (err) {
       console.error('Live server error:', err)
@@ -183,7 +162,7 @@ export default function PreviewPanel() {
     } finally {
       setIsLoading(false)
     }
-  }, [tabs, serverPort, setPreviewUrl, terminalOpen, setTerminalOpen])
+  }, [tabs, activeTab, setPreviewUrl])
 
   const stopLiveServer = useCallback(() => {
     setIsServerRunning(false)
@@ -202,38 +181,19 @@ export default function PreviewPanel() {
       setIsLoading(true)
       setError(null)
       
-      try {
-        let refreshUrl = previewUrl
-        
-        // For blob URLs, just use as-is
-        if (previewUrl.startsWith('blob:')) {
-          refreshUrl = previewUrl
-        } else {
-          // For regular URLs, add timestamp to force reload
-          const url = new URL(previewUrl)
-          url.searchParams.set('_t', Date.now().toString())
-          refreshUrl = url.toString()
-        }
-        
-        iframeRef.current.src = refreshUrl
-      } catch (error) {
-        // If URL construction fails, just reload with original URL
-        iframeRef.current.src = previewUrl + (previewUrl.includes('?') ? '&' : '?') + '_t=' + Date.now()
-      }
+      // Force reload by adding timestamp
+      const url = new URL(previewUrl, window.location.origin)
+      url.searchParams.set('_t', Date.now().toString())
+      iframeRef.current.src = url.toString()
     }
   }
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (urlInput.trim()) {
-      // Clean up previous blob URL if it exists
-      if (previewUrl && previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl)
-      }
-      
       let url = urlInput.trim()
       // Add protocol if missing
-      if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('blob:')) {
+      if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
         url = 'https://' + url
       }
       
@@ -244,7 +204,7 @@ export default function PreviewPanel() {
       setIsServerRunning(false)
       
       // Show alert for external URLs
-      if (!url.startsWith('blob:') && !url.includes('localhost')) {
+      if (!url.startsWith('/') && !url.includes('localhost')) {
         setTimeout(() => displayAlert(url), 1000)
       }
     }
@@ -268,7 +228,7 @@ export default function PreviewPanel() {
 
   // Detect X-Frame-Options blocking
   useEffect(() => {
-    if (previewUrl && !previewUrl.startsWith('blob:')) {
+    if (previewUrl && !previewUrl.startsWith('/')) {
       const timer = setTimeout(() => {
         if (iframeRef.current && isLoading) {
           setIsBlocked(true)
@@ -347,8 +307,8 @@ export default function PreviewPanel() {
           <span className="text-sm text-zinc-300">Preview</span>
           {isServerRunning && (
             <div className="flex items-center gap-1 px-1.5 py-0.5 bg-zinc-800 rounded text-xs text-zinc-400">
-              <div className="w-1 h-1 bg-zinc-400 rounded-full"></div>
-              <span>:{serverPort}</span>
+              <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+              <span>Live</span>
             </div>
           )}
         </div>
@@ -358,7 +318,7 @@ export default function PreviewPanel() {
           {!isServerRunning ? (
             <button
               onClick={startLiveServer}
-              disabled={isLoading}
+              disabled={isLoading || tabs.length === 0}
               className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-50 rounded transition-colors flex items-center gap-1"
               title="Start Live Server"
             >
@@ -463,10 +423,10 @@ export default function PreviewPanel() {
           <div className="flex-1 relative">
             <i className="ph ph-globe absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-600 text-xs"></i>
             <input
-              type="url"
+              type="text"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              placeholder={isServerRunning ? `localhost:${serverPort}` : "Enter URL..."}
+              placeholder={isServerRunning ? "Live server running" : "Enter URL or start live server..."}
               className="w-full pl-7 pr-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-700"
             />
           </div>
@@ -485,19 +445,26 @@ export default function PreviewPanel() {
         {!previewUrl ? (
           <div className="text-center text-zinc-600">
             <i className="ph ph-monitor text-2xl mb-2"></i>
-            <p className="text-xs mb-1">Start live server or enter URL</p>
-            <button
-              onClick={startLiveServer}
-              disabled={isLoading}
-              className="mt-2 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-50 rounded transition-colors flex items-center gap-1 mx-auto"
-            >
-              {isLoading ? (
-                <i className="ph ph-spinner animate-spin"></i>
-              ) : (
-                <i className="ph ph-play"></i>
-              )}
-              Go Live
-            </button>
+            <p className="text-xs mb-1">
+              {tabs.length === 0 
+                ? 'Open a file to start previewing' 
+                : 'Start live server to preview your code'
+              }
+            </p>
+            {tabs.length > 0 && (
+              <button
+                onClick={startLiveServer}
+                disabled={isLoading}
+                className="mt-2 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-50 rounded transition-colors flex items-center gap-1 mx-auto"
+              >
+                {isLoading ? (
+                  <i className="ph ph-spinner animate-spin"></i>
+                ) : (
+                  <i className="ph ph-play"></i>
+                )}
+                Go Live
+              </button>
+            )}
           </div>
         ) : (
           <div className={`relative ${getDeviceClass()} ${previewMode !== 'browser' ? 'border border-zinc-800 rounded overflow-hidden' : ''} max-w-full max-h-full`}>
@@ -558,9 +525,9 @@ export default function PreviewPanel() {
           {previewUrl && (
             <div className="flex items-center gap-1">
               <div className={`w-1.5 h-1.5 rounded-full ${
-                error ? 'bg-zinc-500' : 
-                isLoading ? 'bg-zinc-500' : 
-                isServerRunning ? 'bg-zinc-400' : 'bg-zinc-500'
+                error ? 'bg-red-500' : 
+                isLoading ? 'bg-yellow-500' : 
+                isServerRunning ? 'bg-green-500' : 'bg-zinc-500'
               }`}></div>
               <span className="text-zinc-600">
                 {error ? 'error' : 
@@ -572,7 +539,7 @@ export default function PreviewPanel() {
         </div>
       </div>
 
-      {/* Smooth Alert Notification */}
+      {/* Alert Notification */}
       {showAlert && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right-full duration-300">
           <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-lg max-w-sm">

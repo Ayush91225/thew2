@@ -10,6 +10,11 @@ provider:
     JWT_SECRET: ${env:JWT_SECRET, 'kriya-secret-key'}
     FRONTEND_URL: ${env:FRONTEND_URL, 'https://kriya-ide.vercel.app'}
   
+  deploymentBucket:
+    blockPublicAccess: true
+    versioning: true
+    serverSideEncryption: AES256
+  
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -53,6 +58,43 @@ functions:
 
 resources:
   Resources:
+    ServerlessDeploymentBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        VersioningConfiguration:
+          Status: Enabled
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteOldVersions
+              Status: Enabled
+              NoncurrentVersionExpirationInDays: 30
+        LoggingConfiguration:
+          DestinationBucketName: !Ref ServerlessDeploymentLogsBucket
+          LogFilePrefix: access-logs/
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+    
+    ServerlessDeploymentLogsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteLogs
+              Status: Enabled
+              ExpirationInDays: 90
+
     KriyaDocumentsTable:
       Type: AWS::DynamoDB::Table
       Properties:

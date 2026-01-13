@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 // Components
-import { ErrorBoundary } from '@/components/ErrorBoundary'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import CommandPalette from '@/components/CommandPalette'
 import AIAssistant from '@/components/AIAssistant'
 import YamlEditor from '@/components/YamlEditor'

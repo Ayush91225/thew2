@@ -5,6 +5,7 @@ import path from 'path'
 const WORKSPACE_DIR = path.join(process.cwd(), 'workspace')
 const MAX_FILE_SIZE = 1000000 // 1MB
 const MAX_FILES = 50
+const MAX_FILENAME_LENGTH = 100
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -25,7 +26,7 @@ function sanitizeFilePath(filePath: string): string {
 
 function isValidFilePath(filePath: string): boolean {
   const sanitized = sanitizeFilePath(filePath)
-  return sanitized.length > 0 && sanitized.length <= 100 && !sanitized.includes('..')
+  return sanitized.length > 0 && sanitized.length <= MAX_FILENAME_LENGTH && !sanitized.includes('..')
 }
 
 function getSafePath(filePath: string): string | null {
@@ -38,10 +39,6 @@ function getSafePath(filePath: string): string | null {
 function getMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase()
   return MIME_TYPES[ext] || 'text/plain'
-}
-
-function sanitizeForLog(input: string): string {
-  return input.replace(/[\r\n\t]/g, '_').slice(0, 100)
 }
 
 const handleError = (message: string, status = 500) => 
