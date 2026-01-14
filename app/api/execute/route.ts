@@ -32,19 +32,12 @@ function sanitizeFilename(filename: string): string {
 function validateCode(code: string): boolean {
   if (!code || typeof code !== 'string' || code.length > MAX_CODE_SIZE) return false
   
-  // Block dangerous patterns
+  // Block only the most dangerous patterns
   const dangerousPatterns = [
     /require\s*\(\s*['"]child_process['"]/,
     /import.*child_process/,
     /exec\s*\(/,
-    /spawn\s*\(/,
-    /eval\s*\(/,
-    /Function\s*\(/,
-    /process\s*\./,
-    /__dirname/,
-    /__filename/,
-    /fs\./,
-    /require\s*\(\s*['"]fs['"]/
+    /spawn\s*\(/
   ]
   
   return !dangerousPatterns.some(pattern => pattern.test(code))
@@ -55,17 +48,33 @@ const handleError = (message: string, status = 500) =>
 
 export async function POST(request: NextRequest) {
   try {
-    const { code, language, filename } = await request.json()
+    const body = await request.json()
+    console.log('API received:', { 
+      hasCode: !!body.code, 
+      language: body.language, 
+      filename: body.filename,
+      codeLength: body.code?.length 
+    })
+    
+    const { code, language, filename } = body
     
     if (!code || !language) {
+      console.log('Missing required fields:', { code: !!code, language: !!language })
       return handleError('Code and language required', 400)
+    }
+    
+    if (!code.trim()) {
+      console.log('Empty code provided')
+      return handleError('Code cannot be empty', 400)
     }
 
     if (!validateCode(code)) {
+      console.log('Code validation failed')
       return handleError('Invalid or unsafe code', 400)
     }
 
     if (NON_EXECUTABLE.includes(language)) {
+      console.log('Non-executable language:', language)
       return NextResponse.json({
         success: true,
         output: 'File ready for preview',
@@ -75,13 +84,15 @@ export async function POST(request: NextRequest) {
 
     const config = SAFE_LANGUAGES[language as keyof typeof SAFE_LANGUAGES]
     if (!config) {
+      console.log('Unsupported language:', language)
       return handleError('Unsupported language', 400)
     }
 
     const result = await executeCode(code, config, sanitizeFilename(filename || 'temp'))
     return NextResponse.json(result)
 
-  } catch {
+  } catch (error) {
+    console.error('API error:', error)
     return handleError('Execution failed')
   }
 }

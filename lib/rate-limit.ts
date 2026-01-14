@@ -1,1 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server'\n\nconst rateLimitMap = new Map<string, { count: number; lastReset: number }>()\nconst RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute\nconst MAX_REQUESTS = 100 // per window\n\nexport function rateLimit(request: NextRequest): boolean {\n  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'\n  const now = Date.now()\n  const windowStart = now - RATE_LIMIT_WINDOW\n  \n  const record = rateLimitMap.get(ip)\n  \n  if (!record || record.lastReset < windowStart) {\n    rateLimitMap.set(ip, { count: 1, lastReset: now })\n    return true\n  }\n  \n  if (record.count >= MAX_REQUESTS) {\n    return false\n  }\n  \n  record.count++\n  return true\n}\n\nexport function createRateLimitResponse(): NextResponse {\n  return NextResponse.json(\n    { success: false, error: 'Rate limit exceeded' },\n    { status: 429 }\n  )\n}
+import { NextRequest, NextResponse } from 'next/server'
+
+const rateLimitMap = new Map<string, { count: number; lastReset: number }>()
+const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
+const MAX_REQUESTS = 100 // per window
+
+export function rateLimit(request: NextRequest): boolean {
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+  const now = Date.now()
+  const windowStart = now - RATE_LIMIT_WINDOW
+  
+  const record = rateLimitMap.get(ip)
+  
+  if (!record || record.lastReset < windowStart) {
+    rateLimitMap.set(ip, { count: 1, lastReset: now })
+    return true
+  }
+  
+  if (record.count >= MAX_REQUESTS) {
+    return false
+  }
+  
+  record.count++
+  return true
+}
+
+export function createRateLimitResponse(): NextResponse {
+  return NextResponse.json(
+    { success: false, error: 'Rate limit exceeded' },
+    { status: 429 }
+  )
+}

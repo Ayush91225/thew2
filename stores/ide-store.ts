@@ -236,11 +236,6 @@ interface IDEState {
   debugShowInlineValues: boolean
   debugLogLevel: string
   
-  // Preview Settings
-  previewOpen: boolean
-  previewUrl: string
-  previewMode: 'browser' | 'mobile' | 'tablet'
-  
   notificationsEnabled: boolean
   desktopNotifications: boolean
   soundEnabled: boolean
@@ -437,11 +432,6 @@ interface IDEState {
   setDebugStepIntoLibraries: (enabled: boolean) => void
   setDebugShowInlineValues: (enabled: boolean) => void
   setDebugLogLevel: (level: string) => void
-  
-  // Preview Actions
-  setPreviewOpen: (open: boolean) => void
-  setPreviewUrl: (url: string) => void
-  setPreviewMode: (mode: 'browser' | 'mobile' | 'tablet') => void
   
   // Notification helper
   sendNotification: (type: 'build' | 'error' | 'collaboration' | 'deployment', title: string, message: string) => void
@@ -981,11 +971,6 @@ context:
           debugShowInlineValues: true,
           debugLogLevel: 'info',
           
-          // Preview Settings
-          previewOpen: false,
-          previewUrl: '',
-          previewMode: 'browser',
-          
           gitBranch: 'main',
           gitStatus: 'modified',
           uncommittedChanges: 3,
@@ -1028,97 +1013,113 @@ context:
           },
           
           runCurrentFile: () => {
+            console.log('🚀 runCurrentFile called!')
             const state = get()
-            if (!state.activeTab) return
+            if (!state.activeTab) {
+              console.log('❌ No active tab')
+              return
+            }
             
             const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
-            if (!activeTabData) return
+            if (!activeTabData) {
+              console.log('❌ Active tab data not found')
+              return
+            }
             
+            console.log('📁 Active tab:', activeTabData.name, 'Language:', activeTabData.language)
+            
+            // For HTML files, open in new tab immediately
+            if (activeTabData.language === 'html' || activeTabData.name.endsWith('.html')) {
+              console.log('🌐 HTML file detected:', activeTabData.name)
+              console.log('📝 Content to preview:', activeTabData.content)
+              
+              const htmlContent = activeTabData.content || '<h1>Empty HTML File</h1>'
+              console.log('✅ Final HTML content:', htmlContent)
+              
+              const blob = new Blob([htmlContent], { type: 'text/html' })
+              const url = URL.createObjectURL(blob)
+              
+              console.log('🔗 Opening blob URL:', url)
+              
+              // Open in new tab
+              window.open(url, '_blank')
+              
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('showToast', {
+                  detail: {
+                    type: 'success',
+                    title: 'HTML Preview Opened',
+                    message: 'HTML file opened in new tab'
+                  }
+                }))
+              }
+              return
+            }
+            
+            // Handle empty content
+            if (!activeTabData.content || activeTabData.content.trim().length === 0) {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('showToast', {
+                  detail: {
+                    type: 'info',
+                    title: 'Empty File',
+                    message: 'The file is empty. Add some content to run it.'
+                  }
+                }))
+              }
+              return
+            }
+            
+            // For other languages, try to execute
             const languageMap: Record<string, string> = {
-              'typescript': 'typescript',
-              'javascript': 'javascript', 
-              'python': 'python',
-              'html': 'html',
-              'css': 'css',
-              'json': 'json',
-              'markdown': 'markdown',
-              'md': 'markdown',
-              'ts': 'typescript',
+              'javascript': 'javascript',
               'js': 'javascript',
+              'python': 'python',
               'py': 'python'
             }
             
-            const cleanLanguage = activeTabData.language.toLowerCase().trim()
-            const mappedLanguage = languageMap[cleanLanguage] || 'plaintext'
-            
-            let finalLanguage = mappedLanguage
-            if (activeTabData.name.endsWith('.html') && (cleanLanguage === 'plaintext' || cleanLanguage === 'text')) {
-              finalLanguage = 'html'
-            }
-            
-            console.log('Running file execution for language:', finalLanguage.replace(/[\r\n\t]/g, '_'))
+            const language = languageMap[activeTabData.language.toLowerCase()] || activeTabData.language
             
             set({ isRunning: true, runningFile: activeTabData.id })
             
             fetch('/api/execute', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              const sanitizedCode = activeTabData.content.replace(/[<>"'&]/g, (match) => {
-                const entities: Record<string, string> = {
-                  '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '&': '&amp;'
-                }
-                return entities[match] || match
-              })
-              
               body: JSON.stringify({
-                code: sanitizedCode,
-                language: finalLanguage,
-                filename: activeTabData.name.replace(/[<>"'&]/g, '')
+                code: activeTabData.content,
+                language: language,
+                filename: activeTabData.name
               })
             })
-            .then(res => {
-              console.log('API Response received with status:', res.status)
-              return res.json()
-            })
+            .then(res => res.json())
             .then(result => {
-              console.log('API Result received successfully')
-              set({ isRunning: false, runningFile: null })
+              set({ isRunning: false, runningFile: null, terminalOpen: true })
               
-              if (result.success) {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('showToast', {
-                    detail: {
-                      type: 'success',
-                      title: 'Execution Complete',
-                      message: `File executed successfully in ${result.executionTime || 0}ms`
-                    }
-                  }))
-                }
-              } else {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('showToast', {
-                    detail: {
-                      type: 'error',
-                      title: 'Execution Failed',
-                      message: result.error || 'Unknown error occurred'
-                    }
-                  }))
-                }
-                console.error('Error occurred')
-              }
-            })
-            .catch(error => {
-              set({ isRunning: false, runningFile: null })
+              // Display output in terminal
               if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('showToast', {
+                window.dispatchEvent(new CustomEvent('terminalOutput', {
                   detail: {
-                    type: 'error',
-                    title: 'Network Error',
-                    message: 'Failed to connect to execution service'
+                    output: result.success ? result.output : result.error,
+                    isError: !result.success,
+                    filename: activeTabData.name,
+                    executionTime: result.executionTime
                   }
                 }))
               }
-              console.error('Network error occurred')
+            })
+            .catch(error => {
+              set({ isRunning: false, runningFile: null, terminalOpen: true })
+              console.error('Execution error:', error)
+              
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('terminalOutput', {
+                  detail: {
+                    output: 'Failed to connect to execution service',
+                    isError: true,
+                    filename: activeTabData.name
+                  }
+                }))
+              }
             })
           },
           
@@ -2038,11 +2039,6 @@ context:
           setDebugStepIntoLibraries: (enabled) => set({ debugStepIntoLibraries: enabled }),
           setDebugShowInlineValues: (enabled) => set({ debugShowInlineValues: enabled }),
           setDebugLogLevel: (level) => set({ debugLogLevel: level }),
-          
-          // Preview Actions
-          setPreviewOpen: (open) => set({ previewOpen: open }),
-          setPreviewUrl: (url) => set({ previewUrl: url }),
-          setPreviewMode: (mode) => set({ previewMode: mode }),
           
           sendNotification: (type, title, message) => {
             const state = get()

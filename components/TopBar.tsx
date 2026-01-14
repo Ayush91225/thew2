@@ -15,20 +15,13 @@ export default function TopBar() {
     updateTabContent,
     isRunning,
     runCurrentFile,
-    previewOpen,
-    setPreviewOpen,
-    previewMode,
-    setPreviewMode,
-    previewUrl,
-    setPreviewUrl
+    terminalOpen,
+    setTerminalOpen
   } = useIDEStore()
   
   const [collaborationUsers, setCollaborationUsers] = useState<any[]>([])
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
-  const [isStartingPreview, setIsStartingPreview] = useState(false)
-  const [showRunDropdown, setShowRunDropdown] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Initialize collaboration service
@@ -94,18 +87,6 @@ export default function TopBar() {
     }
   }, [])
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowRunDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-
-
   const toggleCollaboration = async () => {
     console.log('🔄 toggleCollaboration called, activeTab:', activeTab, 'collab:', collab)
     
@@ -138,52 +119,6 @@ export default function TopBar() {
       setConnectionStatus('error')
     } finally {
       setIsConnecting(false)
-    }
-  }
-
-  const startLivePreview = async () => {
-    setIsStartingPreview(true)
-    
-    try {
-      const files: Record<string, string> = {}
-      tabs.forEach(tab => {
-        files[tab.name] = tab.content
-      })
-      
-      const response = await fetch('/api/server', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files })
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to start server')
-      }
-      
-      const result = await response.json()
-      setPreviewUrl(result.url)
-      setPreviewOpen(true)
-      
-    } catch (err) {
-      console.error('Live preview error:', err)
-    } finally {
-      setIsStartingPreview(false)
-    }
-  }
-
-  const handleRunAction = async () => {
-    const currentTab = tabs.find(tab => tab.id === activeTab)
-    if (!currentTab) return
-
-    // If it's an HTML file or has HTML content, start preview
-    if (currentTab.name.endsWith('.html') || 
-        currentTab.content.includes('<!DOCTYPE html>') || 
-        currentTab.content.includes('<html')) {
-      await startLivePreview()
-    } else {
-      // For other files, run normally
-      runCurrentFile()
     }
   }
 
@@ -325,55 +260,30 @@ export default function TopBar() {
         )}
 
         <div className="flex items-center gap-2">
-          {/* RUN BUTTON WITH DROPDOWN */}
-          <div className="relative" ref={dropdownRef}>
-            <div className="flex bg-white rounded overflow-hidden">
-              <button 
-                onClick={runCurrentFile}
-                className="px-3 py-1 text-black font-bold text-xs hover:bg-gray-100 transition-colors flex items-center gap-1"
-              >
-                <i className={`ph ${isRunning ? 'ph-spinner animate-spin' : 'ph-play'} text-xs`}></i>
-                {isRunning ? 'RUNNING' : 'RUN'}
-              </button>
-              <button 
-                onClick={() => setShowRunDropdown(!showRunDropdown)}
-                className="px-2 py-1 text-black hover:bg-gray-100 border-l border-gray-300 transition-colors"
-              >
-                <i className="ph ph-caret-down text-xs"></i>
-              </button>
-            </div>
-            
-            {showRunDropdown && (
-              <div className="absolute top-full right-0 mt-2 bg-zinc-800 border border-zinc-600 rounded-lg shadow-2xl z-50 min-w-[160px] py-2">
-                <button
-                  onClick={() => { runCurrentFile(); setShowRunDropdown(false) }}
-                  className="w-full px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-700 transition-colors flex items-center gap-2"
-                >
-                  <i className="ph ph-play text-green-400 text-xs"></i>
-                  Run File
-                </button>
-                
-                <button
-                  onClick={() => { startLivePreview(); setShowRunDropdown(false) }}
-                  disabled={isStartingPreview || tabs.length === 0}
-                  className="w-full px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                  <i className={`ph ${isStartingPreview ? 'ph-spinner animate-spin' : 'ph-monitor'} text-blue-400 text-xs`}></i>
-                  Live Preview
-                </button>
-                
-                <div className="h-px bg-zinc-600 my-2"></div>
-                
-                <button
-                  onClick={() => { setPreviewOpen(!previewOpen); setShowRunDropdown(false) }}
-                  className="w-full px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-700 transition-colors flex items-center gap-2"
-                >
-                  <i className={`ph ${previewOpen ? 'ph-eye-slash' : 'ph-eye'} text-purple-400 text-xs`}></i>
-                  {previewOpen ? 'Hide Preview' : 'Show Preview'}
-                </button>
-              </div>
-            )}
-          </div>
+          {/* TERMINAL BUTTON */}
+          <button 
+            onClick={() => setTerminalOpen(!terminalOpen)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition ${
+              terminalOpen 
+                ? 'bg-white/10 text-white' 
+                : 'hover:bg-white/5 text-zinc-400 hover:text-white'
+            }`}
+            title="Terminal"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <path d="M3 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3ZM4 5V19H20V5H4ZM12 15H18V17H12V15ZM8.66685 12L5.83842 9.17157L7.25264 7.75736L11.4953 12L7.25264 16.2426L5.83842 14.8284L8.66685 12Z"></path>
+            </svg>
+          </button>
+          
+          {/* RUN BUTTON */}
+          <button 
+            onClick={runCurrentFile}
+            disabled={!activeTab || isRunning}
+            className="px-4 py-1.5 bg-white text-black font-bold text-xs hover:bg-gray-100 transition-colors flex items-center gap-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <i className={`ph ${isRunning ? 'ph-spinner animate-spin' : 'ph-play'} text-xs`}></i>
+            {isRunning ? 'RUNNING' : 'RUN'}
+          </button>
           
           <button className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center transition">
             <i className="ph ph-bell text-zinc-400 hover:text-white"></i>

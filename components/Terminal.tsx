@@ -53,6 +53,29 @@ export default function Terminal() {
     }
   }, [commands])
 
+  // Listen for code execution output
+  useEffect(() => {
+    const handleTerminalOutput = (event: CustomEvent) => {
+      const { output, isError, filename, executionTime } = event.detail
+      const commandId = Date.now().toString()
+      
+      const newCommand: TerminalCommand = {
+        id: commandId,
+        command: `run ${filename}`,
+        output: output || '',
+        timestamp: new Date(),
+        status: isError ? 'error' : 'completed',
+        duration: executionTime,
+        exitCode: isError ? 1 : 0
+      }
+      
+      setCommands(prev => [...prev, newCommand])
+    }
+    
+    window.addEventListener('terminalOutput', handleTerminalOutput as EventListener)
+    return () => window.removeEventListener('terminalOutput', handleTerminalOutput as EventListener)
+  }, [])
+
   if (!terminalOpen) return null
 
   const activeTab = terminalTabs.find(tab => tab.id === activeTerminalTab)

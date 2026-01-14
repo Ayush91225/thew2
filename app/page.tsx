@@ -20,12 +20,12 @@ import AnalyticsView from '@/components/AnalyticsView'
 import DatabaseView from '@/components/DatabaseView'
 import LogsView from '@/components/LogsView'
 import SettingsView from '@/components/SettingsView'
-import PreviewPanel from '@/components/PreviewPanel'
+import Toast from '@/components/Toast'
 import { useIDEStore } from '@/stores/ide-store'
 import { useIDEHotkeys } from '@/hooks/useIDEHotkeys'
 
 export default function Home() {
-  const { view, aiChatOpen, previewOpen, loadFromURL } = useIDEStore()
+  const { view, aiChatOpen, loadFromURL } = useIDEStore()
   useIDEHotkeys()
 
   useEffect(() => {
@@ -105,10 +105,10 @@ export default function Home() {
           <div className="flex flex-1 overflow-hidden">
             {renderMainContent()}
           </div>
-          {previewOpen && <PreviewPanel />}
           {aiChatOpen && <AIChatEnhanced />}
         </div>
         <Terminal />
+        <Toast />
       </div>
     </ErrorBoundary>
   )

@@ -211,12 +211,14 @@ ${activeTabData.content}
   }
 
   const handleIframeLoad = () => {
+    console.log('Iframe loaded successfully')
     setIsLoading(false)
     setError(null)
     setIsBlocked(false)
   }
 
   const handleIframeError = () => {
+    console.log('Iframe error occurred')
     setIsLoading(false)
     setIsBlocked(true)
     setError('This site cannot be displayed in preview')
@@ -226,18 +228,21 @@ ${activeTabData.content}
     }
   }
 
-  // Detect X-Frame-Options blocking
+  // Detect iframe loading timeout
   useEffect(() => {
-    if (previewUrl && !previewUrl.startsWith('/')) {
+    if (previewUrl && isLoading) {
+      console.log('Starting iframe load timeout for:', previewUrl)
       const timer = setTimeout(() => {
-        if (iframeRef.current && isLoading) {
-          setIsBlocked(true)
-          setIsLoading(false)
-          setError('This site cannot be displayed in preview')
-          displayAlert(previewUrl)
-        }
-      }, 3000)
-      return () => clearTimeout(timer)
+        console.log('Iframe load timeout - forcing error state')
+        setIsLoading(false)
+        setError('Preview timed out - try opening in new tab')
+        setIsBlocked(true)
+      }, 5000) // 5 second timeout
+      
+      return () => {
+        console.log('Clearing iframe load timeout')
+        clearTimeout(timer)
+      }
     }
   }, [previewUrl, isLoading])
 
@@ -263,7 +268,12 @@ ${activeTabData.content}
     }
   }
 
-  if (!previewOpen) return null
+  if (!previewOpen) {
+    console.log('PreviewPanel: not rendering because previewOpen is false')
+    return null
+  }
+  
+  console.log('PreviewPanel: rendering with', { previewOpen, previewUrl })
 
   return (
     <div className={`${getResponsiveWidth()} flex flex-col h-full bg-zinc-950 border-l border-zinc-800 min-w-0 relative`} style={{ width: previewMode === 'browser' ? '400px' : undefined }}>
@@ -499,7 +509,6 @@ ${activeTabData.content}
               className="w-full h-full border-0"
               onLoad={handleIframeLoad}
               onError={handleIframeError}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
               title="Live Preview"
             />
           </div>
