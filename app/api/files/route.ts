@@ -107,11 +107,24 @@ export async function GET(request: NextRequest) {
     const filePath = searchParams.get('path')
     
     const workspaceResolved = path.resolve(WORKSPACE_DIR)
-    await fs.mkdir(workspaceResolved, { recursive: true })
+    
+    // Ensure workspace directory exists
+    try {
+      await fs.mkdir(workspaceResolved, { recursive: true })
+    } catch (mkdirError) {
+      console.error('Failed to create workspace directory:', mkdirError)
+      // Continue anyway - might be permission issue but directory might exist
+    }
     
     if (action === 'list') {
-      const files = await buildFileTree(workspaceResolved)
-      return NextResponse.json({ success: true, files })
+      try {
+        const files = await buildFileTree(workspaceResolved)
+        return NextResponse.json({ success: true, files })
+      } catch (listError) {
+        console.error('Failed to build file tree:', listError)
+        // Return empty file list instead of error
+        return NextResponse.json({ success: true, files: [] })
+      }
     }
     
     if (filePath) {
@@ -131,6 +144,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ success: false, error: 'Invalid request' }, { status: 400 })
   } catch (error) {
+    console.error('API /files GET error:', error)
     return NextResponse.json({ success: false, error: 'Failed to read files' }, { status: 500 })
   }
 }

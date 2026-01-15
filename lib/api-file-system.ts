@@ -22,11 +22,15 @@ export class APIFileSystem {
   async listFiles(): Promise<FileNode[]> {
     try {
       const response = await fetch('/api/files?action=list')
-      if (!response.ok) throw new Error('Failed to list files')
+      if (!response.ok) {
+        console.error('API response not OK:', response.status)
+        throw new Error('Failed to list files')
+      }
       const data = await response.json()
       return data.files || []
     } catch (error) {
       console.error('Failed to list files:', error)
+      // Return empty array instead of throwing to prevent UI crash
       return []
     }
   }
