@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config, { dev }) => {
+  webpack: (config, { dev, isServer }) => {
     if (dev) {
       config.devServer = {
         ...config.devServer,
@@ -9,6 +9,19 @@ const nextConfig = {
         },
       }
     }
+    
+    // Exclude database drivers from bundle (not needed on Vercel)
+    if (isServer) {
+      config.externals = config.externals || []
+      config.externals.push({
+        'mysql2/promise': 'commonjs mysql2/promise',
+        'pg': 'commonjs pg',
+        'sqlite3': 'commonjs sqlite3',
+        'sqlite': 'commonjs sqlite',
+        'mongodb': 'commonjs mongodb'
+      })
+    }
+    
     return config
   },
 }
