@@ -253,6 +253,25 @@ export default function Sidebar() {
 
   const handleDelete = (node: FileTreeNode) => {
     if (confirm(`Are you sure you want to delete "${node.name}"?`)) {
+      const { closeTab } = useIDEStore.getState()
+      
+      if (node.type === 'file') {
+        closeTab(node.id)
+      } else if (node.type === 'directory' && node.children) {
+        const closeAllInDirectory = (dirNode: FileTreeNode) => {
+          if (dirNode.children) {
+            dirNode.children.forEach(child => {
+              if (child.type === 'file') {
+                closeTab(child.id)
+              } else if (child.type === 'directory') {
+                closeAllInDirectory(child)
+              }
+            })
+          }
+        }
+        closeAllInDirectory(node)
+      }
+      
       fileTreeManager.deleteNode(node.id)
       loadFiles()
     }
