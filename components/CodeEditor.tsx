@@ -536,12 +536,25 @@ export default function CodeEditor(): JSX.Element {
           updateTabContent(currentTabRef.current, currentContent)
         }
         
+        // Set flag to prevent triggering collaboration during tab switch
+        const editor = editorRef.current as EditorInstance
+        if (hasCollaborationMethods(editor)) {
+          editor._setApplyingRemoteOperation!(true)
+        }
+        
         // Load new tab content
-        editorRef.current.setValue(currentTab.content || '')
+        model.setValue(currentTab.content || '')
         currentTabRef.current = currentTab.id
+        
+        // Reset flag after a short delay
+        setTimeout(() => {
+          if (hasCollaborationMethods(editor)) {
+            editor._setApplyingRemoteOperation!(false)
+          }
+        }, 100)
       }
     }
-  }, [currentTab?.id, currentTab, updateTabContent])
+  }, [currentTab?.id, currentTab, updateTabContent, hasCollaborationMethods])
 
   // Keyboard shortcuts
   useHotkeys('meta+s', (e) => {
