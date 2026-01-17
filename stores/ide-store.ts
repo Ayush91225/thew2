@@ -1013,48 +1013,11 @@ context:
           },
           
           runCurrentFile: () => {
-            console.log('🚀 runCurrentFile called!')
             const state = get()
-            if (!state.activeTab) {
-              console.log('❌ No active tab')
-              return
-            }
+            if (!state.activeTab) return
             
             const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
-            if (!activeTabData) {
-              console.log('❌ Active tab data not found')
-              return
-            }
-            
-            console.log('📁 Active tab:', activeTabData.name, 'Language:', activeTabData.language)
-            
-            // For HTML files, open in new tab immediately
-            if (activeTabData.language === 'html' || activeTabData.name.endsWith('.html')) {
-              console.log('🌐 HTML file detected:', activeTabData.name)
-              console.log('📝 Content to preview:', activeTabData.content)
-              
-              const htmlContent = activeTabData.content || '<h1>Empty HTML File</h1>'
-              console.log('✅ Final HTML content:', htmlContent)
-              
-              const blob = new Blob([htmlContent], { type: 'text/html' })
-              const url = URL.createObjectURL(blob)
-              
-              console.log('🔗 Opening blob URL:', url)
-              
-              // Open in new tab
-              window.open(url, '_blank')
-              
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('showToast', {
-                  detail: {
-                    type: 'success',
-                    title: 'HTML Preview Opened',
-                    message: 'HTML file opened in new tab'
-                  }
-                }))
-              }
-              return
-            }
+            if (!activeTabData) return
             
             // Handle empty content
             if (!activeTabData.content || activeTabData.content.trim().length === 0) {
@@ -1070,17 +1033,20 @@ context:
               return
             }
             
-            // For other languages, try to execute
+            // Map language to execution runtime
             const languageMap: Record<string, string> = {
               'javascript': 'javascript',
               'js': 'javascript',
               'python': 'python',
-              'py': 'python'
+              'py': 'python',
+              'html': 'html',
+              'css': 'css',
+              'json': 'json'
             }
             
             const language = languageMap[activeTabData.language.toLowerCase()] || activeTabData.language
             
-            set({ isRunning: true, runningFile: activeTabData.id })
+            set({ isRunning: true, runningFile: activeTabData.id, terminalOpen: true })
             
             fetch('/api/execute', {
               method: 'POST',
@@ -1093,9 +1059,8 @@ context:
             })
             .then(res => res.json())
             .then(result => {
-              set({ isRunning: false, runningFile: null, terminalOpen: true })
+              set({ isRunning: false, runningFile: null })
               
-              // Display output in terminal
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('terminalOutput', {
                   detail: {
@@ -1108,8 +1073,7 @@ context:
               }
             })
             .catch(error => {
-              set({ isRunning: false, runningFile: null, terminalOpen: true })
-              console.error('Execution error:', error)
+              set({ isRunning: false, runningFile: null })
               
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('terminalOutput', {
