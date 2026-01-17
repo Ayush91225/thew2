@@ -23,14 +23,13 @@ export class APIFileSystem {
     try {
       const response = await fetch('/api/files?action=list')
       if (!response.ok) {
-        console.error('API response not OK:', response.status)
-        throw new Error('Failed to list files')
+        console.warn('API response not OK:', response.status)
+        return []
       }
       const data = await response.json()
       return data.files || []
     } catch (error) {
-      console.error('Failed to list files:', error)
-      // Return empty array instead of throwing to prevent UI crash
+      console.warn('Failed to list files:', error)
       return []
     }
   }
