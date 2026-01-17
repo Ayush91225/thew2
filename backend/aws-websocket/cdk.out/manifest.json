@@ -1,0 +1,231 @@
+{
+  "version": "34.0.0",
+  "artifacts": {
+    "KriyaWebSocketStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "KriyaWebSocketStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "KriyaWebSocketStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://170453760442/ap-south-1",
+      "properties": {
+        "templateFile": "KriyaWebSocketStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::170453760442:role/cdk-hnb659fds-deploy-role-170453760442-ap-south-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::170453760442:role/cdk-hnb659fds-cfn-exec-role-170453760442-ap-south-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-170453760442-ap-south-1/dfb4728f1a3d83cdf1e2ea9fdbbf87496a0253988ea24ea9f4c8bc176df5188c.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "KriyaWebSocketStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::170453760442:role/cdk-hnb659fds-lookup-role-170453760442-ap-south-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "KriyaWebSocketStack.assets"
+      ],
+      "metadata": {
+        "/KriyaWebSocketStack/ConnectionsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ConnectionsTable8000B8A1"
+            }
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectionsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectionsTable8000B8A1"
+          }
+        ],
+        "/KriyaWebSocketStack/DocumentsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "DocumentsTable7E808EE5"
+            }
+          }
+        ],
+        "/KriyaWebSocketStack/DocumentsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsTable7E808EE5"
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectHandler/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectHandlerServiceRole7E4A9B1F"
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectHandler/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectHandlerServiceRoleDefaultPolicy7DE94863"
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectHandler/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectHandler2FFD52D8"
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectHandler/ApiGatewayInvokeConnect": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectHandlerApiGatewayInvokeConnect088B4797"
+          }
+        ],
+        "/KriyaWebSocketStack/DisconnectHandler/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DisconnectHandlerServiceRoleE54F14F9"
+          }
+        ],
+        "/KriyaWebSocketStack/DisconnectHandler/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DisconnectHandlerServiceRoleDefaultPolicy1800B9E5"
+          }
+        ],
+        "/KriyaWebSocketStack/DisconnectHandler/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DisconnectHandlerCB7ED6F7"
+          }
+        ],
+        "/KriyaWebSocketStack/DisconnectHandler/ApiGatewayInvokeDisconnect": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DisconnectHandlerApiGatewayInvokeDisconnect15FE0673"
+          }
+        ],
+        "/KriyaWebSocketStack/MessageHandler/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageHandlerServiceRoleDF05266A"
+          }
+        ],
+        "/KriyaWebSocketStack/MessageHandler/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageHandlerServiceRoleDefaultPolicyD818A6AA"
+          }
+        ],
+        "/KriyaWebSocketStack/MessageHandler/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageHandlerDFBBCD6B"
+          }
+        ],
+        "/KriyaWebSocketStack/MessageHandler/ApiGatewayInvokeMessage": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageHandlerApiGatewayInvokeMessage5C3E401C"
+          }
+        ],
+        "/KriyaWebSocketStack/KriyaWebSocketApi": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "KriyaWebSocketApi"
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectIntegration": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectIntegration"
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectRoute"
+          }
+        ],
+        "/KriyaWebSocketStack/DisconnectIntegration": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DisconnectIntegration"
+          }
+        ],
+        "/KriyaWebSocketStack/DisconnectRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DisconnectRoute"
+          }
+        ],
+        "/KriyaWebSocketStack/MessageIntegration": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageIntegration"
+          }
+        ],
+        "/KriyaWebSocketStack/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DefaultRoute"
+          }
+        ],
+        "/KriyaWebSocketStack/ProdStage": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProdStage"
+          }
+        ],
+        "/KriyaWebSocketStack/WebSocketURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketURL"
+          }
+        ],
+        "/KriyaWebSocketStack/ConnectionsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConnectionsTableName"
+          }
+        ],
+        "/KriyaWebSocketStack/DocumentsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsTableName"
+          }
+        ],
+        "/KriyaWebSocketStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/KriyaWebSocketStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/KriyaWebSocketStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "KriyaWebSocketStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}

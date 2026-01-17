@@ -1,0 +1,10 @@
+.next/
+.serverless/
+*.log
+node_modules/
+.env
+.env.local
+dist/
+build/
+.vercel
+.env*.local

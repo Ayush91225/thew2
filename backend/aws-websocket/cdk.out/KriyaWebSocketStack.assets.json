@@ -1,0 +1,34 @@
+{
+  "version": "34.0.0",
+  "files": {
+    "5a9b035bc115dbad81536e7ea7bde5100df3088f849582d85acf1359bc8c91c5": {
+      "source": {
+        "path": "asset.5a9b035bc115dbad81536e7ea7bde5100df3088f849582d85acf1359bc8c91c5",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "170453760442-ap-south-1": {
+          "bucketName": "cdk-hnb659fds-assets-170453760442-ap-south-1",
+          "objectKey": "5a9b035bc115dbad81536e7ea7bde5100df3088f849582d85acf1359bc8c91c5.zip",
+          "region": "ap-south-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::170453760442:role/cdk-hnb659fds-file-publishing-role-170453760442-ap-south-1"
+        }
+      }
+    },
+    "dfb4728f1a3d83cdf1e2ea9fdbbf87496a0253988ea24ea9f4c8bc176df5188c": {
+      "source": {
+        "path": "KriyaWebSocketStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "170453760442-ap-south-1": {
+          "bucketName": "cdk-hnb659fds-assets-170453760442-ap-south-1",
+          "objectKey": "dfb4728f1a3d83cdf1e2ea9fdbbf87496a0253988ea24ea9f4c8bc176df5188c.json",
+          "region": "ap-south-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::170453760442:role/cdk-hnb659fds-file-publishing-role-170453760442-ap-south-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}
