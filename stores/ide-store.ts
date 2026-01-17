@@ -1122,14 +1122,13 @@ context:
           },
           
           updateTabContent: (tabId, content) => {
-            set((state) => {
-              const updatedTabs = state.tabs.map(tab => 
+            set((state) => ({
+              tabs: state.tabs.map(tab => 
                 tab.id === tabId 
                   ? { ...tab, content, isDirty: true }
                   : tab
               )
-              return { tabs: updatedTabs }
-            })
+            }))
           },
           
           // Terminal Actions
@@ -2232,24 +2231,14 @@ context:
       {
         name: 'kriya-ide-storage',
         partialize: (state: IDEState) => ({
-          tabs: state.tabs,
           activeTab: state.activeTab,
           recentFiles: state.recentFiles,
-          terminalTabs: state.terminalTabs,
-          activeTerminalTab: state.activeTerminalTab,
-          breakpoints: state.breakpoints,
-          apiRequests: state.apiRequests,
-          activeApiRequest: state.activeApiRequest,
-          yamlFiles: state.yamlFiles,
-          activeYamlFile: state.activeYamlFile,
           fontSize: state.fontSize,
           tabSize: state.tabSize,
           minimap: state.minimap,
           autoSave: state.autoSave,
           view: state.view,
           activePanel: state.activePanel,
-          environment: state.environment,
-          collab: state.collab,
           terminalOpen: state.terminalOpen
         })
       }
