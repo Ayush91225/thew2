@@ -220,8 +220,21 @@ export class FileTreeManager {
   }
 
   deleteNode(nodeId: string): boolean {
-    if (!this.fileTree) return false
-    return this.deleteNodeRecursive(this.fileTree, nodeId)
+    if (!this.fileTree || !this.fileTree.children) return false
+    
+    const index = this.fileTree.children.findIndex(child => child.id === nodeId)
+    if (index !== -1) {
+      this.fileTree.children.splice(index, 1)
+      return true
+    }
+    
+    for (const child of this.fileTree.children) {
+      if (this.deleteNodeRecursive(child, nodeId)) {
+        return true
+      }
+    }
+    
+    return false
   }
 
   private deleteNodeRecursive(node: FileTreeNode, targetId: string): boolean {
