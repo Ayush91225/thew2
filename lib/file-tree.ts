@@ -21,7 +21,33 @@ export class FileTreeManager {
   }
 
   constructor() {
-    this.initializeDefaultTree()
+    this.loadFromStorage()
+  }
+
+  private loadFromStorage() {
+    if (typeof window === 'undefined') {
+      this.initializeDefaultTree()
+      return
+    }
+    
+    try {
+      const stored = localStorage.getItem('kriya-file-tree')
+      if (stored) {
+        this.fileTree = JSON.parse(stored)
+      } else {
+        this.initializeDefaultTree()
+        this.saveToStorage()
+      }
+    } catch {
+      this.initializeDefaultTree()
+    }
+  }
+
+  private saveToStorage() {
+    if (typeof window === 'undefined' || !this.fileTree) return
+    try {
+      localStorage.setItem('kriya-file-tree', JSON.stringify(this.fileTree))
+    } catch {}
   }
 
   private initializeDefaultTree() {
@@ -146,6 +172,7 @@ export class FileTreeManager {
       this.fileTree.children.push(newFile)
     }
     
+    this.saveToStorage()
     return newFile
   }
 
@@ -174,6 +201,7 @@ export class FileTreeManager {
       this.fileTree.children.push(newFolder)
     }
     
+    this.saveToStorage()
     return newFolder
   }
 
@@ -225,11 +253,13 @@ export class FileTreeManager {
     const index = this.fileTree.children.findIndex(child => child.id === nodeId)
     if (index !== -1) {
       this.fileTree.children.splice(index, 1)
+      this.saveToStorage()
       return true
     }
     
     for (const child of this.fileTree.children) {
       if (this.deleteNodeRecursive(child, nodeId)) {
+        this.saveToStorage()
         return true
       }
     }
