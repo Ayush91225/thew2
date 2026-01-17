@@ -525,20 +525,23 @@ export default function CodeEditor(): JSX.Element {
     }
   }, [])
 
-  // Handle tab switching
+  // Handle tab switching - FIXED to preserve content
   useEffect(() => {
-    if (editorRef.current && currentTab && currentTabRef.current !== currentTab.id) {
-      try {
-        const model = editorRef.current.getModel()
-        if (model) {
-          editorRef.current.setValue(currentTab.content)
-          currentTabRef.current = currentTab.id
+    if (editorRef.current && currentTab) {
+      const model = editorRef.current.getModel()
+      if (model && currentTabRef.current !== currentTab.id) {
+        // Save current tab content before switching
+        if (currentTabRef.current) {
+          const currentContent = model.getValue()
+          updateTabContent(currentTabRef.current, currentContent)
         }
-      } catch (error) {
-        console.warn('Failed to update editor content:', error)
+        
+        // Load new tab content
+        editorRef.current.setValue(currentTab.content || '')
+        currentTabRef.current = currentTab.id
       }
     }
-  }, [currentTab?.id, currentTab])
+  }, [currentTab?.id, currentTab, updateTabContent])
 
   // Keyboard shortcuts
   useHotkeys('meta+s', (e) => {

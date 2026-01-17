@@ -78,8 +78,17 @@ export default function Sidebar() {
     
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize)
-    return () => window.removeEventListener('resize', checkScreenSize)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    
+    // Force refresh file tree on mount
+    const timer = setTimeout(() => {
+      loadFiles()
+    }, 100)
+    
+    return () => {
+      window.removeEventListener('resize', checkScreenSize)
+      clearTimeout(timer)
+    }
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

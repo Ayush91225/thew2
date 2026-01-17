@@ -14,6 +14,7 @@ import MainEditor from '@/components/MainEditor'
 import CodeEditor from '@/components/CodeEditor'
 import FileTabs from '@/components/FileTabs'
 import Terminal from '@/components/Terminal'
+import StatusBar from '@/components/StatusBar'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import DeploymentDashboard from '@/components/DeploymentDashboard'
 import AnalyticsView from '@/components/AnalyticsView'
@@ -108,6 +109,7 @@ export default function Home() {
           {aiChatOpen && <AIChatEnhanced />}
         </div>
         <Terminal />
+        <StatusBar />
         <Toast />
       </div>
     </ErrorBoundary>
