@@ -8,8 +8,6 @@ export default function TopBar() {
   const { 
     collab, 
     setCollab, 
-    environment, 
-    setEnvironment,
     activeTab,
     tabs,
     updateTabContent,
@@ -133,32 +131,6 @@ export default function TopBar() {
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="label">Environment</span>
-            <div className="flex bg-zinc-900 rounded-lg p-1">
-              <button 
-                onClick={() => setEnvironment('development')}
-                className={`px-3 py-1 text-xs font-bold rounded transition ${
-                  environment === 'development' 
-                    ? 'bg-amber-600 text-white' 
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                DEV
-              </button>
-              <button 
-                onClick={() => setEnvironment('production')}
-                className={`px-3 py-1 text-xs font-bold rounded transition ${
-                  environment === 'production' 
-                    ? 'bg-red-600 text-white' 
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                PROD
-              </button>
-            </div>
-          </div>
-
           <div className="flex items-center gap-2">
             <span className="label">Mode</span>
             <div className="flex bg-zinc-900 rounded-lg p-1">
