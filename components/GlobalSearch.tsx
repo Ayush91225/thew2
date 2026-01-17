@@ -22,6 +22,7 @@ export default function GlobalSearch() {
     setActiveTab
   } = useIDEStore()
   const [results, setResults] = useState<SearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
 
   useHotkeys('meta+shift+f', (e) => {
     e.preventDefault()
@@ -33,42 +34,51 @@ export default function GlobalSearch() {
   })
 
   useEffect(() => {
-    if (globalSearchQuery.length > 2) {
-      const searchResults: SearchResult[] = []
-      
-      // Simple string search without regex
-      tabs.forEach(tab => {
-        const lines = tab.content.split('\n')
-        lines.forEach((line, lineIndex) => {
-          if (line.toLowerCase().includes(globalSearchQuery.toLowerCase())) {
-            searchResults.push({
-              file: tab.name,
-              line: lineIndex + 1,
-              column: line.toLowerCase().indexOf(globalSearchQuery.toLowerCase()) + 1,
-              content: line.trim()
-            })
-          }
-        })
-      })
-      
-      setResults(searchResults)
-    } else {
+    if (globalSearchQuery.length < 2) {
       setResults([])
+      setIsSearching(false)
+      return
     }
-  }, [globalSearchQuery, tabs])
 
-  const jumpToResult = (result: SearchResult) => {
+    setIsSearching(true)
+    const timer = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(globalSearchQuery)}`)
+        .then(res => res.json())
+        .then(data => {
+          const searchResults: SearchResult[] = data.results?.flatMap((result: any) => 
+            result.matches?.map((match: any) => ({
+              file: result.name,
+              line: match.line,
+              column: 1,
+              content: match.text
+            })) || []
+          ) || []
+          setResults(searchResults)
+          setIsSearching(false)
+        })
+        .catch(() => {
+          setResults([])
+          setIsSearching(false)
+        })
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [globalSearchQuery])
+
+  const jumpToResult = async (result: SearchResult) => {
     const existingTab = tabs.find(tab => tab.name === result.file)
     
     if (existingTab) {
       setActiveTab(existingTab.id)
     } else {
+      const res = await fetch(`/api/files?path=${encodeURIComponent(result.file)}`)
+      const data = await res.json()
       const newTab = {
         id: `${result.file}-${Date.now()}`,
         name: result.file,
-        path: `/${result.file}`,
-        content: `// Content of ${result.file}`,
-        language: 'javascript',
+        path: result.file,
+        content: data.content || '',
+        language: result.file.endsWith('.ts') || result.file.endsWith('.tsx') ? 'typescript' : 'javascript',
         isDirty: false,
         icon: 'ph-fill ph-file-js'
       }
@@ -108,7 +118,12 @@ export default function GlobalSearch() {
         </div>
 
         <div className="max-h-96 overflow-y-auto">
-          {results.length > 0 ? (
+          {isSearching ? (
+            <div className="p-8 text-center text-zinc-600">
+              <i className="ph ph-spinner animate-spin text-2xl mb-2"></i>
+              <div>Searching...</div>
+            </div>
+          ) : results.length > 0 ? (
             <div className="p-4">
               <div className="text-xs text-zinc-400 mb-3">
                 {results.length} results found
@@ -137,7 +152,7 @@ export default function GlobalSearch() {
                 ))}
               </div>
             </div>
-          ) : globalSearchQuery.length > 2 ? (
+          ) : globalSearchQuery.length >= 2 ? (
             <div className="p-8 text-center text-zinc-600">
               <i className="ph ph-magnifying-glass text-2xl mb-2"></i>
               <div>No results found</div>
