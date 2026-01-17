@@ -252,7 +252,10 @@ export default function Sidebar() {
   }
 
   const handleDelete = (node: FileTreeNode) => {
-    // Delete not fully implemented in file tree manager
+    if (confirm(`Are you sure you want to delete "${node.name}"?`)) {
+      fileTreeManager.deleteNode(node.id)
+      loadFiles()
+    }
     setContextMenu(null)
   }
 

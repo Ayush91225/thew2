@@ -218,4 +218,26 @@ export class FileTreeManager {
     }
     return iconMap[ext || ''] || 'ph-fill ph-file'
   }
+
+  deleteNode(nodeId: string): boolean {
+    if (!this.fileTree) return false
+    return this.deleteNodeRecursive(this.fileTree, nodeId)
+  }
+
+  private deleteNodeRecursive(node: FileTreeNode, targetId: string): boolean {
+    if (node.children) {
+      const index = node.children.findIndex(child => child.id === targetId)
+      if (index !== -1) {
+        node.children.splice(index, 1)
+        return true
+      }
+      
+      for (const child of node.children) {
+        if (this.deleteNodeRecursive(child, targetId)) {
+          return true
+        }
+      }
+    }
+    return false
+  }
 }
