@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 
 interface TerminalCommand {
   id: string

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 
 export default function AIChatPanel() {
   const { 

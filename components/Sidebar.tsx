@@ -1,6 +1,6 @@
 'use client'
 
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 import { FileTreeManager, FileTreeNode } from '@/lib/file-tree'
 import { DebugPanel, ExtensionsPanel, DatabasePanel, APIPanel } from './SidebarPanels'
 import { useState, useEffect, useRef, useCallback } from 'react'

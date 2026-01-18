@@ -1,6 +1,6 @@
 'use client'
 
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 
 export default function CollaborationToggle() {
   const { collab, setCollab } = useIDEStore()

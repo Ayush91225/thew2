@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useMemo, useCallback } from 'react'
 import Editor from '@monaco-editor/react'
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { collaborationService, TextOperation } from '@/lib/collaboration-service'
 import type { editor } from 'monaco-editor'

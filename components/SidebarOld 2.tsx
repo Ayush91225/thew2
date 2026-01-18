@@ -1,6 +1,6 @@
 'use client'
 
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 import { FileSystemManager } from '@/lib/file-system'
 import { useState } from 'react'
 

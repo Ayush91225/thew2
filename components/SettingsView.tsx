@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 import FileCreator from './FileCreator'
 import FolderCreator from './FolderCreator'
 

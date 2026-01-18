@@ -1,5 +1,12 @@
 import { StateCreator } from 'zustand'
 
+interface AIMessage {
+  id: string
+  type: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
+
 export interface UISlice {
   commandPalette: boolean
   aiModal: boolean
@@ -12,6 +19,8 @@ export interface UISlice {
   activePanel: string
   previewOpen: boolean
   collab: boolean
+  aiMessages: AIMessage[]
+  aiInputValue: string
   
   setCommandPalette: (open: boolean) => void
   setAIModal: (open: boolean) => void
@@ -24,6 +33,9 @@ export interface UISlice {
   setActivePanel: (panel: string) => void
   setPreviewOpen: (open: boolean) => void
   setCollab: (collab: boolean) => void
+  addAIMessage: (message: Omit<AIMessage, 'id' | 'timestamp'>) => void
+  setAIInputValue: (value: string) => void
+  clearAIChat: () => void
 }
 
 export const createUISlice: StateCreator<UISlice> = (set) => ({
@@ -38,6 +50,8 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
   activePanel: 'files',
   previewOpen: false,
   collab: false,
+  aiMessages: [],
+  aiInputValue: '',
   
   setCommandPalette: (open) => set({ commandPalette: open }),
   setAIModal: (open) => set({ aiModal: open }),
@@ -50,4 +64,13 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
   setActivePanel: (panel) => set({ activePanel: panel }),
   setPreviewOpen: (open) => set({ previewOpen: open }),
   setCollab: (collab) => set({ collab }),
+  addAIMessage: (message) => set((state) => ({
+    aiMessages: [...state.aiMessages, {
+      ...message,
+      id: Date.now().toString(),
+      timestamp: new Date()
+    }]
+  })),
+  setAIInputValue: (value) => set({ aiInputValue: value }),
+  clearAIChat: () => set({ aiMessages: [], aiInputValue: '' }),
 })
