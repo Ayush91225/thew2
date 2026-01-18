@@ -72,10 +72,10 @@ export default function SettingsView() {
   const handleFolderCreate = async (name: string, template?: string) => {
     try {
       console.log('Creating folder:', { name, template })
-      alert(`Folder "${name}" created successfully!`)
+      alert(` Folder "${name}" created successfully!\n\nTemplate: ${template || 'empty'}\n\nThis is a simulation. In production, this would create an actual folder.`)
     } catch (error) {
       console.error('Failed to create folder:', error)
-      alert('Failed to create folder')
+      alert(' Failed to create folder')
     }
   }
 
