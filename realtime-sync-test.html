@@ -69,6 +69,104 @@
             if (!isConnected) return;
             
             const currentContent = editor1.value;
-            if (currentContent !== lastContent && !isApplyingRemote) {\n                // Find the difference\n                const diff = findDifference(lastContent, currentContent);\n                if (diff) {\n                    logMessage(`Sync: ${diff.type} \"${diff.text}\" at position ${diff.position}`);\n                    \n                    // Apply to remote editor immediately\n                    setTimeout(() => {\n                        isApplyingRemote = true;\n                        editor2.value = currentContent;\n                        isApplyingRemote = false;\n                        logMessage('✅ Applied to remote editor');\n                    }, 10); // Minimal delay to simulate network\n                }\n                lastContent = currentContent;\n            }\n        }\n        \n        function findDifference(oldText, newText) {\n            if (oldText === newText) return null;\n            \n            // Find insertion point\n            let i = 0;\n            while (i < oldText.length && i < newText.length && oldText[i] === newText[i]) {\n                i++;\n            }\n            \n            if (newText.length > oldText.length) {\n                // Insertion\n                return {\n                    type: 'insert',\n                    position: i,\n                    text: newText.slice(i, i + (newText.length - oldText.length))\n                };\n            } else if (newText.length < oldText.length) {\n                // Deletion\n                return {\n                    type: 'delete',\n                    position: i,\n                    text: oldText.slice(i, i + (oldText.length - newText.length))\n                };\n            } else {\n                // Replacement\n                let j = oldText.length - 1;\n                let k = newText.length - 1;\n                while (j >= i && k >= i && oldText[j] === newText[k]) {\n                    j--;\n                    k--;\n                }\n                return {\n                    type: 'replace',\n                    position: i,\n                    text: newText.slice(i, k + 1)\n                };\n            }\n        }\n        \n        function connect() {\n            isConnected = true;\n            status.textContent = 'Connected';\n            status.className = 'connected';\n            users.add('user1');\n            users.add('user2');\n            userCount.textContent = users.size;\n            lastContent = editor1.value;\n            logMessage('🟢 Connected to real-time sync');\n        }\n        \n        function disconnect() {\n            isConnected = false;\n            status.textContent = 'Disconnected';\n            status.className = 'disconnected';\n            users.clear();\n            userCount.textContent = '0';\n            logMessage('🔴 Disconnected from sync');\n        }\n        \n        function logMessage(msg) {\n            const time = new Date().toLocaleTimeString();\n            log.innerHTML += `<div>[${time}] ${msg}</div>`;\n            log.scrollTop = log.scrollHeight;\n        }\n        \n        function clearLog() {\n            log.innerHTML = '';\n        }\n        \n        // Real-time input monitoring\n        editor1.addEventListener('input', () => {\n            if (isConnected) {\n                simulateRealTimeSync();\n            }\n        });\n        \n        // Auto-connect for demo\n        setTimeout(connect, 1000);\n        \n        logMessage('Real-time sync test initialized');\n    </script>
+            if (currentContent !== lastContent && !isApplyingRemote) {
+                // Find the difference
+                const diff = findDifference(lastContent, currentContent);
+                if (diff) {
+                    logMessage(`Sync: ${diff.type} "${diff.text}" at position ${diff.position}`);
+                    
+                    // Apply to remote editor immediately
+                    setTimeout(() => {
+                        isApplyingRemote = true;
+                        editor2.value = currentContent;
+                        isApplyingRemote = false;
+                        logMessage('✅ Applied to remote editor');
+                    }, 10); // Minimal delay to simulate network
+                }
+                lastContent = currentContent;
+            }
+        }
+        
+        function findDifference(oldText, newText) {
+            if (oldText === newText) return null;
+            
+            // Find insertion point
+            let i = 0;
+            while (i < oldText.length && i < newText.length && oldText[i] === newText[i]) {
+                i++;
+            }
+            
+            if (newText.length > oldText.length) {
+                // Insertion
+                return {
+                    type: 'insert',
+                    position: i,
+                    text: newText.slice(i, i + (newText.length - oldText.length))
+                };
+            } else if (newText.length < oldText.length) {
+                // Deletion
+                return {
+                    type: 'delete',
+                    position: i,
+                    text: oldText.slice(i, i + (oldText.length - newText.length))
+                };
+            } else {
+                // Replacement
+                let j = oldText.length - 1;
+                let k = newText.length - 1;
+                while (j >= i && k >= i && oldText[j] === newText[k]) {
+                    j--;
+                    k--;
+                }
+                return {
+                    type: 'replace',
+                    position: i,
+                    text: newText.slice(i, k + 1)
+                };
+            }
+        }
+        
+        function connect() {
+            isConnected = true;
+            status.textContent = 'Connected';
+            status.className = 'connected';
+            users.add('user1');
+            users.add('user2');
+            userCount.textContent = users.size;
+            lastContent = editor1.value;
+            logMessage('🟢 Connected to real-time sync');
+        }
+        
+        function disconnect() {
+            isConnected = false;
+            status.textContent = 'Disconnected';
+            status.className = 'disconnected';
+            users.clear();
+            userCount.textContent = '0';
+            logMessage('🔴 Disconnected from sync');
+        }
+        
+        function logMessage(msg) {
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<div>[${time}] ${msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function clearLog() {
+            log.innerHTML = '';
+        }
+        
+        // Real-time input monitoring
+        editor1.addEventListener('input', () => {
+            if (isConnected) {
+                simulateRealTimeSync();
+            }
+        });
+        
+        // Auto-connect for demo
+        setTimeout(connect, 1000);
+        
+        logMessage('Real-time sync test initialized');
+    </script>
 </body>
 </html>

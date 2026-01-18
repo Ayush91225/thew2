@@ -13,6 +13,37 @@ export interface SettingsSlice {
   aiPrivacyMode: boolean
   aiCustomPrompts: string[]
   
+  // Notification settings
+  notificationsEnabled: boolean
+  desktopNotifications: boolean
+  soundEnabled: boolean
+  notificationVolume: number
+  emailNotifications: boolean
+  slackIntegration: boolean
+  discordIntegration: boolean
+  buildNotifications: boolean
+  errorNotifications: boolean
+  collaborationNotifications: boolean
+  deploymentNotifications: boolean
+  quietHours: boolean
+  quietStart: string
+  quietEnd: string
+  
+  // Keybinding settings
+  keybindings: Record<string, string>
+  customKeybindings: Record<string, string>
+  keybindingPreset: string
+  enableVimMode: boolean
+  enableEmacsMode: boolean
+  
+  // Theme settings
+  currentTheme: string
+  customThemes: Record<string, any>
+  themePreview: boolean
+  autoThemeSwitch: boolean
+  lightThemeTime: string
+  darkThemeTime: string
+  
   // Language settings
   languageSettings: Record<string, any>
   defaultLanguage: string
@@ -40,6 +71,43 @@ export interface SettingsSlice {
   addCustomPrompt: (prompt: string) => void
   removeCustomPrompt: (index: number) => void
   testAiConnection: () => void
+  
+  // Notification actions
+  setNotificationsEnabled: (enabled: boolean) => void
+  setDesktopNotifications: (enabled: boolean) => void
+  setSoundEnabled: (enabled: boolean) => void
+  setNotificationVolume: (volume: number) => void
+  setEmailNotifications: (enabled: boolean) => void
+  setSlackIntegration: (enabled: boolean) => void
+  setDiscordIntegration: (enabled: boolean) => void
+  setBuildNotifications: (enabled: boolean) => void
+  setErrorNotifications: (enabled: boolean) => void
+  setCollaborationNotifications: (enabled: boolean) => void
+  setDeploymentNotifications: (enabled: boolean) => void
+  setQuietHours: (enabled: boolean) => void
+  setQuietStart: (time: string) => void
+  setQuietEnd: (time: string) => void
+  testNotification: () => void
+  
+  // Keybinding actions
+  setKeybindingPreset: (preset: string) => void
+  setCustomKeybinding: (action: string, keys: string) => void
+  resetKeybindings: () => void
+  setVimMode: (enabled: boolean) => void
+  setEmacsMode: (enabled: boolean) => void
+  exportKeybindings: () => void
+  importKeybindings: (bindings: Record<string, string>) => void
+  
+  // Theme actions
+  setTheme: (theme: string) => void
+  createCustomTheme: (name: string, config: any) => void
+  deleteCustomTheme: (name: string) => void
+  setThemePreview: (enabled: boolean) => void
+  setAutoThemeSwitch: (enabled: boolean) => void
+  setLightThemeTime: (time: string) => void
+  setDarkThemeTime: (time: string) => void
+  exportTheme: (name: string) => void
+  importTheme: (config: any) => void
   
   // Language actions
   setLanguageEnabled: (language: string, enabled: boolean) => void
@@ -85,6 +153,37 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set) => ({
   aiPrivacyMode: false,
   aiCustomPrompts: [],
   
+  // Notification settings
+  notificationsEnabled: true,
+  desktopNotifications: true,
+  soundEnabled: false,
+  notificationVolume: 0.5,
+  emailNotifications: false,
+  slackIntegration: false,
+  discordIntegration: false,
+  buildNotifications: true,
+  errorNotifications: true,
+  collaborationNotifications: true,
+  deploymentNotifications: true,
+  quietHours: false,
+  quietStart: '22:00',
+  quietEnd: '08:00',
+  
+  // Keybinding settings
+  keybindings: {},
+  customKeybindings: {},
+  keybindingPreset: 'VSCode',
+  enableVimMode: false,
+  enableEmacsMode: false,
+  
+  // Theme settings
+  currentTheme: 'Dark',
+  customThemes: {},
+  themePreview: false,
+  autoThemeSwitch: false,
+  lightThemeTime: '08:00',
+  darkThemeTime: '20:00',
+  
   // Language settings
   languageSettings: {},
   defaultLanguage: 'plaintext',
@@ -112,6 +211,43 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set) => ({
   addCustomPrompt: (prompt) => set((state) => ({ aiCustomPrompts: [...state.aiCustomPrompts, prompt] })),
   removeCustomPrompt: (index) => set((state) => ({ aiCustomPrompts: state.aiCustomPrompts.filter((_, i) => i !== index) })),
   testAiConnection: () => {},
+  
+  // Notification actions
+  setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
+  setDesktopNotifications: (enabled) => set({ desktopNotifications: enabled }),
+  setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
+  setNotificationVolume: (volume) => set({ notificationVolume: volume }),
+  setEmailNotifications: (enabled) => set({ emailNotifications: enabled }),
+  setSlackIntegration: (enabled) => set({ slackIntegration: enabled }),
+  setDiscordIntegration: (enabled) => set({ discordIntegration: enabled }),
+  setBuildNotifications: (enabled) => set({ buildNotifications: enabled }),
+  setErrorNotifications: (enabled) => set({ errorNotifications: enabled }),
+  setCollaborationNotifications: (enabled) => set({ collaborationNotifications: enabled }),
+  setDeploymentNotifications: (enabled) => set({ deploymentNotifications: enabled }),
+  setQuietHours: (enabled) => set({ quietHours: enabled }),
+  setQuietStart: (time) => set({ quietStart: time }),
+  setQuietEnd: (time) => set({ quietEnd: time }),
+  testNotification: () => {},
+  
+  // Keybinding actions
+  setKeybindingPreset: (preset) => set({ keybindingPreset: preset }),
+  setCustomKeybinding: (action, keys) => set((state) => ({ customKeybindings: { ...state.customKeybindings, [action]: keys } })),
+  resetKeybindings: () => set({ customKeybindings: {} }),
+  setVimMode: (enabled) => set({ enableVimMode: enabled }),
+  setEmacsMode: (enabled) => set({ enableEmacsMode: enabled }),
+  exportKeybindings: () => {},
+  importKeybindings: (bindings) => set({ customKeybindings: bindings }),
+  
+  // Theme actions
+  setTheme: (theme) => set({ currentTheme: theme }),
+  createCustomTheme: (name, config) => set((state) => ({ customThemes: { ...state.customThemes, [name]: config } })),
+  deleteCustomTheme: (name) => set((state) => { const themes = { ...state.customThemes }; delete themes[name]; return { customThemes: themes } }),
+  setThemePreview: (enabled) => set({ themePreview: enabled }),
+  setAutoThemeSwitch: (enabled) => set({ autoThemeSwitch: enabled }),
+  setLightThemeTime: (time) => set({ lightThemeTime: time }),
+  setDarkThemeTime: (time) => set({ darkThemeTime: time }),
+  exportTheme: () => {},
+  importTheme: (config) => set((state) => ({ customThemes: { ...state.customThemes, ...config } })),
   
   // Language actions
   setLanguageEnabled: () => {},
