@@ -72,6 +72,7 @@ interface CompatibilitySlice {
   uninstallExtension: (id: string) => void
   searchMarketplaceExtensions: (query?: string, category?: string) => void
   checkForExtensionUpdates: () => void
+  executeExtensionCommand: (command: string, ...args: any[]) => Promise<void>
   
   // Database actions (additional)
   connectToDatabase: (config: any) => Promise<void>
@@ -137,6 +138,7 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   uninstallExtension: async (id: string) => {},
   searchMarketplaceExtensions: async (query?: string, category?: string) => {},
   checkForExtensionUpdates: async () => {},
+  executeExtensionCommand: async (command: string, ...args: any[]) => {},
   
   // Database actions
   connectToDatabase: async (config: any) => {},
