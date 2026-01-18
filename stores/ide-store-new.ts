@@ -55,6 +55,10 @@ interface CompatibilitySlice {
   queryLoading: boolean
   databaseTables: string[]
   
+  // Collaboration state
+  collaborationUsers: any[]
+  isConnectedToCollaboration: boolean
+  
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => void
   startDebugSession: () => void
@@ -76,6 +80,12 @@ interface CompatibilitySlice {
   setDatabaseQuery: (query: string) => void
   setActiveDatabaseConnection: (connectionId: string | null) => void
   refreshDatabaseTables: (connectionId: string) => Promise<void>
+  
+  // Collaboration actions
+  setCollaborationConnection: (connected: boolean) => void
+  setCollaborationUsers: (users: any[]) => void
+  addCollaborationUser: (user: any) => void
+  removeCollaborationUser: (userId: string) => void
 }
 
 const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
@@ -97,6 +107,10 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   queryResults: null,
   queryLoading: false,
   databaseTables: [],
+  
+  // Collaboration state
+  collaborationUsers: [],
+  isConnectedToCollaboration: false,
   
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => set((state: any) => {
@@ -130,7 +144,13 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   executeQuery: async (connectionId: string, sql: string) => {},
   setDatabaseQuery: (query: string) => set({ databaseQuery: query }),
   setActiveDatabaseConnection: (connectionId: string | null) => set({ activeDatabaseConnection: connectionId }),
-  refreshDatabaseTables: async (connectionId: string) => {}
+  refreshDatabaseTables: async (connectionId: string) => {},
+  
+  // Collaboration actions
+  setCollaborationConnection: (connected: boolean) => set({ isConnectedToCollaboration: connected }),
+  setCollaborationUsers: (users: any[]) => set({ collaborationUsers: users }),
+  addCollaborationUser: (user: any) => set((state: any) => ({ collaborationUsers: [...state.collaborationUsers, user] })),
+  removeCollaborationUser: (userId: string) => set((state: any) => ({ collaborationUsers: state.collaborationUsers.filter((u: any) => u.id !== userId) }))
 })
 
 // Combined store type
