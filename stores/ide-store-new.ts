@@ -59,6 +59,11 @@ interface CompatibilitySlice {
   collaborationUsers: any[]
   isConnectedToCollaboration: boolean
   
+  // Git state
+  gitBranch: string
+  gitStatus: string
+  uncommittedChanges: number
+  
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => void
   startDebugSession: () => void
@@ -112,6 +117,11 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   // Collaboration state
   collaborationUsers: [],
   isConnectedToCollaboration: false,
+  
+  // Git state
+  gitBranch: 'main',
+  gitStatus: 'clean',
+  uncommittedChanges: 0,
   
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => set((state: any) => {
