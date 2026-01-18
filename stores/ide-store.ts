@@ -481,113 +481,8 @@ export const useIDEStore = create<IDEState>()(
           activePanel: 'files',
           isRunning: false,
           runningFile: null,
-          activeTab: 'sample-html',
-          tabs: [
-            {
-              id: 'sample-html',
-              name: 'index.html',
-              path: '/index.html',
-              content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kriya IDE Preview</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            text-align: center;
-            max-width: 600px;
-        }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            line-height: 1.6;
-        }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-        .feature {
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-        .feature h3 {
-            margin-top: 0;
-            color: #ffd700;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚀 Kriya IDE</h1>
-        <p>Welcome to the professional web-based IDE with real-time collaboration!</p>
-        
-        <div class="features">
-            <div class="feature">
-                <h3>📝 Code Editor</h3>
-                <p>Monaco-powered editor with syntax highlighting</p>
-            </div>
-            <div class="feature">
-                <h3>🤝 Collaboration</h3>
-                <p>Real-time collaborative editing across tabs</p>
-            </div>
-            <div class="feature">
-                <h3>👁️ Live Preview</h3>
-                <p>Instant preview with responsive device modes</p>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const features = document.querySelectorAll('.feature');
-            features.forEach((feature, index) => {
-                feature.style.animationDelay = (index * 0.2) + 's';
-                feature.style.animation = 'fadeInUp 0.6s ease forwards';
-            });
-        });
-        
-        const style = document.createElement('style');
-        style.textContent = \`
-            @keyframes fadeInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(30px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            .feature {
-                opacity: 0;
-            }
-        \`;
-        document.head.appendChild(style);
-    </script>
-</body>
-</html>`,
-              language: 'html',
+          activeTab: null,
+          tabs: [],
               isDirty: false,
               icon: 'ph ph-file-html'
             }
@@ -1013,48 +908,11 @@ context:
           },
           
           runCurrentFile: () => {
-            console.log('🚀 runCurrentFile called!')
             const state = get()
-            if (!state.activeTab) {
-              console.log('❌ No active tab')
-              return
-            }
+            if (!state.activeTab) return
             
             const activeTabData = state.tabs.find(tab => tab.id === state.activeTab)
-            if (!activeTabData) {
-              console.log('❌ Active tab data not found')
-              return
-            }
-            
-            console.log('📁 Active tab:', activeTabData.name, 'Language:', activeTabData.language)
-            
-            // For HTML files, open in new tab immediately
-            if (activeTabData.language === 'html' || activeTabData.name.endsWith('.html')) {
-              console.log('🌐 HTML file detected:', activeTabData.name)
-              console.log('📝 Content to preview:', activeTabData.content)
-              
-              const htmlContent = activeTabData.content || '<h1>Empty HTML File</h1>'
-              console.log('✅ Final HTML content:', htmlContent)
-              
-              const blob = new Blob([htmlContent], { type: 'text/html' })
-              const url = URL.createObjectURL(blob)
-              
-              console.log('🔗 Opening blob URL:', url)
-              
-              // Open in new tab
-              window.open(url, '_blank')
-              
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('showToast', {
-                  detail: {
-                    type: 'success',
-                    title: 'HTML Preview Opened',
-                    message: 'HTML file opened in new tab'
-                  }
-                }))
-              }
-              return
-            }
+            if (!activeTabData) return
             
             // Handle empty content
             if (!activeTabData.content || activeTabData.content.trim().length === 0) {
@@ -1070,17 +928,20 @@ context:
               return
             }
             
-            // For other languages, try to execute
+            // Map language to execution runtime
             const languageMap: Record<string, string> = {
               'javascript': 'javascript',
               'js': 'javascript',
               'python': 'python',
-              'py': 'python'
+              'py': 'python',
+              'html': 'html',
+              'css': 'css',
+              'json': 'json'
             }
             
             const language = languageMap[activeTabData.language.toLowerCase()] || activeTabData.language
             
-            set({ isRunning: true, runningFile: activeTabData.id })
+            set({ isRunning: true, runningFile: activeTabData.id, terminalOpen: true })
             
             fetch('/api/execute', {
               method: 'POST',
@@ -1093,9 +954,8 @@ context:
             })
             .then(res => res.json())
             .then(result => {
-              set({ isRunning: false, runningFile: null, terminalOpen: true })
+              set({ isRunning: false, runningFile: null })
               
-              // Display output in terminal
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('terminalOutput', {
                   detail: {
@@ -1108,8 +968,7 @@ context:
               }
             })
             .catch(error => {
-              set({ isRunning: false, runningFile: null, terminalOpen: true })
-              console.error('Execution error:', error)
+              set({ isRunning: false, runningFile: null })
               
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('terminalOutput', {
@@ -1158,14 +1017,13 @@ context:
           },
           
           updateTabContent: (tabId, content) => {
-            set((state) => {
-              const updatedTabs = state.tabs.map(tab => 
+            set((state) => ({
+              tabs: state.tabs.map(tab => 
                 tab.id === tabId 
                   ? { ...tab, content, isDirty: true }
                   : tab
               )
-              return { tabs: updatedTabs }
-            })
+            }))
           },
           
           // Terminal Actions
@@ -2268,24 +2126,14 @@ context:
       {
         name: 'kriya-ide-storage',
         partialize: (state: IDEState) => ({
-          tabs: state.tabs,
           activeTab: state.activeTab,
           recentFiles: state.recentFiles,
-          terminalTabs: state.terminalTabs,
-          activeTerminalTab: state.activeTerminalTab,
-          breakpoints: state.breakpoints,
-          apiRequests: state.apiRequests,
-          activeApiRequest: state.activeApiRequest,
-          yamlFiles: state.yamlFiles,
-          activeYamlFile: state.activeYamlFile,
           fontSize: state.fontSize,
           tabSize: state.tabSize,
           minimap: state.minimap,
           autoSave: state.autoSave,
           view: state.view,
           activePanel: state.activePanel,
-          environment: state.environment,
-          collab: state.collab,
           terminalOpen: state.terminalOpen
         })
       }

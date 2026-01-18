@@ -78,8 +78,17 @@ export default function Sidebar() {
     
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize)
-    return () => window.removeEventListener('resize', checkScreenSize)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    
+    // Force refresh file tree on mount
+    const timer = setTimeout(() => {
+      loadFiles()
+    }, 100)
+    
+    return () => {
+      window.removeEventListener('resize', checkScreenSize)
+      clearTimeout(timer)
+    }
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -247,7 +256,29 @@ export default function Sidebar() {
   }
 
   const handleDelete = (node: FileTreeNode) => {
-    // Delete not fully implemented in file tree manager
+    if (confirm(`Are you sure you want to delete "${node.name}"?`)) {
+      const { closeTab } = useIDEStore.getState()
+      
+      if (node.type === 'file') {
+        closeTab(node.id)
+      } else if (node.type === 'directory' && node.children) {
+        const closeAllInDirectory = (dirNode: FileTreeNode) => {
+          if (dirNode.children) {
+            dirNode.children.forEach(child => {
+              if (child.type === 'file') {
+                closeTab(child.id)
+              } else if (child.type === 'directory') {
+                closeAllInDirectory(child)
+              }
+            })
+          }
+        }
+        closeAllInDirectory(node)
+      }
+      
+      fileTreeManager.deleteNode(node.id)
+      loadFiles()
+    }
     setContextMenu(null)
   }
 

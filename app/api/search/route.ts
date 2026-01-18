@@ -1,77 +1,90 @@
 import { NextRequest, NextResponse } from 'next/server'
+import fs from 'fs/promises'
+import path from 'path'
 
-const MOCK_RESULTS = [
-  {
-    id: '1',
-    type: 'file',
-    name: 'MainEditor.tsx',
-    path: '/components/MainEditor.tsx',
-    content: 'Monaco Editor component with pitch black theme'
-  },
-  {
-    id: '2',
-    type: 'file',
-    name: 'ide-store.ts',
-    path: '/stores/ide-store.ts',
-    content: 'Zustand store for IDE state management'
-  },
-  {
-    id: '3',
-    type: 'function',
-    name: 'useIDEStore',
-    path: '/stores/ide-store.ts',
-    content: 'Main IDE store hook'
-  }
-]
+const WORKSPACE_DIR = path.join(process.cwd(), 'workspace')
 
-function createMatches(query: string, result: any) {
-  if (!query) return []
-  
-  const matches = []
-  if (result.name.toLowerCase().includes(query.toLowerCase())) {
-    matches.push({ line: 45, text: `const ${result.name.split('.')[0]} = ...` })
-  }
-  if (result.content.toLowerCase().includes(query.toLowerCase())) {
-    matches.push({ line: 12, text: result.content })
-  }
-  return matches
-}
-
-function filterResults(results: any[], query: string) {
-  if (!query) return results
-  
-  const lowerQuery = query.toLowerCase()
-  return results.filter(result => 
-    result.name.toLowerCase().includes(lowerQuery) ||
-    result.content.toLowerCase().includes(lowerQuery)
-  )
+async function searchFiles(dir: string, query: string, results: any[] = []) {
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true })
+    
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name)
+      
+      if (entry.isDirectory()) {
+        if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
+          await searchFiles(fullPath, query, results)
+        }
+      } else if (entry.isFile()) {
+        const relativePath = path.relative(WORKSPACE_DIR, fullPath)
+        const fileName = entry.name
+        
+        // Check if filename matches
+        if (fileName.toLowerCase().includes(query.toLowerCase())) {
+          results.push({
+            id: fullPath,
+            type: 'file',
+            name: relativePath,
+            path: fullPath,
+            content: 'Filename match',
+            matches: [{ line: 1, text: `File: ${fileName}` }],
+            priority: 1
+          })
+        } else {
+          // Search file content
+          const content = await fs.readFile(fullPath, 'utf-8')
+          const lines = content.split('\n')
+          const matches: any[] = []
+          
+          lines.forEach((line, idx) => {
+            if (line.toLowerCase().includes(query.toLowerCase())) {
+              matches.push({ line: idx + 1, text: line.trim() })
+            }
+          })
+          
+          if (matches.length > 0) {
+            results.push({
+              id: fullPath,
+              type: 'file',
+              name: relativePath,
+              path: fullPath,
+              content: `${matches.length} matches`,
+              matches: matches.slice(0, 10),
+              priority: 2
+            })
+          }
+        }
+      }
+    }
+  } catch {}
+  return results
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q')
-    const type = searchParams.get('type') || 'all'
 
-    // Simulate search delay
-    await new Promise(resolve => setTimeout(resolve, 300))
+    if (!query || query.length < 2) {
+      return NextResponse.json({ query, results: [], total: 0, took: 0 })
+    }
 
-    const filteredResults = filterResults(MOCK_RESULTS, query || '')
-    const resultsWithMatches = filteredResults.map(result => ({
-      ...result,
-      matches: createMatches(query || '', result)
-    }))
+    const start = Date.now()
+    const results = await searchFiles(WORKSPACE_DIR, query)
+    results.sort((a, b) => (a.priority || 2) - (b.priority || 2))
+    const took = Date.now() - start
 
     return NextResponse.json({
       query,
-      results: resultsWithMatches,
-      total: resultsWithMatches.length,
-      took: Math.floor(Math.random() * 100) + 50
+      results,
+      total: results.length,
+      took
     })
   } catch {
     return NextResponse.json({ error: 'Search failed' }, { status: 500 })
   }
 }
+
 
 export async function POST(request: NextRequest) {
   try {
