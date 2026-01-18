@@ -12,6 +12,7 @@ export interface UISlice {
   aiModal: boolean
   aiChatOpen: boolean
   settingsModal: boolean
+  yamlModal: boolean
   globalSearch: boolean
   globalSearchQuery: string
   terminalOpen: boolean
@@ -26,6 +27,7 @@ export interface UISlice {
   setAIModal: (open: boolean) => void
   setAIChatOpen: (open: boolean) => void
   setSettingsModal: (open: boolean) => void
+  setYamlModal: (open: boolean) => void
   setGlobalSearch: (open: boolean) => void
   setGlobalSearchQuery: (query: string) => void
   setTerminalOpen: (open: boolean) => void
@@ -43,6 +45,7 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
   aiModal: false,
   aiChatOpen: false,
   settingsModal: false,
+  yamlModal: false,
   globalSearch: false,
   globalSearchQuery: '',
   terminalOpen: false,
@@ -57,6 +60,7 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
   setAIModal: (open) => set({ aiModal: open }),
   setAIChatOpen: (open) => set({ aiChatOpen: open }),
   setSettingsModal: (open) => set({ settingsModal: open }),
+  setYamlModal: (open) => set({ yamlModal: open }),
   setGlobalSearch: (open) => set({ globalSearch: open }),
   setGlobalSearchQuery: (query) => set({ globalSearchQuery: query }),
   setTerminalOpen: (open) => set({ terminalOpen: open }),

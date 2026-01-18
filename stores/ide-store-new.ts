@@ -64,6 +64,10 @@ interface CompatibilitySlice {
   gitStatus: string
   uncommittedChanges: number
   
+  // YAML state
+  yamlFiles: any[]
+  activeYamlFile: string | null
+  
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => void
   startDebugSession: () => void
@@ -92,6 +96,15 @@ interface CompatibilitySlice {
   setCollaborationUsers: (users: any[]) => void
   addCollaborationUser: (user: any) => void
   removeCollaborationUser: (userId: string) => void
+  
+  // YAML actions
+  addYamlFile: (file: any) => void
+  updateYamlFile: (id: string, content: string) => void
+  deleteYamlFile: (id: string) => void
+  setActiveYamlFile: (id: string) => void
+  validateYaml: (id: string) => void
+  runYaml: (id: string) => void
+  uploadYamlFile: (file: File) => Promise<void>
 }
 
 const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
@@ -122,6 +135,10 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   gitBranch: 'main',
   gitStatus: 'clean',
   uncommittedChanges: 0,
+  
+  // YAML state
+  yamlFiles: [],
+  activeYamlFile: null,
   
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => set((state: any) => {
@@ -162,7 +179,16 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   setCollaborationConnection: (connected: boolean) => set({ isConnectedToCollaboration: connected }),
   setCollaborationUsers: (users: any[]) => set({ collaborationUsers: users }),
   addCollaborationUser: (user: any) => set((state: any) => ({ collaborationUsers: [...state.collaborationUsers, user] })),
-  removeCollaborationUser: (userId: string) => set((state: any) => ({ collaborationUsers: state.collaborationUsers.filter((u: any) => u.id !== userId) }))
+  removeCollaborationUser: (userId: string) => set((state: any) => ({ collaborationUsers: state.collaborationUsers.filter((u: any) => u.id !== userId) })),
+  
+  // YAML actions
+  addYamlFile: (file: any) => set((state: any) => ({ yamlFiles: [...state.yamlFiles, file], activeYamlFile: file.id })),
+  updateYamlFile: (id: string, content: string) => set((state: any) => ({ yamlFiles: state.yamlFiles.map((f: any) => f.id === id ? { ...f, content } : f) })),
+  deleteYamlFile: (id: string) => set((state: any) => ({ yamlFiles: state.yamlFiles.filter((f: any) => f.id !== id), activeYamlFile: state.activeYamlFile === id ? null : state.activeYamlFile })),
+  setActiveYamlFile: (id: string) => set({ activeYamlFile: id }),
+  validateYaml: (id: string) => {},
+  runYaml: (id: string) => {},
+  uploadYamlFile: async (file: File) => {}
 })
 
 // Combined store type
