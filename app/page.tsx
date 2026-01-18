@@ -22,7 +22,7 @@ import DatabaseView from '@/components/DatabaseView'
 import LogsView from '@/components/LogsView'
 import SettingsView from '@/components/SettingsView'
 import Toast from '@/components/Toast'
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 import { useIDEHotkeys } from '@/hooks/useIDEHotkeys'
 
 export default function Home() {

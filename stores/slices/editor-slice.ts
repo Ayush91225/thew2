@@ -18,6 +18,8 @@ export interface EditorSlice {
   tabSize: number
   minimap: boolean
   autoSave: boolean
+  isRunning: boolean
+  runningFile: string | null
   
   setActiveTab: (tabId: string) => void
   addTab: (file: FileTab) => void
@@ -28,6 +30,7 @@ export interface EditorSlice {
   setTabSize: (size: number) => void
   setMinimap: (enabled: boolean) => void
   setAutoSave: (enabled: boolean) => void
+  runCurrentFile: () => void
 }
 
 export const createEditorSlice: StateCreator<EditorSlice> = (set, get) => ({
@@ -38,6 +41,8 @@ export const createEditorSlice: StateCreator<EditorSlice> = (set, get) => ({
   tabSize: 2,
   minimap: false,
   autoSave: false,
+  isRunning: false,
+  runningFile: null,
   
   setActiveTab: (tabId) => set({ activeTab: tabId }),
   
@@ -78,4 +83,13 @@ export const createEditorSlice: StateCreator<EditorSlice> = (set, get) => ({
   setTabSize: (size) => set({ tabSize: size }),
   setMinimap: (enabled) => set({ minimap: enabled }),
   setAutoSave: (enabled) => set({ autoSave: enabled }),
+  
+  runCurrentFile: () => {
+    const state = get() as any
+    if (!state.activeTab) return
+    const tab = state.tabs.find((t: FileTab) => t.id === state.activeTab)
+    if (!tab) return
+    set({ isRunning: true, runningFile: tab.id })
+    setTimeout(() => set({ isRunning: false, runningFile: null }), 2000)
+  }
 })
