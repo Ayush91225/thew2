@@ -185,6 +185,16 @@ body {
   background-color: #52525b;
 }
 
+/* Hide scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Collaboration cursor styles */
 .collaboration-cursor {
   position: relative;

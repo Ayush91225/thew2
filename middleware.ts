@@ -32,7 +32,7 @@ export function middleware(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     
     // Allow these API routes without auth
-    const publicRoutes = ['/api/search', '/api/files', '/api/server', '/api/execute', '/api/terminal', '/api/packages', '/api/debug', '/api/extensions', '/api/deploy', '/api/database', '/api/collections', '/api/environments', '/api/proxy']
+    const publicRoutes = ['/api/search', '/api/files', '/api/server', '/api/execute', '/api/terminal', '/api/packages', '/api/debug', '/api/extensions', '/api/deploy', '/api/database', '/api/collections', '/api/environments', '/api/proxy', '/api/git', '/api/install', '/api/dev']
     const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
     
     if (!authHeader && !isPublicRoute) {
