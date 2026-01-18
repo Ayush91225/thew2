@@ -166,15 +166,19 @@ export default function Sidebar() {
     // Generate sample content based on file type
     const getFileContent = (filename: string): string => {
       const ext = filename.split('.').pop()?.toLowerCase()
+      const componentName = filename.replace(/\.(tsx|jsx)$/, '').replace(/[^a-zA-Z0-9]/g, '')
       const contentMap: Record<string, string> = {
-        'tsx': `'use client'\n\nexport default function ${filename.replace('.tsx', '')}() {\n  return <div>Component</div>\n}`,
-        'ts': `// ${filename}\n\nexport const example = () => {\n  console.log('Hello')\n}`,
-        'js': `// ${filename}\n\nfunction example() {\n  console.log('Hello')\n}`,
-        'css': `/* ${filename} */\n\n.container {\n  padding: 20px;\n}`,
+        'tsx': `'use client'\n\nimport { useState } from 'react'\n\nexport default function ${componentName}() {\n  return (\n    <div>\n      <h1>${componentName}</h1>\n    </div>\n  )\n}`,
+        'jsx': `'use client'\n\nimport { useState } from 'react'\n\nexport default function ${componentName}() {\n  return (\n    <div>\n      <h1>${componentName}</h1>\n    </div>\n  )\n}`,
+        'ts': `// ${filename}\n\nexport const example = () => {\n  console.log('Hello from ${filename}')\n}`,
+        'js': `// ${filename}\n\nfunction example() {\n  console.log('Hello from ${filename}')\n}\n\nexport default example`,
+        'css': `/* ${filename} */\n\n.container {\n  padding: 20px;\n  margin: 0 auto;\n}`,
         'json': `{\n  "name": "example",\n  "version": "1.0.0"\n}`,
-        'md': `# ${filename.replace('.md', '')}\n\nContent here...`
+        'md': `# ${filename.replace('.md', '')}\n\nContent here...`,
+        'html': `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${filename.replace('.html', '')}</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n</body>\n</html>`,
+        'py': `# ${filename}\n\ndef main():\n    print("Hello from ${filename}")\n\nif __name__ == "__main__":\n    main()`
       }
-      return contentMap[ext || ''] || `// ${filename}\n\n// File content here...`
+      return contentMap[ext || ''] || `// ${filename}\n\n`
     }
 
     const getLanguage = (filename: string): string => {
