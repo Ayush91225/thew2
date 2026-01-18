@@ -4,6 +4,7 @@ import { EditorSlice, createEditorSlice } from './slices/editor-slice'
 import { UISlice, createUISlice } from './slices/ui-slice'
 import { DatabaseSlice, createDatabaseSlice } from './slices/database-slice'
 import { APISlice, createAPISlice } from './slices/api-slice'
+import { SettingsSlice, createSettingsSlice } from './slices/settings-slice'
 
 // Additional interfaces for compatibility
 interface Extension {
@@ -43,9 +44,13 @@ interface CompatibilitySlice {
   // Extensions state
   extensions: Extension[]
   extensionSearchQuery: string
+  extensionFilter: string
   marketplaceExtensions: any[]
   marketplaceLoading: boolean
   marketplaceCategories: string[]
+  autoUpdateExtensions: boolean
+  trustedExtensionsOnly: boolean
+  extensionSandbox: boolean
   
   // Database state (additional properties)
   databaseConnections: DatabaseConnection[]
@@ -64,9 +69,30 @@ interface CompatibilitySlice {
   gitStatus: string
   uncommittedChanges: number
   
+  // Project state
+  projectRoot: string | null
+  projectFiles: any[]
+  
+  // Terminal state
+  terminalTabs: any[]
+  activeTerminalTab: string | null
+  
   // YAML state
   yamlFiles: any[]
   activeYamlFile: string | null
+  
+  // Performance state
+  cpuUsage: number
+  memoryUsage: number
+  buildTime: number
+  maxFileSize: number
+  syntaxHighlighting: string
+  lazyLoading: boolean
+  incrementalBuild: boolean
+  memoryLimit: number
+  buildThreads: string
+  memoryOptimization: boolean
+  buildCache: boolean
   
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => void
@@ -75,6 +101,7 @@ interface CompatibilitySlice {
   
   // Extension actions
   setExtensionSearchQuery: (query: string) => void
+  setExtensionFilter: (filter: string) => void
   toggleExtension: (id: string) => void
   updateExtension: (id: string) => void
   installExtension: (extension: any) => void
@@ -82,6 +109,9 @@ interface CompatibilitySlice {
   searchMarketplaceExtensions: (query?: string, category?: string) => void
   checkForExtensionUpdates: () => void
   executeExtensionCommand: (command: string, ...args: any[]) => Promise<void>
+  setAutoUpdateExtensions: (enabled: boolean) => void
+  setTrustedExtensionsOnly: (enabled: boolean) => void
+  setExtensionSandbox: (enabled: boolean) => void
   
   // Database actions (additional)
   connectToDatabase: (config: any) => Promise<void>
@@ -105,6 +135,29 @@ interface CompatibilitySlice {
   validateYaml: (id: string) => void
   runYaml: (id: string) => void
   uploadYamlFile: (file: File) => Promise<void>
+  
+  // Performance actions
+  updateMetrics: (metrics: { cpu: number; memory: number; buildTime: number }) => void
+  setMaxFileSize: (size: number) => void
+  setSyntaxHighlighting: (level: string) => void
+  setLazyLoading: (enabled: boolean) => void
+  setIncrementalBuild: (enabled: boolean) => void
+  setMemoryLimit: (limit: number) => void
+  setBuildThreads: (threads: string) => void
+  setMemoryOptimization: (enabled: boolean) => void
+  setBuildCache: (enabled: boolean) => void
+  clearCache: () => void
+  runPerformanceTest: () => void
+  optimizePerformance: () => void
+  
+  // Project actions
+  setProjectRoot: (path: string | null) => void
+  setProjectFiles: (files: any[]) => void
+  
+  // Terminal actions
+  addTerminalTab: (tab: any) => void
+  closeTerminalTab: (tabId: string) => void
+  setActiveTerminalTab: (tabId: string) => void
 }
 
 const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
@@ -115,9 +168,13 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   // Extensions state
   extensions: [],
   extensionSearchQuery: '',
+  extensionFilter: 'All',
   marketplaceExtensions: [],
   marketplaceLoading: false,
   marketplaceCategories: ['All'],
+  autoUpdateExtensions: true,
+  trustedExtensionsOnly: true,
+  extensionSandbox: true,
   
   // Database state
   databaseConnections: [],
@@ -136,9 +193,30 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   gitStatus: 'clean',
   uncommittedChanges: 0,
   
+  // Project state
+  projectRoot: null,
+  projectFiles: [],
+  
+  // Terminal state
+  terminalTabs: [{ id: 'bash-1', name: 'bash', type: 'bash', isActive: true }],
+  activeTerminalTab: 'bash-1',
+  
   // YAML state
   yamlFiles: [],
   activeYamlFile: null,
+  
+  // Performance state
+  cpuUsage: 0,
+  memoryUsage: 0,
+  buildTime: 0,
+  maxFileSize: 50,
+  syntaxHighlighting: 'Full',
+  lazyLoading: true,
+  incrementalBuild: true,
+  memoryLimit: 4,
+  buildThreads: 'Auto',
+  memoryOptimization: true,
+  buildCache: true,
   
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => set((state: any) => {
@@ -159,6 +237,7 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   
   // Extension actions
   setExtensionSearchQuery: (query: string) => set({ extensionSearchQuery: query }),
+  setExtensionFilter: (filter: string) => set({ extensionFilter: filter }),
   toggleExtension: async (id: string) => {},
   updateExtension: async (id: string) => {},
   installExtension: async (extension: any) => {},
@@ -166,6 +245,9 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   searchMarketplaceExtensions: async (query?: string, category?: string) => {},
   checkForExtensionUpdates: async () => {},
   executeExtensionCommand: async (command: string, ...args: any[]) => {},
+  setAutoUpdateExtensions: (enabled: boolean) => set({ autoUpdateExtensions: enabled }),
+  setTrustedExtensionsOnly: (enabled: boolean) => set({ trustedExtensionsOnly: enabled }),
+  setExtensionSandbox: (enabled: boolean) => set({ extensionSandbox: enabled }),
   
   // Database actions
   connectToDatabase: async (config: any) => {},
@@ -188,11 +270,34 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   setActiveYamlFile: (id: string) => set({ activeYamlFile: id }),
   validateYaml: (id: string) => {},
   runYaml: (id: string) => {},
-  uploadYamlFile: async (file: File) => {}
+  uploadYamlFile: async (file: File) => {},
+  
+  // Performance actions
+  updateMetrics: (metrics: { cpu: number; memory: number; buildTime: number }) => set({ cpuUsage: metrics.cpu, memoryUsage: metrics.memory, buildTime: metrics.buildTime }),
+  setMaxFileSize: (size: number) => set({ maxFileSize: size }),
+  setSyntaxHighlighting: (level: string) => set({ syntaxHighlighting: level }),
+  setLazyLoading: (enabled: boolean) => set({ lazyLoading: enabled }),
+  setIncrementalBuild: (enabled: boolean) => set({ incrementalBuild: enabled }),
+  setMemoryLimit: (limit: number) => set({ memoryLimit: limit }),
+  setBuildThreads: (threads: string) => set({ buildThreads: threads }),
+  setMemoryOptimization: (enabled: boolean) => set({ memoryOptimization: enabled }),
+  setBuildCache: (enabled: boolean) => set({ buildCache: enabled }),
+  clearCache: () => {},
+  runPerformanceTest: () => {},
+  optimizePerformance: () => {},
+  
+  // Project actions
+  setProjectRoot: (path: string | null) => set({ projectRoot: path }),
+  setProjectFiles: (files: any[]) => set({ projectFiles: files }),
+  
+  // Terminal actions
+  addTerminalTab: (tab: any) => set((state: any) => ({ terminalTabs: [...state.terminalTabs, tab], activeTerminalTab: tab.id })),
+  closeTerminalTab: (tabId: string) => set((state: any) => ({ terminalTabs: state.terminalTabs.filter((t: any) => t.id !== tabId) })),
+  setActiveTerminalTab: (tabId: string) => set({ activeTerminalTab: tabId })
 })
 
 // Combined store type
-export type IDEStore = EditorSlice & UISlice & DatabaseSlice & APISlice & CompatibilitySlice & {
+export type IDEStore = EditorSlice & UISlice & DatabaseSlice & APISlice & SettingsSlice & CompatibilitySlice & {
   // URL persistence
   loadFromURL: () => void
   saveToURL: () => void
@@ -206,6 +311,7 @@ export const useIDEStore = create<IDEStore>()(
         ...createUISlice(set, get, store),
         ...createDatabaseSlice(set, get, store),
         ...createAPISlice(set, get, store),
+        ...createSettingsSlice(set, get, store),
         ...createCompatibilitySlice(set, get),
         
         // URL persistence methods
