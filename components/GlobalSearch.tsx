@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-new'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 interface SearchResult {
@@ -41,29 +41,28 @@ export default function GlobalSearch() {
     }
 
     setIsSearching(true)
-    const timer = setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(globalSearchQuery)}`)
-        .then(res => res.json())
-        .then(data => {
-          const searchResults: SearchResult[] = data.results?.flatMap((result: any) => 
-            result.matches?.map((match: any) => ({
-              file: result.name,
-              line: match.line,
-              column: 1,
-              content: match.text
-            })) || []
-          ) || []
-          setResults(searchResults)
-          setIsSearching(false)
-        })
-        .catch(() => {
-          setResults([])
-          setIsSearching(false)
-        })
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [globalSearchQuery])
+    
+    // Search through open tabs client-side
+    const searchResults: SearchResult[] = []
+    const query = globalSearchQuery.toLowerCase()
+    
+    tabs.forEach(tab => {
+      const lines = tab.content.split('\n')
+      lines.forEach((line, idx) => {
+        if (line.toLowerCase().includes(query)) {
+          searchResults.push({
+            file: tab.name,
+            line: idx + 1,
+            column: 1,
+            content: line.trim()
+          })
+        }
+      })
+    })
+    
+    setResults(searchResults)
+    setIsSearching(false)
+  }, [globalSearchQuery, tabs])
 
   const jumpToResult = async (result: SearchResult) => {
     const existingTab = tabs.find(tab => tab.name === result.file)
