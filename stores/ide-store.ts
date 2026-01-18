@@ -483,10 +483,6 @@ export const useIDEStore = create<IDEState>()(
           runningFile: null,
           activeTab: null,
           tabs: [],
-              isDirty: false,
-              icon: 'ph ph-file-html'
-            }
-          ],
           recentFiles: [],
           fileTree: fileManager.getFileTree(),
           fileTreeVersion: 0,
