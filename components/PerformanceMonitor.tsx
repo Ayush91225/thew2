@@ -13,18 +13,12 @@ interface PerformanceMetrics {
 }
 
 export default function PerformanceMonitor() {
-  const { 
-    view, 
-    cpuUsage, 
-    memoryUsage, 
-    buildTime, 
-    updateMetrics 
-  } = useIDEStore()
+  const { view } = useIDEStore()
   
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    cpu: cpuUsage,
-    memory: memoryUsage,
-    buildTime,
+    cpu: 45,
+    memory: 62,
+    buildTime: 2.3,
     bundleSize: 2.4,
     loadTime: 1.2,
     errorRate: 0.1
@@ -36,21 +30,14 @@ export default function PerformanceMonitor() {
     if (view === 'monitoring') {
       setIsMonitoring(true)
       const interval = setInterval(() => {
-        const newMetrics = {
-          cpu: Math.max(10, Math.min(90, cpuUsage + (Math.random() - 0.5) * 10)),
-          memory: Math.max(20, Math.min(95, memoryUsage + (Math.random() - 0.5) * 8)),
-          buildTime: Math.max(0.5, buildTime + (Math.random() - 0.5) * 0.5),
+        setMetrics(prev => ({
+          cpu: Math.max(10, Math.min(90, prev.cpu + (Math.random() - 0.5) * 10)),
+          memory: Math.max(20, Math.min(95, prev.memory + (Math.random() - 0.5) * 8)),
+          buildTime: Math.max(0.5, prev.buildTime + (Math.random() - 0.5) * 0.5),
           bundleSize: Math.max(1.0, 2.4 + (Math.random() - 0.5) * 0.2),
           loadTime: Math.max(0.3, 1.2 + (Math.random() - 0.5) * 0.3),
           errorRate: Math.max(0, Math.min(5, 0.1 + (Math.random() - 0.5) * 0.2))
-        }
-        
-        setMetrics(newMetrics)
-        updateMetrics({
-          cpu: newMetrics.cpu,
-          memory: newMetrics.memory,
-          buildTime: newMetrics.buildTime
-        })
+        }))
       }, 2000)
 
       return () => {
@@ -58,7 +45,7 @@ export default function PerformanceMonitor() {
         setIsMonitoring(false)
       }
     }
-  }, [view, cpuUsage, memoryUsage, buildTime, updateMetrics])
+  }, [view])
 
   if (view !== 'monitoring') return null
 

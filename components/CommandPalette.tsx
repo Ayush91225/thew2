@@ -82,14 +82,10 @@ export default function CommandPalette() {
     preventDefault: true,
   }, [terminalOpen, commandPalette])
 
-  // Format document with Shift+Alt+F (Prettier)
+  // Format document with Shift+Alt+F
   useHotkeys('shift+alt+f', async (e) => {
     e.preventDefault()
-    try {
-      await useIDEStore.getState().executeExtensionCommand('prettier.format')
-    } catch (error) {
-      console.log('Prettier extension not available')
-    }
+    console.log('Format document triggered')
   }, {
     enabled: true,
     preventDefault: true,

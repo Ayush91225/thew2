@@ -475,16 +475,35 @@ interface Extension {
 }
 
 export function ExtensionsPanel() {
-  const {
-    extensions,
-    extensionSearchQuery,
-    setExtensionSearchQuery,
-    toggleExtension,
-    updateExtension,
-    checkForExtensionUpdates
-  } = useIDEStore()
+  const { } = useIDEStore()
   
-  // Add missing states that aren't in the store
+  // Local state for extensions
+  const [extensionSearchQuery, setExtensionSearchQuery] = useState('')
+  const [extensions] = useState<Extension[]>([
+    {
+      id: 'prettier',
+      name: 'Prettier',
+      version: '3.0.0',
+      category: 'Formatters',
+      downloads: '10M+',
+      status: 'active',
+      icon: 'ph-code'
+    },
+    {
+      id: 'eslint',
+      name: 'ESLint',
+      version: '8.0.0',
+      category: 'Linters',
+      downloads: '8M+',
+      status: 'active',
+      icon: 'ph-bug'
+    }
+  ])
+  
+  const toggleExtension = (id: string) => console.log('Toggle:', id)
+  const updateExtension = (id: string) => console.log('Update:', id)
+  const checkForExtensionUpdates = () => console.log('Check updates')
+  
   const [marketplaceExtensions] = useState<Extension[]>([])
   const [marketplaceLoading] = useState(false)
   const [marketplaceCategories] = useState(['All', 'Themes', 'Programming Languages', 'Debuggers', 'Formatters'])
@@ -745,21 +764,20 @@ interface QueryResult {
 }
 
 export function DatabasePanel() {
-  const {
-    // Assuming these are in the store, adding defaults
-    databaseConnections = [] as DatabaseConnection[],
-    activeDatabaseConnection = null as string | null,
-    databaseQuery = '',
-    queryResults = null as QueryResult | null,
-    queryLoading = false,
-    databaseTables = [],
-    connectToDatabase = async () => {},
-    disconnectFromDatabase = async () => {},
-    executeQuery = async () => {},
-    setDatabaseQuery = () => {},
-    setActiveDatabaseConnection = () => {},
-    refreshDatabaseTables = async () => {}
-  } = useIDEStore()
+  const { } = useIDEStore()
+  
+  // Local state for database
+  const [databaseConnections] = useState<DatabaseConnection[]>([])
+  const [activeDatabaseConnection, setActiveDatabaseConnection] = useState<string | null>(null)
+  const [databaseQuery, setDatabaseQuery] = useState('')
+  const [queryResults, setQueryResults] = useState<QueryResult | null>(null)
+  const [queryLoading, setQueryLoading] = useState(false)
+  const [databaseTables, setDatabaseTables] = useState<string[]>([])
+  
+  const connectToDatabase = async (form: any) => {}
+  const disconnectFromDatabase = async (connectionId: string) => {}
+  const executeQuery = async (conn: string, query: string) => {}
+  const refreshDatabaseTables = async () => {}
   
   const [activeTab, setActiveTab] = useState<'connections' | 'query' | 'results'>('connections')
   const [showConnectionForm, setShowConnectionForm] = useState(false)
@@ -939,7 +957,7 @@ export function DatabasePanel() {
           <div>
             {databaseConnections.length > 0 ? (
               <div className="space-y-2">
-                {databaseConnections.map(conn => (
+                {databaseConnections.map((conn: DatabaseConnection) => (
                   <div 
                     key={conn.id}
                     onClick={() => setActiveDatabaseConnection(conn.id)}
@@ -1027,7 +1045,7 @@ export function DatabasePanel() {
                       ))}
                     </div>
                     {/* Rows */}
-                    {queryResults.rows.slice(0, 50).map((row, index) => (
+                    {queryResults.rows.slice(0, 50).map((row: any, index: number) => (
                       <div key={index} className="flex border-b border-zinc-800 last:border-b-0">
                         {Object.values(row).map((value, i) => (
                           <div key={i} className="flex-1 px-3 py-2 text-xs text-white border-r border-zinc-800 last:border-r-0 truncate">

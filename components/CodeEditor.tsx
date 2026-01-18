@@ -618,45 +618,10 @@ export default function CodeEditor(): JSX.Element {
     if (!editorRef.current || !currentTab) return
     
     try {
-      // Check if Prettier extension is loaded and active
-      const { extensions } = useIDEStore.getState()
-      const prettierExt = extensions.find(ext => ext.id === 'prettier' && ext.status === 'active')
-      
-      if (prettierExt) {
-        // Load extension if not already loaded
-        const { extensionManager } = await import('@/lib/extension-manager')
-        const loadedExtensions = extensionManager.getLoadedExtensions()
-        
-        if (!loadedExtensions.includes('prettier')) {
-          await extensionManager.loadExtension('prettier')
-        }
-        
-        // Execute format command (shows extension message)
-        await extensionManager.executeCommand('prettier.format')
-        
-        // Apply simple formatting to show extension is working
-        const content = editorRef.current.getValue()
-        const formatted = content
-          .replace(/;\s*\n/g, ';\n')
-          .replace(/\{\s*\n/g, ' {\n')
-          .replace(/\}\s*\n/g, '\n}\n')
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0)
-          .join('\n')
-        
-        if (formatted !== content) {
-          editorRef.current.setValue(formatted)
-        }
-      } else {
-        // Use Monaco's built-in formatter
-        editorRef.current.getAction('editor.action.formatDocument')?.run()
-      }
-      
+      // Use Monaco's built-in formatter
+      editorRef.current.getAction('editor.action.formatDocument')?.run()
     } catch (error) {
       console.warn('Format failed:', error)
-      // Fallback to Monaco's built-in formatter
-      editorRef.current.getAction('editor.action.formatDocument')?.run()
     }
   }, [currentTab])
 
