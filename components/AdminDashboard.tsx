@@ -93,9 +93,9 @@ function Dashboard({ teams }: { teams: any[] }) {
     <>
       <div className="grid grid-cols-4 gap-4">
         <Card title="Total Teams" value={teams.length.toString()} />
-        <Card title="Active Teams" value={teams.filter(t => t.mode === 'LIVE').length.toString()} />
-        <Card title="Members" value={teams.reduce((sum, t) => sum + t.members, 0).toString()} />
-        <Card title="Live Sessions" value={teams.filter(t => t.mode === 'LIVE').length.toString()} />
+        <Card title="Active Teams" value={teams.filter(t => t.workspace.sharedState.mode === 'LIVE').length.toString()} />
+        <Card title="Members" value={teams.reduce((sum, t) => sum + t.members.length, 0).toString()} />
+        <Card title="Live Sessions" value={teams.filter(t => t.workspace.sharedState.mode === 'LIVE').length.toString()} />
       </div>
 
       <section className="mt-8">
@@ -126,13 +126,30 @@ function Teams({ teams, selectedTeam, setSelectedTeam }: {
 
   const handleCreate = () => {
     if (newTeam.name && newTeam.description) {
-      addTeam(newTeam)
+      const teamData = {
+        name: newTeam.name,
+        description: newTeam.description,
+        members: [],
+        workspace: {
+          id: `workspace-${Date.now()}`,
+          teamId: `team-${Date.now()}`,
+          files: [],
+          activeFiles: [],
+          sharedState: {
+            mode: newTeam.mode,
+            activeMembers: [],
+            currentSession: undefined
+          }
+        },
+        lastActivity: new Date().toISOString()
+      }
+      addTeam(teamData)
       setNewTeam({ name: '', description: '', members: 1, mode: 'SOLO' })
       setShowCreate(false)
     }
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     deleteTeam(id)
     if (selectedTeam?.id === id) setSelectedTeam(null)
   }
@@ -205,8 +222,8 @@ function Teams({ teams, selectedTeam, setSelectedTeam }: {
             >
               <span>{team.name}</span>
               <span>{team.description}</span>
-              <span>{team.members}</span>
-              <span className={team.mode === 'LIVE' ? 'text-white font-semibold' : 'text-zinc-400 font-semibold'}>{team.mode}</span>
+              <span>{team.members.length}</span>
+              <span className={team.workspace.sharedState.mode === 'LIVE' ? 'text-white font-semibold' : 'text-zinc-400 font-semibold'}>{team.workspace.sharedState.mode}</span>
               <span>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(team.id); }}
@@ -226,17 +243,20 @@ function Teams({ teams, selectedTeam, setSelectedTeam }: {
           <div className="flex flex-col gap-3 text-sm">
             <p><b>Name:</b> {selectedTeam.name}</p>
             <p><b>Description:</b> {selectedTeam.description}</p>
-            <p><b>Members:</b> {selectedTeam.members}</p>
+            <p><b>Members:</b> {selectedTeam.members.length}</p>
             <p>
-              <b>Mode:</b> <span className={selectedTeam.mode === 'LIVE' ? 'text-white font-semibold' : 'text-zinc-400 font-semibold'}>{selectedTeam.mode}</span>
+              <b>Mode:</b> <span className={selectedTeam.workspace.sharedState.mode === 'LIVE' ? 'text-white font-semibold' : 'text-zinc-400 font-semibold'}>{selectedTeam.workspace.sharedState.mode}</span>
             </p>
-            {selectedTeam.activeUsers && selectedTeam.activeUsers.length > 0 && (
+            {selectedTeam.workspace.sharedState.activeMembers && selectedTeam.workspace.sharedState.activeMembers.length > 0 && (
               <div>
                 <b>Active Users:</b>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedTeam.activeUsers.map((user: string, i: number) => (
-                    <span key={i} className="px-2 py-1 bg-zinc-800 rounded text-xs">{user}</span>
-                  ))}
+                  {selectedTeam.workspace.sharedState.activeMembers.map((userId: string, i: number) => {
+                    const member = selectedTeam.members.find((m: any) => m.id === userId)
+                    return (
+                      <span key={i} className="px-2 py-1 bg-zinc-800 rounded text-xs">{member?.name || userId}</span>
+                    )
+                  })}
                 </div>
               </div>
             )}

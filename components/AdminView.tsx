@@ -21,5 +21,5 @@ export default function AdminView() {
     return <AdminLogin onLogin={handleLogin} />
   }
 
-  return <AdminDashboard onLogout={handleLogout} />
+  return <AdminDashboard />
 }
