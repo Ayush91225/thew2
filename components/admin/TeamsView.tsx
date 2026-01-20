@@ -28,13 +28,31 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
 
     const handleCreate = () => {
         if (newTeam.name && newTeam.description) {
-            addTeam(newTeam)
+            // Create a proper team object with required fields
+            const teamData = {
+                name: newTeam.name,
+                description: newTeam.description,
+                members: [],
+                workspace: {
+                    id: `workspace-${Date.now()}`,
+                    teamId: `team-${Date.now()}`,
+                    files: [],
+                    activeFiles: [],
+                    sharedState: {
+                        mode: newTeam.mode,
+                        activeMembers: [],
+                        currentSession: undefined
+                    }
+                },
+                lastActivity: new Date().toISOString()
+            }
+            addTeam(teamData as any)
             setNewTeam({ name: '', description: '', members: 1, mode: 'SOLO' })
             setShowCreate(false)
         }
     }
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (id: string) => {
         deleteTeam(id)
         if (selectedTeam?.id === id) setSelectedTeam(null)
     }
@@ -192,7 +210,7 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
                                         </span>
                                     </div>
                                     <div className="flex -space-x-2">
-                                        {team.members.slice(0, 3).map((member, i) => (
+                                        {team.members.slice(0, 3).map((member: any, i: number) => (
                                             <div 
                                                 key={member.id} 
                                                 className={`w-8 h-8 rounded-full border-2 border-black overflow-hidden ${

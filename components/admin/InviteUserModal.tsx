@@ -129,7 +129,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
                                         <i className="ph ph-check text-3xl"></i>
                                     </div>
                                     <h3 className="text-lg font-bold text-white mb-1">Invitation Sent!</h3>
-                                    <p className="text-zinc-500 text-sm">We've sent an email to <span className="text-white">{email}</span></p>
+                                    <p className="text-zinc-500 text-sm">We&apos;ve sent an email to <span className="text-white">{email}</span></p>
                                 </div>
                             )}
                         </div>

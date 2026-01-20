@@ -1,6 +1,5 @@
 'use client'
 
-<<<<<<< HEAD
 import { useEffect, lazy, Suspense, useState } from 'react'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -115,38 +114,6 @@ export default function Home() {
   }
 
   useEffect(() => {
-=======
-import { useEffect } from 'react'
-// Components
-import ErrorBoundary from '@/components/ErrorBoundary'
-import CommandPalette from '@/components/CommandPalette'
-import AIAssistant from '@/components/AIAssistant'
-import YamlEditor from '@/components/YamlEditor'
-import AIChatEnhanced from '@/components/AIChatEnhanced'
-import GlobalSearch from '@/components/GlobalSearch'
-import TopBar from '@/components/TopBar'
-import Sidebar from '@/components/Sidebar'
-import MainEditor from '@/components/MainEditor'
-import CodeEditor from '@/components/CodeEditor'
-import FileTabs from '@/components/FileTabs'
-import Terminal from '@/components/Terminal'
-import StatusBar from '@/components/StatusBar'
-import PerformanceMonitor from '@/components/PerformanceMonitor'
-import DeploymentDashboard from '@/components/DeploymentDashboard'
-import AnalyticsView from '@/components/AnalyticsView'
-import DatabaseView from '@/components/DatabaseView'
-import LogsView from '@/components/LogsView'
-import SettingsView from '@/components/SettingsView'
-import Toast from '@/components/Toast'
-import { useIDEStore } from '@/stores/ide-store-new'
-import { useIDEHotkeys } from '@/hooks/useIDEHotkeys'
-
-export default function Home() {
-  const { view, aiChatOpen, loadFromURL } = useIDEStore()
-  useIDEHotkeys()
-
-  useEffect(() => {
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
     // Load state from URL parameters only on client side
     if (typeof window !== 'undefined') {
       // Delay to ensure hydration is complete and prevent 500 errors
@@ -157,19 +124,11 @@ export default function Home() {
           console.warn('Failed to load from URL:', error)
         }
       }, 200)
-<<<<<<< HEAD
 
       return () => clearTimeout(timer)
     }
   }, [])
 
-=======
-      
-      return () => clearTimeout(timer)
-    }
-  }, [])
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   useEffect(() => {
     // Disable browser right-click context menu
     const handleContextMenu = (e: MouseEvent) => {
@@ -184,7 +143,6 @@ export default function Home() {
   const renderMainContent = () => {
     switch (view) {
       case 'deploy':
-<<<<<<< HEAD
         return (
           <Suspense fallback={<LoadingSpinner />}>
             <DeploymentDashboard />
@@ -220,19 +178,6 @@ export default function Home() {
             <SettingsView />
           </Suspense>
         )
-=======
-        return <DeploymentDashboard />
-      case 'monitoring':
-        return <PerformanceMonitor />
-      case 'analytics':
-        return <AnalyticsView />
-      case 'db':
-        return <DatabaseView />
-      case 'logs':
-        return <LogsView />
-      case 'settings':
-        return <SettingsView />
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
       default:
         return (
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -256,7 +201,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-<<<<<<< HEAD
 
       <AuthGuard>
         {/* Desktop IDE */}
@@ -321,27 +265,6 @@ export default function Home() {
           </Suspense>
         </div>
       </AuthGuard>
-=======
-      
-      {/* Desktop IDE */}
-      <div className="hidden lg:flex flex-col h-screen">
-        <CommandPalette />
-        <AIAssistant />
-        <YamlEditor />
-        <GlobalSearch />
-        <TopBar />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar />
-          <div className="flex flex-1 overflow-hidden">
-            {renderMainContent()}
-          </div>
-          {aiChatOpen && <AIChatEnhanced />}
-        </div>
-        <Terminal />
-        <StatusBar />
-        <Toast />
-      </div>
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
     </ErrorBoundary>
   )
 }

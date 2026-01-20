@@ -3,7 +3,18 @@ const nextConfig = {
   generateBuildId: async () => {
     return `build-${Date.now()}`
   },
+  // Exclude backend directories from compilation
+  experimental: {
+    externalDir: true,
+  },
   webpack: (config, { dev, isServer }) => {
+    // Exclude backend directories
+    config.externals = config.externals || []
+    config.externals.push({
+      './backend': 'commonjs ./backend',
+      '../backend': 'commonjs ../backend'
+    })
+    
     if (dev) {
       config.devServer = {
         ...config.devServer,
@@ -15,13 +26,14 @@ const nextConfig = {
     
     // Exclude database drivers from bundle (not needed on Vercel)
     if (isServer) {
-      config.externals = config.externals || []
       config.externals.push({
         'mysql2/promise': 'commonjs mysql2/promise',
         'pg': 'commonjs pg',
         'sqlite3': 'commonjs sqlite3',
         'sqlite': 'commonjs sqlite',
-        'mongodb': 'commonjs mongodb'
+        'mongodb': 'commonjs mongodb',
+        'aws-cdk-lib': 'commonjs aws-cdk-lib',
+        'constructs': 'commonjs constructs'
       })
     }
     

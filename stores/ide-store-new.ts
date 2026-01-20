@@ -5,10 +5,7 @@ import { UISlice, createUISlice } from './slices/ui-slice'
 import { DatabaseSlice, createDatabaseSlice } from './slices/database-slice'
 import { APISlice, createAPISlice } from './slices/api-slice'
 import { SettingsSlice, createSettingsSlice } from './slices/settings-slice'
-<<<<<<< HEAD
 import { AuthSlice, createAuthSlice } from './slices/auth-slice'
-=======
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
 
 // Additional interfaces for compatibility
 interface Extension {
@@ -44,16 +41,11 @@ interface CompatibilitySlice {
   // Debug state
   breakpoints: Record<string, number[]>
   debugSession: boolean
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Git state
   gitBranch: string
   gitStatus: string
   uncommittedChanges: number
-<<<<<<< HEAD
 
   // Project state
   projectRoot: string | null
@@ -71,51 +63,20 @@ interface CompatibilitySlice {
   collaborationUsers: any[]
   isConnectedToCollaboration: boolean
 
-=======
-  
-  // Project state
-  projectRoot: string | null
-  projectFiles: any[]
-  
-  // Terminal state
-  terminalTabs: any[]
-  activeTerminalTab: string | null
-  
-  // YAML state
-  yamlFiles: any[]
-  activeYamlFile: string | null
-  
-  // Collaboration state
-  collaborationUsers: any[]
-  isConnectedToCollaboration: boolean
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => void
   startDebugSession: () => void
   stopDebugSession: () => void
-<<<<<<< HEAD
 
   // Project actions
   setProjectRoot: (path: string | null) => void
   setProjectFiles: (files: any[]) => void
 
-=======
-  
-  // Project actions
-  setProjectRoot: (path: string | null) => void
-  setProjectFiles: (files: any[]) => void
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Terminal actions
   addTerminalTab: (tab: any) => void
   closeTerminalTab: (tabId: string) => void
   setActiveTerminalTab: (tabId: string) => void
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // YAML actions
   addYamlFile: (file: any) => void
   updateYamlFile: (id: string, content: string) => void
@@ -124,11 +85,7 @@ interface CompatibilitySlice {
   validateYaml: (id: string) => void
   runYaml: (id: string) => void
   uploadYamlFile: (file: File) => Promise<void>
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Collaboration actions
   setCollaborationConnection: (connected: boolean) => void
   setCollaborationUsers: (users: any[]) => void
@@ -140,16 +97,11 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   // Debug state
   breakpoints: {},
   debugSession: false,
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Git state
   gitBranch: 'main',
   gitStatus: 'clean',
   uncommittedChanges: 0,
-<<<<<<< HEAD
 
   // Project state
   projectRoot: null,
@@ -167,25 +119,6 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   collaborationUsers: [],
   isConnectedToCollaboration: false,
 
-=======
-  
-  // Project state
-  projectRoot: null,
-  projectFiles: [],
-  
-  // Terminal state
-  terminalTabs: [{ id: 'bash-1', name: 'bash', type: 'bash', isActive: true }],
-  activeTerminalTab: 'bash-1',
-  
-  // YAML state
-  yamlFiles: [],
-  activeYamlFile: null,
-  
-  // Collaboration state
-  collaborationUsers: [],
-  isConnectedToCollaboration: false,
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Debug actions
   toggleBreakpoint: (file: string, line: number) => set((state: any) => {
     const fileBreakpoints = state.breakpoints[file] || []
@@ -193,17 +126,12 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
     return {
       breakpoints: {
         ...state.breakpoints,
-<<<<<<< HEAD
         [file]: hasBreakpoint
-=======
-        [file]: hasBreakpoint 
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
           ? fileBreakpoints.filter((l: number) => l !== line)
           : [...fileBreakpoints, line].sort((a: number, b: number) => a - b)
       }
     }
   }),
-<<<<<<< HEAD
 
   startDebugSession: () => set({ debugSession: true }),
   stopDebugSession: () => set({ debugSession: false }),
@@ -212,41 +140,20 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   setProjectRoot: (path: string | null) => set({ projectRoot: path }),
   setProjectFiles: (files: any[]) => set({ projectFiles: files }),
 
-=======
-  
-  startDebugSession: () => set({ debugSession: true }),
-  stopDebugSession: () => set({ debugSession: false }),
-  
-  // Project actions
-  setProjectRoot: (path: string | null) => set({ projectRoot: path }),
-  setProjectFiles: (files: any[]) => set({ projectFiles: files }),
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Terminal actions
   addTerminalTab: (tab: any) => set((state: any) => ({ terminalTabs: [...state.terminalTabs, tab], activeTerminalTab: tab.id })),
   closeTerminalTab: (tabId: string) => set((state: any) => ({ terminalTabs: state.terminalTabs.filter((t: any) => t.id !== tabId) })),
   setActiveTerminalTab: (tabId: string) => set({ activeTerminalTab: tabId }),
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // YAML actions
   addYamlFile: (file: any) => set((state: any) => ({ yamlFiles: [...state.yamlFiles, file], activeYamlFile: file.id })),
   updateYamlFile: (id: string, content: string) => set((state: any) => ({ yamlFiles: state.yamlFiles.map((f: any) => f.id === id ? { ...f, content } : f) })),
   deleteYamlFile: (id: string) => set((state: any) => ({ yamlFiles: state.yamlFiles.filter((f: any) => f.id !== id), activeYamlFile: state.activeYamlFile === id ? null : state.activeYamlFile })),
   setActiveYamlFile: (id: string) => set({ activeYamlFile: id }),
-<<<<<<< HEAD
   validateYaml: (id: string) => { },
   runYaml: (id: string) => { },
   uploadYamlFile: async (file: File) => { },
 
-=======
-  validateYaml: (id: string) => {},
-  runYaml: (id: string) => {},
-  uploadYamlFile: async (file: File) => {},
-  
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // Collaboration actions
   setCollaborationConnection: (connected: boolean) => set({ isConnectedToCollaboration: connected }),
   setCollaborationUsers: (users: any[]) => set({ collaborationUsers: users }),
@@ -255,11 +162,7 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
 })
 
 // Combined store type
-<<<<<<< HEAD
 export type IDEStore = EditorSlice & UISlice & DatabaseSlice & APISlice & SettingsSlice & CompatibilitySlice & AuthSlice & {
-=======
-export type IDEStore = EditorSlice & UISlice & DatabaseSlice & APISlice & SettingsSlice & CompatibilitySlice & {
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   // URL persistence
   loadFromURL: () => void
   saveToURL: () => void
@@ -275,7 +178,6 @@ export const useIDEStore = create<IDEStore>()(
         ...createAPISlice(set, get, store),
         ...createSettingsSlice(set, get, store),
         ...createCompatibilitySlice(set, get),
-<<<<<<< HEAD
         ...createAuthSlice(set, get, store),
 
         // URL persistence methods
@@ -286,22 +188,10 @@ export const useIDEStore = create<IDEStore>()(
             const params = new URLSearchParams(window.location.search)
             const updates: Partial<IDEStore> = {}
 
-=======
-        
-        // URL persistence methods
-        loadFromURL: () => {
-          if (typeof window === 'undefined') return
-          
-          try {
-            const params = new URLSearchParams(window.location.search)
-            const updates: Partial<IDEStore> = {}
-            
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
             const view = params.get('view')
             const panel = params.get('panel')
             const tab = params.get('tab')
             const search = params.get('search')
-<<<<<<< HEAD
 
             if (view && ['workspace', 'settings', 'deploy', 'db', 'logs'].includes(view)) {
               updates.view = view
@@ -311,39 +201,20 @@ export const useIDEStore = create<IDEStore>()(
               updates.activePanel = panel
             }
 
-=======
-            
-            if (view && ['workspace', 'settings', 'deploy', 'db', 'logs'].includes(view)) {
-              updates.view = view
-            }
-            
-            if (panel && ['files', 'search', 'git', 'debug', 'database', 'api', 'yaml', 'extensions'].includes(panel)) {
-              updates.activePanel = panel
-            }
-            
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
             if (tab && tab.length < 100) {
               const state = useIDEStore.getState()
               if (state.tabs.some(t => t.id === tab)) {
                 updates.activeTab = tab
               }
             }
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
             if (search && search.length <= 100) {
               const sanitized = search.replace(/[<>"'&\r\n\t]/g, '').trim()
               if (sanitized && !sanitized.includes('..')) {
                 updates.globalSearchQuery = sanitized
               }
             }
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
             if (Object.keys(updates).length > 0) {
               useIDEStore.setState(updates)
             }
@@ -351,7 +222,6 @@ export const useIDEStore = create<IDEStore>()(
             console.warn('Failed to load from URL:', error)
           }
         },
-<<<<<<< HEAD
 
         saveToURL: () => {
           if (typeof window === 'undefined') return
@@ -380,36 +250,6 @@ export const useIDEStore = create<IDEStore>()(
               ? `${window.location.pathname}?${params.toString()}`
               : window.location.pathname
 
-=======
-        
-        saveToURL: () => {
-          if (typeof window === 'undefined') return
-          
-          try {
-            const state = useIDEStore.getState()
-            const params = new URLSearchParams()
-            
-            if (state.view && state.view !== 'workspace') {
-              params.set('view', state.view)
-            }
-            
-            if (state.activePanel && state.activePanel !== 'files') {
-              params.set('panel', state.activePanel)
-            }
-            
-            if (state.activeTab && state.activeTab.length < 100) {
-              params.set('tab', state.activeTab)
-            }
-            
-            if (state.globalSearchQuery && state.globalSearchQuery.trim() && state.globalSearchQuery.length <= 100) {
-              params.set('search', state.globalSearchQuery.trim())
-            }
-            
-            const newURL = params.toString() 
-              ? `${window.location.pathname}?${params.toString()}` 
-              : window.location.pathname
-              
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
             if (newURL !== window.location.href) {
               window.history.replaceState({}, '', newURL)
             }
@@ -421,24 +261,11 @@ export const useIDEStore = create<IDEStore>()(
       {
         name: 'kriya-ide-storage',
         partialize: (state) => ({
-<<<<<<< HEAD
           // Only persist essential data
           activeTab: state.activeTab,
           view: state.view,
           activePanel: state.activePanel,
           isAuthenticated: state.isAuthenticated
-=======
-          tabs: state.tabs,
-          activeTab: state.activeTab,
-          fontSize: state.fontSize,
-          tabSize: state.tabSize,
-          minimap: state.minimap,
-          autoSave: state.autoSave,
-          view: state.view,
-          activePanel: state.activePanel,
-          collab: state.collab,
-          terminalOpen: state.terminalOpen
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
         })
       }
     )

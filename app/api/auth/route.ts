@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-<<<<<<< HEAD
     // Check against mock users
     let user: any = null
 
@@ -74,36 +73,11 @@ export async function POST(request: NextRequest) {
         refreshToken: `mock-refresh-token-${user.role}`
       })
     }
-=======
-    // Use environment variables for credentials
-    const validEmail = process.env.DEMO_EMAIL || 'demo@kriya.dev'
-    const validPassword = process.env.DEMO_PASSWORD || 'demo123'
-
-    // Timing-safe comparison
-    const emailValid = constantTimeCompare(email || '', validEmail)
-    const passwordValid = constantTimeCompare(password || '', validPassword)
-
-    if (emailValid && passwordValid) {
-      return NextResponse.json({
-        success: true,
-        user: {
-          id: '1',
-          email,
-          name: 'Demo User',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face',
-          role: 'developer',
-          permissions: ['read', 'write', 'deploy', 'admin']
-        },
-        token: 'mock-jwt-token',
-        refreshToken: 'mock-refresh-token'
-      })
-    }
 
     return NextResponse.json(
       { success: false, error: 'Invalid credentials' },
       { status: 401 }
     )
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Authentication failed' },
@@ -116,11 +90,7 @@ export async function DELETE() {
   try {
     // Logout endpoint
     await new Promise(resolve => setTimeout(resolve, 200))
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
     return NextResponse.json({
       success: true,
       message: 'Logged out successfully'
