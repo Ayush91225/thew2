@@ -15,7 +15,7 @@ export default function DashboardView({ teams }: DashboardViewProps) {
     // Calculate stats
     const totalTeams = teams.length
     const activeTeams = teams.filter(t => t.mode === 'LIVE').length
-    const totalMembers = teams.reduce((acc, t) => acc + t.members, 0)
+    const totalMembers = teams.reduce((acc, t) => acc + (t.members?.length || 0), 0)
     const activeSessions = teams.filter(t => t.mode === 'LIVE').length
 
     // Calculate activity trend (mock logic for demo)
