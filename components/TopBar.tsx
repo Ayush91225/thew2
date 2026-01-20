@@ -3,27 +3,18 @@
 import { useIDEStore } from '@/stores/ide-store-new'
 import { collaborationService } from '@/lib/collaboration-service'
 import { useState, useEffect, useRef } from 'react'
-<<<<<<< HEAD
 import KriyaLogo from './logo/KriyaLogo'
 
 export default function TopBar() {
   const {
     collab,
     setCollab,
-=======
-
-export default function TopBar() {
-  const { 
-    collab, 
-    setCollab, 
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
     activeTab,
     tabs,
     updateTabContent,
     isRunning,
     runCurrentFile,
     terminalOpen,
-<<<<<<< HEAD
     setTerminalOpen,
     user,
     logout
@@ -48,14 +39,6 @@ export default function TopBar() {
       }
     }
   }, [])
-=======
-    setTerminalOpen
-  } = useIDEStore()
-  
-  const [collaborationUsers, setCollaborationUsers] = useState<any[]>([])
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
 
   useEffect(() => {
     // Initialize collaboration service
@@ -70,11 +53,7 @@ export default function TopBar() {
         console.warn('Could not fetch IP:', error)
         userIP = 'user-' + Math.random().toString(36).substr(2, 9)
       }
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
       const payload = {
         userId: userIP,
         name: userIP,
@@ -82,11 +61,7 @@ export default function TopBar() {
       }
       return btoa(JSON.stringify(payload))
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
     generateToken().then(token => {
       console.log('🔑 Generated token for IP-based user')
       collaborationService.connect(token)
@@ -131,11 +106,7 @@ export default function TopBar() {
 
   const toggleCollaboration = async () => {
     console.log('🔄 toggleCollaboration called, activeTab:', activeTab, 'collab:', collab)
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
     if (!activeTab) {
       console.warn('No active tab for collaboration')
       return
@@ -143,34 +114,19 @@ export default function TopBar() {
 
     setIsConnecting(true)
     const newMode = collab ? 'solo' : 'live'
-<<<<<<< HEAD
 
     console.log(`🔄 Toggling to ${newMode} mode for tab:`, activeTab)
 
-=======
-    
-    console.log(`🔄 Toggling to ${newMode} mode for tab:`, activeTab)
-    
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
     try {
       // Join document in the new mode - use a FIXED shared document ID for all users
       const sharedDocumentId = 'shared-document' // Fixed ID so all users join the same document
       console.log('🎯 About to call joinDocument with:', sharedDocumentId, newMode)
-<<<<<<< HEAD
 
       const result = collaborationService.joinDocument(sharedDocumentId, newMode)
       console.log('📋 joinDocument result:', result)
 
       setCollab(!collab)
 
-=======
-      
-      const result = collaborationService.joinDocument(sharedDocumentId, newMode)
-      console.log('📋 joinDocument result:', result)
-      
-      setCollab(!collab)
-      
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
       if (newMode === 'solo') {
         setCollaborationUsers([])
         setConnectionStatus('disconnected')
@@ -189,7 +145,6 @@ export default function TopBar() {
     <header className="h-12 border-b-line bg-black flex items-center justify-between px-6 shrink-0">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3">
-<<<<<<< HEAD
           <KriyaLogo className="w-8 h-8" />
           <span className="font-bold text-white text-sm">KRIYA</span>
         </div>
@@ -218,24 +173,6 @@ export default function TopBar() {
                   ? 'bg-blue-600 text-white'
                   : 'text-zinc-400 hover:text-white'
                   } ${isConnecting ? 'opacity-50' : ''}`}
-=======
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-white to-zinc-400"></div>
-          <span className="font-bold text-white text-sm">KRIYA</span>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="label">Mode</span>
-            <div className="flex bg-zinc-900 rounded-lg p-1">
-              <button 
-                onClick={toggleCollaboration}
-                disabled={isConnecting || !activeTab}
-                className={`px-3 py-1 text-xs font-bold rounded transition flex items-center gap-2 ${
-                  !collab 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-zinc-400 hover:text-white'
-                } ${isConnecting ? 'opacity-50' : ''}`}
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
               >
                 {isConnecting && !collab ? (
                   <i className="ph ph-spinner animate-spin text-xs"></i>
@@ -244,7 +181,6 @@ export default function TopBar() {
                 )}
                 SOLO
               </button>
-<<<<<<< HEAD
               <button
                 onClick={toggleCollaboration}
                 disabled={isConnecting || !activeTab}
@@ -252,16 +188,6 @@ export default function TopBar() {
                   ? 'bg-green-600 text-white'
                   : 'text-zinc-400 hover:text-white'
                   } ${isConnecting ? 'opacity-50' : ''}`}
-=======
-              <button 
-                onClick={toggleCollaboration}
-                disabled={isConnecting || !activeTab}
-                className={`px-3 py-1 text-xs font-bold rounded transition flex items-center gap-2 ${
-                  collab 
-                    ? 'bg-green-600 text-white' 
-                    : 'text-zinc-400 hover:text-white'
-                } ${isConnecting ? 'opacity-50' : ''}`}
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
               >
                 {isConnecting && collab ? (
                   <i className="ph ph-spinner animate-spin text-xs"></i>
@@ -310,7 +236,6 @@ export default function TopBar() {
 
         {/* Connection status */}
         <div className="flex items-center gap-2">
-<<<<<<< HEAD
           <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' :
             connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
               connectionStatus === 'error' ? 'bg-red-400' :
@@ -321,19 +246,6 @@ export default function TopBar() {
               connectionStatus === 'connecting' ? 'Connecting...' :
                 connectionStatus === 'error' ? 'Connection Error' :
                   collab ? 'Disconnected' : 'Solo'}
-=======
-          <div className={`w-2 h-2 rounded-full ${
-            connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' :
-            connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
-            connectionStatus === 'error' ? 'bg-red-400' :
-            'bg-zinc-600'
-          }`}></div>
-          <span className="text-xs text-zinc-400">
-            {connectionStatus === 'connected' && collab ? `Live (${collaborationUsers.length + 1} users)` :
-             connectionStatus === 'connecting' ? 'Connecting...' :
-             connectionStatus === 'error' ? 'Connection Error' :
-             collab ? 'Disconnected' : 'Solo'}
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
           </span>
         </div>
 
@@ -349,7 +261,6 @@ export default function TopBar() {
         )}
 
         <div className="flex items-center gap-2">
-<<<<<<< HEAD
           {/* ADMIN DASHBOARD BUTTON */}
           <a
             href="/admin"
@@ -367,31 +278,15 @@ export default function TopBar() {
               ? 'bg-white/10 text-white'
               : 'hover:bg-white/5 text-zinc-400 hover:text-white'
               }`}
-=======
-          {/* TERMINAL BUTTON */}
-          <button 
-            onClick={() => setTerminalOpen(!terminalOpen)}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition ${
-              terminalOpen 
-                ? 'bg-white/10 text-white' 
-                : 'hover:bg-white/5 text-zinc-400 hover:text-white'
-            }`}
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
             title="Terminal"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
               <path d="M3 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3ZM4 5V19H20V5H4ZM12 15H18V17H12V15ZM8.66685 12L5.83842 9.17157L7.25264 7.75736L11.4953 12L7.25264 16.2426L5.83842 14.8284L8.66685 12Z"></path>
             </svg>
           </button>
-<<<<<<< HEAD
 
           {/* RUN BUTTON */}
           <button
-=======
-          
-          {/* RUN BUTTON */}
-          <button 
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
             onClick={runCurrentFile}
             disabled={!activeTab || isRunning}
             className="px-4 py-1.5 bg-white text-black font-bold text-xs hover:bg-gray-100 transition-colors flex items-center gap-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
@@ -399,7 +294,6 @@ export default function TopBar() {
             <i className={`ph ${isRunning ? 'ph-spinner animate-spin' : 'ph-play'} text-xs`}></i>
             {isRunning ? 'RUNNING' : 'RUN'}
           </button>
-<<<<<<< HEAD
         </div>
 
         <div className="flex items-center gap-3 pl-4 border-l border-white/10">
@@ -425,15 +319,6 @@ export default function TopBar() {
               </button>
             </div>
           )}
-=======
-          
-          <button className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center transition">
-            <i className="ph ph-bell text-zinc-400 hover:text-white"></i>
-          </button>
-          <button className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center transition">
-            <i className="ph ph-question text-zinc-400 hover:text-white"></i>
-          </button>
->>>>>>> b9b08b1f72adc3e2c782bb8e94fd06833fd0461a
         </div>
       </div>
     </header>

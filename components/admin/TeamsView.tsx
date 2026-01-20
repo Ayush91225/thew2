@@ -17,7 +17,23 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
     const { addTeam, deleteTeam } = useAdminStore()
     const [showCreate, setShowCreate] = useState(false)
     const [showInvite, setShowInvite] = useState(false)
-    const [newTeam, setNewTeam] = useState({ name: '', description: '', members: 1, mode: 'SOLO' as 'LIVE' | 'SOLO' })
+    const [newTeam, setNewTeam] = useState({ 
+        name: '', 
+        description: '', 
+        members: [] as any[], 
+        mode: 'SOLO' as 'LIVE' | 'SOLO',
+        workspace: {
+            id: 'temp-workspace',
+            teamId: 'temp-team-id',
+            files: [],
+            activeFiles: [],
+            sharedState: { 
+                mode: 'SOLO' as 'LIVE' | 'SOLO',
+                activeMembers: []
+            }
+        },
+        lastActivity: new Date().toISOString()
+    })
     const [searchTerm, setSearchTerm] = useState('')
 
     const handleOpenIDE = (team: any) => {
@@ -29,12 +45,28 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
     const handleCreate = () => {
         if (newTeam.name && newTeam.description) {
             addTeam(newTeam)
-            setNewTeam({ name: '', description: '', members: 1, mode: 'SOLO' })
+            setNewTeam({ 
+                name: '', 
+                description: '', 
+                members: [], 
+                mode: 'SOLO',
+                workspace: {
+                    id: 'temp-workspace',
+                    teamId: 'temp-team-id',
+                    files: [],
+                    activeFiles: [],
+                    sharedState: { 
+                        mode: 'SOLO',
+                        activeMembers: []
+                    }
+                },
+                lastActivity: new Date().toISOString()
+            })
             setShowCreate(false)
         }
     }
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (id: string) => {
         deleteTeam(id)
         if (selectedTeam?.id === id) setSelectedTeam(null)
     }
@@ -109,19 +141,22 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
                             onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
                             className="bg-black/50 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-white/30 outline-none"
                         />
-                        <div className="flex items-center gap-4 bg-black/50 border border-white/10 rounded-lg p-3">
-                            <span className="text-sm text-zinc-400">Initial Members:</span>
-                            <input
-                                type="number"
-                                value={newTeam.members}
-                                onChange={(e) => setNewTeam({ ...newTeam, members: parseInt(e.target.value) || 1 })}
-                                className="bg-transparent text-white outline-none w-20"
-                                min="1"
-                            />
-                        </div>
                         <select
                             value={newTeam.mode}
-                            onChange={(e) => setNewTeam({ ...newTeam, mode: e.target.value as 'LIVE' | 'SOLO' })}
+                            onChange={(e) => {
+                                const mode = e.target.value as 'LIVE' | 'SOLO'
+                                setNewTeam({ 
+                                    ...newTeam, 
+                                    mode,
+                                    workspace: {
+                                        ...newTeam.workspace,
+                                        sharedState: { 
+                                            mode,
+                                            activeMembers: []
+                                        }
+                                    }
+                                })
+                            }}
                             className="bg-black/50 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-white/30 outline-none appearance-none cursor-pointer"
                         >
                             <option value="SOLO">SOLO Mode</option>
@@ -192,7 +227,7 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
                                         </span>
                                     </div>
                                     <div className="flex -space-x-2">
-                                        {team.members.slice(0, 3).map((member, i) => (
+                                        {team.members.slice(0, 3).map((member: any, i: number) => (
                                             <div 
                                                 key={member.id} 
                                                 className={`w-8 h-8 rounded-full border-2 border-black overflow-hidden ${
