@@ -14,9 +14,9 @@ export default function DashboardView({ teams }: DashboardViewProps) {
 
     // Calculate stats
     const totalTeams = teams.length
-    const activeTeams = teams.filter(t => t.mode === 'LIVE').length
+    const activeTeams = teams.filter(t => t.workspace?.sharedState?.mode === 'LIVE').length
     const totalMembers = teams.reduce((acc, t) => acc + (t.members?.length || 0), 0)
-    const activeSessions = teams.filter(t => t.mode === 'LIVE').length
+    const activeSessions = teams.filter(t => t.workspace?.sharedState?.mode === 'LIVE').length
 
     // Calculate activity trend (mock logic for demo)
     const activityTrend = '+12% vs last week'
@@ -170,7 +170,7 @@ export default function DashboardView({ teams }: DashboardViewProps) {
                     </h3>
 
                     <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-thin">
-                        {activities.slice(0, 10).map((activity, i) => (
+                        {activities.length > 0 ? activities.slice(0, 10).map((activity, i) => (
                             <div key={activity.id} className="flex gap-3 text-sm group">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${activity.type === 'session' ? 'bg-green-400 animate-pulse' :
@@ -190,7 +190,14 @@ export default function DashboardView({ teams }: DashboardViewProps) {
                                     </span>
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <div className="flex items-center justify-center h-32 text-zinc-500">
+                                <div className="text-center">
+                                    <i className="ph ph-clock-counter-clockwise text-2xl mb-2 opacity-50"></i>
+                                    <p className="text-sm">No recent activity</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>

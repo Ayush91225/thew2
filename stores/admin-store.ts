@@ -27,48 +27,7 @@ export const useAdminStore = create<AdminStore>()(
   persist(
     (set, get) => ({
       teams: [],
-      activities: [
-        {
-          id: 1,
-          type: 'session',
-          user: 'John Doe',
-          action: 'started live session',
-          team: 'Frontend Team',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString()
-        },
-        {
-          id: 2,
-          type: 'file',
-          user: 'Sarah Chen',
-          action: 'modified App.tsx',
-          team: 'Backend Team',
-          timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString()
-        },
-        {
-          id: 3,
-          type: 'deploy',
-          user: 'Mike Wilson',
-          action: 'deployed to production',
-          team: 'DevOps',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString()
-        },
-        {
-          id: 4,
-          type: 'member',
-          user: 'Admin',
-          action: 'invited new member',
-          team: 'Frontend Team',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 5,
-          type: 'mode',
-          user: 'Lisa Park',
-          action: 'switched to LIVE mode',
-          team: 'Design Team',
-          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-        }
-      ],
+      activities: [],
       
       refreshTeams: () => {
         const realTeams = teamService.getAllTeams()
@@ -118,6 +77,54 @@ export const useAdminStore = create<AdminStore>()(
       })),
       
       syncWithIDE: () => {
+        // Initialize default activities if empty
+        const currentState = get()
+        if (currentState.activities.length === 0) {
+          const defaultActivities = [
+            {
+              id: 1,
+              type: 'session' as const,
+              user: 'John Doe',
+              action: 'started live session',
+              team: 'Frontend Team',
+              timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString()
+            },
+            {
+              id: 2,
+              type: 'file' as const,
+              user: 'Sarah Chen',
+              action: 'modified App.tsx',
+              team: 'Backend Team',
+              timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString()
+            },
+            {
+              id: 3,
+              type: 'deploy' as const,
+              user: 'Mike Wilson',
+              action: 'deployed to production',
+              team: 'DevOps',
+              timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString()
+            },
+            {
+              id: 4,
+              type: 'member' as const,
+              user: 'Admin',
+              action: 'invited new member',
+              team: 'Frontend Team',
+              timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+            },
+            {
+              id: 5,
+              type: 'mode' as const,
+              user: 'Lisa Park',
+              action: 'switched to LIVE mode',
+              team: 'Design Team',
+              timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+            }
+          ]
+          set({ activities: defaultActivities })
+        }
+        
         // Refresh teams from service
         get().refreshTeams()
         
