@@ -1,0 +1,65 @@
+import React from 'react'
+
+interface KriyaLogoProps {
+    className?: string
+}
+
+export default function KriyaLogo({ className }: KriyaLogoProps) {
+    return (
+        <svg
+            className={className}
+            viewBox="0 0 336 313"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <g filter="url(#filter0_n_1073_15)">
+                <path d="M328.9 293.999H229.065L184.311 231.567C184.311 231.567 180.199 210.737 197.985 192.046C218.697 170.279 241.114 174.29 241.114 174.29L328.9 293.999Z" fill="url(#paint0_linear_1073_15)" />
+            </g>
+            <path d="M186.378 98.5194C189.036 126.972 186.4 243 186.4 243L110.9 247.5C110.9 247.5 112.594 163.593 106.426 97.389C100.257 31.1852 133.945 0.0417906 133.945 0.0417906L197.9 59C197.9 59 183.72 70.0664 186.378 98.5194Z" fill="url(#paint1_linear_1073_15)" />
+            <g filter="url(#filter1_d_1073_15)">
+                <path d="M198.931 208.145C225.931 164.145 279.931 164.145 279.931 164.145L323.431 100.645C323.431 100.645 212.933 66.6468 149.763 152.446C86.594 238.245 119.431 293.645 119.431 293.645H192.931C192.931 293.645 171.931 252.145 198.931 208.145Z" fill="white" />
+                <path d="M198.931 208.145C225.931 164.145 279.931 164.145 279.931 164.145L323.431 100.645C323.431 100.645 212.933 66.6468 149.763 152.446C86.594 238.245 119.431 293.645 119.431 293.645H192.931C192.931 293.645 171.931 252.145 198.931 208.145Z" stroke="url(#paint2_linear_1073_15)" />
+            </g>
+            <defs>
+                <filter id="filter0_n_1073_15" x="183.9" y="173.999" width="145" height="120" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                    <feFlood floodOpacity="0" result="BackgroundImageFix" />
+                    <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+                    <feTurbulence type="fractalNoise" baseFrequency="10 10" stitchTiles="stitch" numOctaves="3" result="noise" seed="5770" />
+                    <feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
+                    <feComponentTransfer in="alphaNoise" result="coloredNoise1">
+                        <feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 " />
+                    </feComponentTransfer>
+                    <feComposite operator="in" in2="shape" in="coloredNoise1" result="noise1Clipped" />
+                    <feFlood floodColor="rgba(139, 139, 139, 0.25)" result="color1Flood" />
+                    <feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
+                    <feMerge result="effect1_noise_1073_15">
+                        <feMergeNode in="shape" />
+                        <feMergeNode in="color1" />
+                    </feMerge>
+                </filter>
+                <filter id="filter1_d_1073_15" x="101.4" y="91.4995" width="233.828" height="220.646" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                    <feFlood floodOpacity="0" result="BackgroundImageFix" />
+                    <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
+                    <feOffset dx="1" dy="8" />
+                    <feGaussianBlur stdDeviation="5" />
+                    <feComposite in2="hardAlpha" operator="out" />
+                    <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0" />
+                    <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1073_15" />
+                    <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1073_15" result="shape" />
+                </filter>
+                <linearGradient id="paint0_linear_1073_15" x1="188.4" y1="193.5" x2="271.4" y2="294" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#999999" />
+                    <stop offset="0.605769" stopColor="white" />
+                </linearGradient>
+                <linearGradient id="paint1_linear_1073_15" x1="208.643" y1="68.8763" x2="74.743" y2="214.182" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#A0EF9A" />
+                    <stop offset="0.6875" stopColor="#325230" />
+                </linearGradient>
+                <linearGradient id="paint2_linear_1073_15" x1="298.9" y1="116" x2="131.4" y2="280.5" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="white" />
+                    <stop offset="1" stopColor="#665D5D" />
+                </linearGradient>
+            </defs>
+        </svg>
+    )
+}

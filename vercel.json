@@ -1,0 +1,32 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_COLLABORATION_WS_URL": "wss://xtc3torv9c.execute-api.ap-south-1.amazonaws.com/prod",
+    "NEXT_PUBLIC_API_URL": "https://1ngwyksutc.execute-api.ap-south-1.amazonaws.com/prod",
+    "NEXT_PUBLIC_JWT_SECRET": "kriya-collaboration-secret-2024",
+    "NEXT_PUBLIC_AWS_REGION": "ap-south-1"
+  }
+}

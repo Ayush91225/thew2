@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Cross-Tab Sync</title>
+</head>
+<body>
+    <h1>Debug Cross-Tab Sync</h1>
+    <button onclick="sendMessage()">Send Message</button>
+    <div id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log')
+        
+        function addLog(message) {
+            log.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`
+        }
+        
+        // Listen for storage events (only fires in OTHER tabs)
+        window.addEventListener('storage', (e) => {
+            addLog(`Storage event received: ${e.key} = ${e.newValue}`)
+        })
+        
+        function sendMessage() {
+            const message = `Hello from tab ${Math.random().toString(36).substr(2, 5)}`
+            localStorage.setItem('test-message', message)
+            addLog(`Sent: ${message}`)
+        }
+        
+        addLog('Ready - Open this page in another tab and click Send Message')
+    </script>
+</body>
+</html>
