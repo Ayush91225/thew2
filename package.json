@@ -28,6 +28,7 @@
     "react-split": "^2.0.14",
     "react-virtualized-auto-sizer": "^1.0.24",
     "react-window": "^1.8.8",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.3.0",
     "zustand": "^4.5.7"
   },

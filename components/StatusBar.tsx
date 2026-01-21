@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useIDEStore } from '@/stores/ide-store-new'
+import BackendStatus from './BackendStatus'
 
 export default function StatusBar() {
   const { tabs, activeTab } = useIDEStore()
@@ -49,6 +50,9 @@ export default function StatusBar() {
   return (
     <div className="h-6 bg-black border-t border-zinc-800/50 flex items-center justify-between px-3 text-xs shrink-0">
       <div className="flex items-center gap-4">
+        {/* Backend Status */}
+        <BackendStatus />
+        
         {/* Go Live Button */}
         <button
           onClick={toggleLiveServer}

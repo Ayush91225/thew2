@@ -1,0 +1,6 @@
+{
+  "documentId": "shared-document",
+  "content": "'use client'\n\nimport { useState } from 'react'\n\nexport default function layout() {\n  return (\n    <div>\n      <h1>layout</h1>\n    </div>\n  )\n} fdvfds\nchl rha h ",
+  "version": 7,
+  "updatedAt": 1768997323653
+}

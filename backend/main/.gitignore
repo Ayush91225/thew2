@@ -1,6 +1,0 @@
-.serverless/
-*.log
-node_modules/
-.env
-.env.local
-cloudformation-template-*.json

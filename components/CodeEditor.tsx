@@ -4,7 +4,7 @@ import { useEffect, useRef, useMemo, useCallback } from 'react'
 import Editor from '@monaco-editor/react'
 import { useIDEStore } from '@/stores/ide-store-new'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { collaborationService, TextOperation } from '@/lib/collaboration-service'
+import { collaborationService, TextOperation } from '@/lib/collaboration-service-real'
 import type { editor } from 'monaco-editor'
 
 // Types for better type safety
