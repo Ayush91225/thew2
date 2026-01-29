@@ -22,14 +22,14 @@ const EDITOR_OPTIONS = {
   fontFamily: 'JetBrains Mono, monospace',
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
-  wordWrap: 'on',
+  wordWrap: 'on' as const,
   tabSize: 2,
   automaticLayout: true,
   quickSuggestions: false,
   parameterHints: { enabled: false },
   folding: false,
-  lineNumbers: 'on',
-  renderWhitespace: 'none'
+  lineNumbers: 'on' as const,
+  renderWhitespace: 'none' as const
 }
 
 const CodeEditor = memo(() => {

@@ -107,7 +107,7 @@ export default function LandingPage() {
                                     &nbsp;&nbsp;<span className="text-purple-400">const</span> [<span className="text-orange-300">count</span>, <span className="text-orange-300">setCount</span>] = <span className="text-blue-400">useState</span>(0)<br />
                                     &nbsp;&nbsp;<span className="text-zinc-500">// Welcome to KRIYA IDE</span><br />
                                     &nbsp;&nbsp;<span className="text-purple-400">return</span> (<br />
-                                    &nbsp;&nbsp;&nbsp;&nbsp;&lt;<span className="text-red-400">div</span> className=<span className="text-green-300">"ide-container"</span>&gt;<br />
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&lt;<span className="text-red-400">div</span> className=<span className="text-green-300">&quot;ide-container&quot;</span>&gt;<br />
                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span className="text-red-400">h1</span>&gt;Hello World&lt;/<span className="text-red-400">h1</span>&gt;<br />
                                     &nbsp;&nbsp;&nbsp;&nbsp;&lt;/<span className="text-red-400">div</span>&gt;<br />
                                     &nbsp;&nbsp;)<br />
@@ -133,7 +133,7 @@ export default function LandingPage() {
                         <FeatureCard
                             icon={Rocket}
                             title="Instant Dev Environments"
-                            description="Spin up a fresh container in milliseconds. No more 'works on my machine' issues."
+                            description="Spin up a fresh container in milliseconds. No more &apos;works on my machine&apos; issues."
                             delay={0.1}
                         />
                         <FeatureCard
