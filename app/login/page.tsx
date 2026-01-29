@@ -57,7 +57,7 @@ export default function LoginPage() {
                 } else if (data.user.role === 'employee') {
                     router.push('/employee')
                 } else {
-                    router.push('/')
+                    router.push('/ide')
                 }
             } else {
                 setError('Login failed')

@@ -14,7 +14,6 @@ body {
   color: #a3a3a3;
   font-family: 'Inter', -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
 }
 
 @layer components {

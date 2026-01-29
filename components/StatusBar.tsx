@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useIDEStore } from '@/stores/ide-store-new'
+import { useIDEStore } from '@/stores/ide-store-fast'
 import BackendStatus from './BackendStatus'
 
 export default function StatusBar() {

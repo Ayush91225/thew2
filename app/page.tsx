@@ -1,270 +1,201 @@
 'use client'
 
-import { useEffect, lazy, Suspense, useState } from 'react'
-import ErrorBoundary from '@/components/ErrorBoundary'
-import LoadingScreen from '@/components/LoadingScreen'
-import { useIDEStore } from '@/stores/ide-store-new'
-import { useIDEHotkeys } from '@/hooks/useIDEHotkeys'
-import AuthGuard from '@/components/auth/AuthGuard'
+import { motion } from 'framer-motion'
+import Navbar from '@/components/marketing/Navbar'
+import Footer from '@/components/marketing/Footer'
+import { Rocket, Code, Users, Lightning, Globe, ShieldCheck, IconWeight } from 'phosphor-react'
+import Link from 'next/link'
+import KriyaLogo from '@/components/logo/KriyaLogo'
 
-// Import core components directly (no lazy loading)
-import TopBar from '@/components/TopBar'
-import Sidebar from '@/components/Sidebar'
-import CodeEditor from '@/components/CodeEditor'
-import FileTabs from '@/components/FileTabs'
-import StatusBar from '@/components/StatusBar'
+interface FeatureCardProps {
+    icon: React.ComponentType<{ weight?: IconWeight; className?: string }>
+    title: string
+    description: string
+    delay: number
+}
 
-// Lazy load only heavy/optional components
-const CommandPalette = lazy(() => import('@/components/CommandPalette'))
-const AIAssistant = lazy(() => import('@/components/AIAssistant'))
-const YamlEditor = lazy(() => import('@/components/YamlEditor'))
-const AIChatEnhanced = lazy(() => import('@/components/AIChatEnhanced'))
-const GlobalSearch = lazy(() => import('@/components/GlobalSearch'))
-const Terminal = lazy(() => import('@/components/Terminal'))
-const Toast = lazy(() => import('@/components/Toast'))
-const DebugPanel = lazy(() => import('@/components/DebugPanel'))
-
-// Lazy load view components
-const PerformanceMonitor = lazy(() => import('@/components/PerformanceMonitor'))
-const DeploymentDashboard = lazy(() => import('@/components/DeploymentDashboard'))
-const AnalyticsView = lazy(() => import('@/components/AnalyticsView'))
-const DatabaseView = lazy(() => import('@/components/DatabaseView'))
-const LogsView = lazy(() => import('@/components/LogsView'))
-const SettingsView = lazy(() => import('@/components/SettingsView'))
-
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center p-2">
-    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-  </div>
+const FeatureCard = ({ icon: Icon, title, description, delay }: FeatureCardProps) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay, duration: 0.5 }}
+        className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group"
+    >
+        <div className="w-12 h-12 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <Icon weight="duotone" className="w-6 h-6" />
+        </div>
+        <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+        <p className="text-zinc-400 leading-relaxed">{description}</p>
+    </motion.div>
 )
 
-export default function Home() {
-  const { view, aiChatOpen, loadFromURL } = useIDEStore()
-  const [teamContext, setTeamContext] = useState<any>(null)
-  useIDEHotkeys()
+export default function LandingPage() {
+    return (
+        <div className="min-h-screen bg-black text-white selection:bg-blue-500/30 overflow-x-hidden font-display">
+            <Navbar />
 
-  useEffect(() => {
-    // Load team context and workspace from URL or localStorage
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const teamId = params.get('team')
-      
-      if (teamId) {
-        const storedTeam = localStorage.getItem('activeTeam')
-        if (storedTeam) {
-          const team = JSON.parse(storedTeam)
-          setTeamContext(team)
-          
-          // Load team workspace into IDE
-          const store = useIDEStore.getState()
-          
-          // Convert team files to IDE tabs
-          const teamTabs = team.workspace?.files?.map((file: any) => ({
-            id: file.id,
-            name: file.name,
-            path: file.path,
-            content: file.content,
-            language: getLanguageFromPath(file.path),
-            isDirty: false,
-            icon: getIconFromPath(file.path)
-          })) || []
-          
-          if (teamTabs.length > 0) {
-            // Add each tab individually
-            teamTabs.forEach((tab: any) => store.addTab(tab))
-            store.setActiveTab(teamTabs[0].id)
-          }
-        }
-      }
-    }
-  }, [])
-  
-  const getLanguageFromPath = (path: string) => {
-    const ext = path.split('.').pop()?.toLowerCase()
-    const langMap: Record<string, string> = {
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'js': 'javascript', 
-      'jsx': 'javascript',
-      'py': 'python',
-      'java': 'java',
-      'css': 'css',
-      'html': 'html',
-      'json': 'json',
-      'md': 'markdown'
-    }
-    return langMap[ext || ''] || 'plaintext'
-  }
-  
-  const getIconFromPath = (path: string) => {
-    const ext = path.split('.').pop()?.toLowerCase()
-    const iconMap: Record<string, string> = {
-      'ts': 'ph ph-file-ts',
-      'tsx': 'ph ph-file-tsx', 
-      'js': 'ph ph-file-js',
-      'jsx': 'ph ph-file-jsx',
-      'py': 'ph ph-file-py',
-      'java': 'ph ph-coffee',
-      'css': 'ph ph-file-css',
-      'html': 'ph ph-file-html',
-      'json': 'ph ph-brackets-curly',
-      'md': 'ph ph-file-text'
-    }
-    return iconMap[ext || ''] || 'ph ph-file'
-  }
+            {/* Hero Section */}
+            <section className="relative pt-32 pb-20 overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-black to-black" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
 
-  useEffect(() => {
-    // Load state from URL parameters only on client side
-    if (typeof window !== 'undefined') {
-      // Delay to ensure hydration is complete and prevent 500 errors
-      const timer = setTimeout(() => {
-        try {
-          loadFromURL()
-        } catch (error) {
-          console.warn('Failed to load from URL:', error)
-        }
-      }, 200)
+                <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <span className="inline-block py-1 px-3 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium mb-6">
+                            v1.0 is now live 🚀
+                        </span>
+                        <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70">
+                            Code from anywhere,<br />
+                            <span className="text-blue-400">deploy everywhere.</span>
+                        </h1>
+                        <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10">
+                            KRIYA is the advanced cloud IDE that empowers teams to collaborate in real-time.
+                            Zero setup, instant environments, and AI-powered development.
+                        </p>
 
-      return () => clearTimeout(timer)
-    }
-  }, [])
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <Link
+                                href="/ide"
+                                className="w-full sm:w-auto px-8 py-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all hover:scale-105 shadow-lg shadow-blue-900/40"
+                            >
+                                Start Coding for Free
+                            </Link>
+                            <Link
+                                href="/docs"
+                                className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/5 hover:bg-white/10 text-white font-semibold border border-white/10 transition-all hover:scale-105"
+                            >
+                                Read Documentation
+                            </Link>
+                        </div>
+                    </motion.div>
 
-  useEffect(() => {
-    // Disable browser right-click context menu
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault()
-      // TODO: Show custom context menu
-    }
+                    {/* Hero Visual/Screenshot */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.8 }}
+                        className="mt-20 relative rounded-xl border border-white/10 shadow-2xl shadow-blue-900/20 overflow-hidden"
+                    >
+                        <div className="absolute inset-0 bg-blue-500/5 backdrop-blur-sm z-10 flex items-center justify-center group cursor-pointer">
+                            <div className="px-6 py-3 rounded-full bg-black/80 border border-white/20 text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                                Launch Interactive Demo
+                            </div>
+                        </div>
+                        {/* Placeholder for IDE Screenshot - CSS Grid Pattern for now */}
+                        <div className="aspect-[16/9] bg-[#0A0A0A] p-4 font-mono text-sm text-left overflow-hidden">
+                            <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
+                                <div className="w-3 h-3 rounded-full bg-red-500" />
+                                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                                <div className="w-3 h-3 rounded-full bg-green-500" />
+                            </div>
+                            <div className="grid grid-cols-12 gap-4 h-full">
+                                <div className="hidden md:block col-span-2 border-r border-white/5 text-zinc-500 p-2">
+                                    <div>src</div>
+                                    <div className="pl-2">components</div>
+                                    <div className="pl-2">utils</div>
+                                    <div>package.json</div>
+                                </div>
+                                <div className="col-span-12 md:col-span-10 text-zinc-300">
+                                    <span className="text-purple-400">import</span> <span className="text-yellow-200">{`{ useState }`}</span> <span className="text-purple-400">from</span> <span className="text-green-300">'react'</span><br />
+                                    <br />
+                                    <span className="text-purple-400">export default function</span> <span className="text-blue-400">App</span>() {`{`}<br />
+                                    &nbsp;&nbsp;<span className="text-purple-400">const</span> [<span className="text-orange-300">count</span>, <span className="text-orange-300">setCount</span>] = <span className="text-blue-400">useState</span>(0)<br />
+                                    &nbsp;&nbsp;<span className="text-zinc-500">// Welcome to KRIYA IDE</span><br />
+                                    &nbsp;&nbsp;<span className="text-purple-400">return</span> (<br />
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&lt;<span className="text-red-400">div</span> className=<span className="text-green-300">"ide-container"</span>&gt;<br />
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span className="text-red-400">h1</span>&gt;Hello World&lt;/<span className="text-red-400">h1</span>&gt;<br />
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&lt;/<span className="text-red-400">div</span>&gt;<br />
+                                    &nbsp;&nbsp;)<br />
+                                    {`}`}
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
 
-    document.addEventListener('contextmenu', handleContextMenu)
-    return () => document.removeEventListener('contextmenu', handleContextMenu)
-  }, [])
+            {/* Features Section */}
+            <section className="py-24 bg-zinc-900/50">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl md:text-5xl font-bold mb-4">Everything you need to ship</h2>
+                        <p className="text-zinc-400 max-w-2xl mx-auto">
+                            Built for speed, designed for collaboration. KRIYA brings the power of a full development environment to your browser.
+                        </p>
+                    </div>
 
-  const renderMainContent = () => {
-    switch (view) {
-      case 'deploy':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <DeploymentDashboard />
-          </Suspense>
-        )
-      case 'monitoring':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <PerformanceMonitor />
-          </Suspense>
-        )
-      case 'analytics':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <AnalyticsView />
-          </Suspense>
-        )
-      case 'db':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <DatabaseView />
-          </Suspense>
-        )
-      case 'logs':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <LogsView />
-          </Suspense>
-        )
-      case 'settings':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <SettingsView />
-          </Suspense>
-        )
-      default:
-        return (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <FileTabs />
-            <CodeEditor />
-          </div>
-        )
-    }
-  }
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <FeatureCard
+                            icon={Rocket}
+                            title="Instant Dev Environments"
+                            description="Spin up a fresh container in milliseconds. No more 'works on my machine' issues."
+                            delay={0.1}
+                        />
+                        <FeatureCard
+                            icon={Users}
+                            title="Real-time Collaboration"
+                            description="Code with your team in real-time. See cursors, share terminals, and debug together."
+                            delay={0.2}
+                        />
+                        <FeatureCard
+                            icon={Lightning}
+                            title="AI Powered"
+                            description="Built-in AI assistant to help you write, debug, and refactor code faster than ever."
+                            delay={0.3}
+                        />
+                        <FeatureCard
+                            icon={Globe}
+                            title="Global Edge Deployment"
+                            description="Deploy your applications to the edge with a single click. Global scaling included."
+                            delay={0.4}
+                        />
+                        <FeatureCard
+                            icon={Code}
+                            title="Polyglot Support"
+                            description="Support for TypeScript, Python, Go, Rust, and more out of the box."
+                            delay={0.5}
+                        />
+                        <FeatureCard
+                            icon={ShieldCheck}
+                            title="Enterprise Security"
+                            description="SOC2 compliant, role-based access control, and secure isolated containers."
+                            delay={0.6}
+                        />
+                    </div>
+                </div>
+            </section>
 
-  return (
-    <ErrorBoundary>
-      {/* Mobile restriction */}
-      <div className="block lg:hidden h-screen bg-black flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="font-mono text-white text-lg mb-4">
-            PLEASE VISIT WITH DESKTOP
-          </div>
-          <div className="font-mono text-zinc-400 text-sm">
-            This IDE requires a larger screen
-          </div>
+            {/* CTA Section */}
+            <section className="py-24 relative overflow-hidden">
+                <div className="absolute inset-0 bg-blue-600/10" />
+                <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
+                    <h2 className="text-4xl font-bold mb-6">Ready to transform your workflow?</h2>
+                    <p className="text-lg text-zinc-300 mb-8">
+                        Join thousands of developers building the future with KRIYA.
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <Link
+                            href="/ide"
+                            className="px-8 py-3 rounded-full bg-white text-black font-bold hover:bg-zinc-200 transition-colors"
+                        >
+                            Get Started Now
+                        </Link>
+                        <Link
+                            href="/contact"
+                            className="px-8 py-3 rounded-full bg-transparent border border-white/20 hover:bg-white/10 transition-colors"
+                        >
+                            Contact Sales
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            <Footer />
         </div>
-      </div>
-
-      <AuthGuard>
-        {/* Desktop IDE */}
-        <div className="hidden lg:flex flex-col h-screen">
-          {/* Team Context Banner */}
-          {teamContext && (
-            <div className="bg-blue-600/20 border-b border-blue-500/30 px-4 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <i className="ph ph-users text-blue-400"></i>
-                <span className="text-blue-100 font-medium">Team: {teamContext.name}</span>
-                <span className="text-blue-300 text-sm">({teamContext.workspace?.sharedState?.mode || 'SOLO'} Mode)</span>
-                <span className="text-blue-400 text-xs">{teamContext.description}</span>
-              </div>
-              <button
-                onClick={() => setTeamContext(null)}
-                className="text-blue-300 hover:text-white transition"
-                title="Exit team view"
-              >
-                <i className="ph ph-x"></i>
-              </button>
-            </div>
-          )}
-          
-          {/* Core IDE Components - No Suspense */}
-          <TopBar />
-          
-          <div className="flex flex-1 overflow-hidden">
-            <Sidebar />
-            <div className="flex flex-1 overflow-hidden">
-              {renderMainContent()}
-            </div>
-            {aiChatOpen && (
-              <Suspense fallback={<LoadingSpinner />}>
-                <AIChatEnhanced />
-              </Suspense>
-            )}
-          </div>
-          
-          <StatusBar />
-          
-          {/* Optional Components - With Suspense */}
-          <Suspense fallback={null}>
-            <CommandPalette />
-          </Suspense>
-          <Suspense fallback={null}>
-            <AIAssistant />
-          </Suspense>
-          <Suspense fallback={null}>
-            <YamlEditor />
-          </Suspense>
-          <Suspense fallback={null}>
-            <GlobalSearch />
-          </Suspense>
-          <Suspense fallback={null}>
-            <Terminal />
-          </Suspense>
-          <Suspense fallback={null}>
-            <Toast />
-          </Suspense>
-          <Suspense fallback={null}>
-            <DebugPanel />
-          </Suspense>
-        </div>
-      </AuthGuard>
-    </ErrorBoundary>
-  )
+    )
 }
