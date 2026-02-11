@@ -76,19 +76,24 @@ export const useIDEStore = create<FastIDEStore>()(
     
     addTab: (file) => set((state) => {
       const exists = state.tabs.find(t => t.path === file.path)
-      if (exists) return { activeTab: exists.id }
-      return { tabs: [...state.tabs, file], activeTab: file.id }
+      if (exists) {
+        return { activeTab: exists.id }
+      }
+      const newTabs = [...state.tabs, file]
+      return { tabs: newTabs, activeTab: file.id }
     }),
     
     closeTab: (tabId) => set((state) => {
       const newTabs = state.tabs.filter(t => t.id !== tabId)
       let newActiveTab = state.activeTab
       
-      if (state.activeTab === tabId && newTabs.length > 0) {
-        const idx = state.tabs.findIndex(t => t.id === tabId)
-        newActiveTab = newTabs[Math.min(idx, newTabs.length - 1)].id
-      } else if (newTabs.length === 0) {
-        newActiveTab = null
+      if (state.activeTab === tabId) {
+        if (newTabs.length > 0) {
+          const idx = state.tabs.findIndex(t => t.id === tabId)
+          newActiveTab = newTabs[Math.min(idx, newTabs.length - 1)]?.id || null
+        } else {
+          newActiveTab = null
+        }
       }
       
       return { tabs: newTabs, activeTab: newActiveTab }

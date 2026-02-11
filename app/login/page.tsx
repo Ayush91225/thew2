@@ -1,202 +1,174 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import KriyaLogo from '../../components/logo/KriyaLogo'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useIDEStore } from '@/stores/ide-store-new'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, UserRole, MOCK_USERS } from '../../types/auth'
-import { useIDEStore } from '../../stores/ide-store-new'
+import Logo from '@/components/Logo'
 
 export default function LoginPage() {
-    const router = useRouter()
-    const login = useIDEStore((state) => state.login)
-    const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState('')
-    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const router = useRouter()
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'employee' | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const { login } = useIDEStore()
 
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            setMousePosition({
-                x: e.clientX,
-                y: e.clientY
-            })
-        }
-        window.addEventListener('mousemove', handleMouseMove)
-        return () => window.removeEventListener('mousemove', handleMouseMove)
-    }, [])
-
-    const handleLogin = async (role: UserRole) => {
-        setIsLoading(true)
-        setError('')
-        setSelectedRole(role)
-
-        try {
-            const mockUser = MOCK_USERS[role]
-            // Simulate network delay for effect
-            await new Promise(resolve => setTimeout(resolve, 800))
-
-            const password = role === 'admin' ? 'admin123' :
-                role === 'project_head' ? 'head123' : 'emp123'
-
-            const res = await fetch('/api/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: mockUser.email,
-                    password: password
-                })
-            })
-
-            const data = await res.json()
-
-            if (data.success && data.user) {
-                login(data.user)
-                if (data.user.role === 'admin') {
-                    router.push('/admin')
-                } else if (data.user.role === 'employee') {
-                    router.push('/employee')
-                } else {
-                    router.push('/ide')
-                }
-            } else {
-                setError('Login failed')
-                setIsLoading(false)
-                setSelectedRole(null)
-            }
-        } catch (err) {
-            setError('An error occurred during login')
-            setIsLoading(false)
-            setSelectedRole(null)
-        }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (email && password && selectedRole) {
+      login({
+        id: Date.now().toString(),
+        email,
+        name: email.split('@')[0],
+        avatar: '/avatar.png',
+        role: selectedRole,
+        permissions: selectedRole === 'admin' ? ['all'] : ['read', 'write']
+      })
+      router.push(selectedRole === 'admin' ? '/admin' : '/employee')
     }
+  }
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.2
-            }
-        }
-    }
+  return (
+    <div className="h-screen bg-black flex items-center justify-center relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[40%] h-[40%] bg-blue-900/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[120px]" />
+      </div>
 
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: 'spring', stiffness: 300, damping: 24 }
-        }
-    }
-
-    return (
-        <div className="min-h-screen bg-black text-white flex items-center justify-center p-4 overflow-hidden relative selection:bg-blue-500/30">
-            {/* Dynamic Background */}
-            <div className="absolute inset-0 z-0">
-                <div
-                    className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]"
-                    style={{
-                        transform: `translate(${mousePosition.x * 0.02}px, ${mousePosition.y * 0.02}px)`
-                    }}
-                />
-                <div
-                    className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px]"
-                    style={{
-                        transform: `translate(${-mousePosition.x * 0.02}px, ${-mousePosition.y * 0.02}px)`
-                    }}
-                />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Logo className="w-12 h-12" />
+              <h1 className="text-3xl font-bold text-white">KRIYA</h1>
             </div>
+            <p className="text-sm text-zinc-400">Enterprise Cloud Development Environment</p>
+          </div>
 
-            {/* Grid Pattern Overlay */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-0 pointer-events-none"></div>
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none z-0"></div>
-
-            <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="relative z-10 w-full max-w-md"
-            >
-                <div className="glass border-[0.5px] border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-xl bg-black/40">
-                    <motion.div variants={itemVariants} className="text-center mb-10">
-                        <KriyaLogo className="w-16 h-16 mx-auto mb-6 shadow-lg shadow-white/5" />
-                        <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
-                            Welcome Back
-                        </h1>
-                        <p className="text-zinc-400 text-sm">Select your identity to access the workspace</p>
-                    </motion.div>
-
-                    <div className="space-y-3">
-                        {(Object.entries(MOCK_USERS) as [UserRole, User][]).map(([role, user]) => (
-                            <motion.button
-                                key={role}
-                                variants={itemVariants}
-                                whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.03)' }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => handleLogin(role)}
-                                disabled={isLoading}
-                                className={`w-full p-3 rounded-xl border transition-all duration-300 flex items-center gap-4 group relative overflow-hidden
-                                    ${isLoading && selectedRole !== role ? 'opacity-30 blur-sm' : ''}
-                                    ${selectedRole === role
-                                        ? 'border-blue-500/50 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]'
-                                        : 'border-white/5 bg-zinc-900/50 hover:border-white/10'
-                                    }
-                                `}
-                            >
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors duration-300
-                                    ${selectedRole === role ? 'border-blue-500/30' : 'border-white/10 bg-zinc-800'}
-                                `}>
-                                    <img src={user.avatar} alt={role} className="w-full h-full rounded-full object-cover" />
-                                </div>
-                                <div className="flex-1 text-left">
-                                    <div className={`font-medium text-sm transition-colors ${selectedRole === role ? 'text-blue-400' : 'text-zinc-200 group-hover:text-white'}`}>
-                                        {user.name}
-                                    </div>
-                                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
-                                        {role.replace('_', ' ')}
-                                    </div>
-                                </div>
-
-                                {selectedRole === role && isLoading ? (
-                                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                    <i className="ph ph-arrow-right text-zinc-600 group-hover:text-white transition-colors duration-300 text-sm" />
-                                )}
-                            </motion.button>
-                        ))}
+          <AnimatePresence mode="wait">
+            {!selectedRole ? (
+              <motion.div
+                key="role-selection"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-3"
+              >
+                <p className="text-zinc-400 text-sm mb-6">Select your role to continue</p>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedRole('admin')}
+                  className="w-full p-5 bg-gradient-to-br from-blue-600/10 to-blue-600/5 hover:from-blue-600/20 hover:to-blue-600/10 border border-blue-500/20 hover:border-blue-500/40 rounded-xl transition-all duration-200 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-blue-600/20 flex items-center justify-center group-hover:bg-blue-600/30 transition-colors">
+                      <i className="ph ph-shield-check text-2xl text-blue-400"></i>
                     </div>
+                    <div className="text-left flex-1">
+                      <h3 className="text-base font-semibold text-white">Administrator</h3>
+                      <p className="text-xs text-zinc-400">Full system access and management</p>
+                    </div>
+                    <i className="ph ph-caret-right text-zinc-600 group-hover:text-blue-400 transition-colors"></i>
+                  </div>
+                </motion.button>
 
-                    <AnimatePresence>
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs text-center font-medium"
-                            >
-                                {error}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    <motion.div variants={itemVariants} className="mt-8 pt-6 border-t border-dashed border-white/10 text-center">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">System Online</span>
-                        </div>
-                        <p className="text-[10px] text-zinc-600">Enterprise Guard v2.0.0 • Secure Connection</p>
-                    </motion.div>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedRole('employee')}
+                  className="w-full p-5 bg-gradient-to-br from-purple-600/10 to-purple-600/5 hover:from-purple-600/20 hover:to-purple-600/10 border border-purple-500/20 hover:border-purple-500/40 rounded-xl transition-all duration-200 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-purple-600/20 flex items-center justify-center group-hover:bg-purple-600/30 transition-colors">
+                      <i className="ph ph-user-circle text-2xl text-purple-400"></i>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h3 className="text-base font-semibold text-white">Employee</h3>
+                      <p className="text-xs text-zinc-400">Access workspace and projects</p>
+                    </div>
+                    <i className="ph ph-caret-right text-zinc-600 group-hover:text-purple-400 transition-colors"></i>
+                  </div>
+                </motion.button>
+              </motion.div>
+            ) : (
+              <motion.form
+                key="login-form"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                onSubmit={handleSubmit}
+                className="space-y-4"
+              >
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${selectedRole === 'admin' ? 'bg-blue-600/20' : 'bg-purple-600/20'} flex items-center justify-center`}>
+                      <i className={`ph ${selectedRole === 'admin' ? 'ph-shield-check text-blue-400' : 'ph-user-circle text-purple-400'} text-xl`}></i>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider">Signing in as</p>
+                      <p className="text-sm font-semibold text-white capitalize">{selectedRole}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole(null)}
+                    className="text-xs text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Change
+                  </button>
                 </div>
 
-                <motion.div
-                    variants={itemVariants}
-                    className="text-center mt-6 text-zinc-600 text-xs hover:text-zinc-500 transition-colors cursor-pointer"
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-2">Password</label>
+                  <input
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                    required
+                  />
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  type="submit"
+                  className={`w-full py-3 mt-6 ${selectedRole === 'admin' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'} text-white font-semibold rounded-lg transition-colors shadow-lg`}
                 >
-                    Need help? Contact support
-                </motion.div>
-            </motion.div>
+                  Sign In
+                </motion.button>
+              </motion.form>
+            )}
+          </AnimatePresence>
         </div>
-    )
+
+        {/* Footer */}
+        <p className="text-center text-xs text-zinc-600 mt-6">© 2024 KRIYA. All rights reserved.</p>
+      </motion.div>
+    </div>
+  )
 }

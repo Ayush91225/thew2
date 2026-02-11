@@ -39,7 +39,7 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
     const handleOpenIDE = (team: any) => {
         // Store team context and navigate to IDE
         localStorage.setItem('activeTeam', JSON.stringify(team))
-        router.push(`/?team=${team.id}&mode=${team.mode}`)
+        router.push(`/ide?team=${team.id}&mode=${team.mode}`)
     }
 
     const handleCreate = () => {

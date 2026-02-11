@@ -15,9 +15,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
   )
 })
 
-// Simplified editor options for faster loading
 const EDITOR_OPTIONS = {
-  theme: 'vs-dark',
   fontSize: 14,
   fontFamily: 'JetBrains Mono, monospace',
   minimap: { enabled: false },
@@ -25,9 +23,6 @@ const EDITOR_OPTIONS = {
   wordWrap: 'on' as const,
   tabSize: 2,
   automaticLayout: true,
-  quickSuggestions: false,
-  parameterHints: { enabled: false },
-  folding: false,
   lineNumbers: 'on' as const,
   renderWhitespace: 'none' as const
 }
@@ -41,8 +36,36 @@ const CodeEditor = memo(() => {
     [tabs, activeTab]
   )
 
-  const handleEditorDidMount = useCallback((editor: any) => {
+  const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
     editorRef.current = editor
+    
+    // Define custom dark theme to match app
+    monaco.editor.defineTheme('kriya-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: '', foreground: 'e4e4e7' }, // zinc-200
+        { token: 'comment', foreground: '71717a', fontStyle: 'italic' }, // zinc-500
+        { token: 'keyword', foreground: '60a5fa' }, // blue-400
+        { token: 'string', foreground: '34d399' }, // emerald-400
+        { token: 'number', foreground: 'f59e0b' }, // amber-500
+        { token: 'type', foreground: 'a78bfa' }, // violet-400
+        { token: 'function', foreground: 'fbbf24' }, // amber-400
+      ],
+      colors: {
+        'editor.background': '#000000', // Pure black like app
+        'editor.foreground': '#e4e4e7', // zinc-200
+        'editorLineNumber.foreground': '#52525b', // zinc-600
+        'editorLineNumber.activeForeground': '#a1a1aa', // zinc-400
+        'editor.selectionBackground': '#1e40af40', // blue-700 with opacity
+        'editor.lineHighlightBackground': '#18181b', // zinc-900
+        'editorCursor.foreground': '#60a5fa', // blue-400
+        'editorWhitespace.foreground': '#27272a', // zinc-800
+      }
+    })
+    
+    // Apply the custom theme
+    monaco.editor.setTheme('kriya-dark')
   }, [])
 
   const handleEditorChange = useCallback((value: string | undefined) => {

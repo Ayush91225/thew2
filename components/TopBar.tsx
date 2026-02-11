@@ -3,7 +3,8 @@
 import { useIDEStore } from '@/stores/ide-store-new'
 import { collaborationService } from '@/lib/collaboration-service'
 import { useState, useEffect, useRef } from 'react'
-import KriyaLogo from './logo/KriyaLogo'
+import Logo from '@/components/Logo'
+
 
 export default function TopBar() {
   const {
@@ -145,7 +146,7 @@ export default function TopBar() {
     <header className="h-12 border-b-line bg-black flex items-center justify-between px-6 shrink-0">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3">
-          <KriyaLogo className="w-8 h-8" />
+          <Logo className="w-8 h-8" />
           <span className="font-bold text-white text-sm">KRIYA</span>
         </div>
 
@@ -269,6 +270,16 @@ export default function TopBar() {
             title="Admin Dashboard"
           >
             <i className="ph ph-gauge text-zinc-400 group-hover:text-white"></i>
+          </a>
+
+          {/* EMPLOYEE PORTAL BUTTON */}
+          <a
+            href="/employee"
+            target="_blank"
+            className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center transition group"
+            title="Employee Portal"
+          >
+            <i className="ph ph-briefcase text-zinc-400 group-hover:text-white"></i>
           </a>
 
           {/* TERMINAL BUTTON */}

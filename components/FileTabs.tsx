@@ -1,6 +1,6 @@
 'use client'
 
-import { useIDEStore } from '@/stores/ide-store-new'
+import { useIDEStore } from '@/stores/ide-store-fast'
 
 const getFileIcon = (filename: string) => {
   const ext = filename.split('.').pop()?.toLowerCase()

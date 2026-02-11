@@ -1,6 +1,6 @@
 'use client'
 
-import { useIDEStore } from '@/stores/ide-store-new'
+import { useIDEStore } from '@/stores/ide-store-fast'
 import { FileTreeManager, FileTreeNode } from '@/lib/file-tree'
 import { DebugPanel, ExtensionsPanel, DatabasePanel, APIPanel } from './SidebarPanels'
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -29,21 +29,35 @@ export default function Sidebar() {
     tabs,
     activeTab,
     addTab,
-    gitBranch,
-    gitStatus,
-    uncommittedChanges,
-    yamlFiles,
-    activeYamlFile,
-    addYamlFile,
-    deleteYamlFile,
-    setActiveYamlFile,
-    validateYaml,
-    runYaml,
-    uploadYamlFile,
-    setYamlModal
+    closeTab
   } = useIDEStore()
   
-  const get = useIDEStore.getState
+    // Generate sample content based on file type
+    const getFileContent = (filename: string): string => {
+      const ext = filename.split('.').pop()?.toLowerCase()
+      const componentName = filename.replace(/\.(tsx|jsx)$/, '').replace(/[^a-zA-Z0-9]/g, '')
+      const contentMap: Record<string, string> = {
+        'tsx': `'use client'\n\nimport { useState } from 'react'\n\nexport default function ${componentName}() {\n  return (\n    <div>\n      <h1>${componentName}</h1>\n    </div>\n  )\n}`,
+        'jsx': `'use client'\n\nimport { useState } from 'react'\n\nexport default function ${componentName}() {\n  return (\n    <div>\n      <h1>${componentName}</h1>\n    </div>\n  )\n}`,
+        'ts': `// ${filename}\n\nexport const example = () => {\n  console.log('Hello from ${filename}')\n}`,
+        'js': `// ${filename}\n\nfunction example() {\n  console.log('Hello from ${filename}')\n}\n\nexport default example`,
+        'css': `/* ${filename} */\n\n.container {\n  padding: 20px;\n  margin: 0 auto;\n}`,
+        'json': `{\n  "name": "example",\n  "version": "1.0.0"\n}`,
+        'md': `# ${filename.replace('.md', '')}\n\nContent here...`,
+        'html': `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${filename.replace('.html', '')}</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n</body>\n</html>`,
+        'py': `# ${filename}\n\ndef main():\n    print("Hello from ${filename}")\n\nif __name__ == "__main__":\n    main()`
+      }
+      return contentMap[ext || ''] || `// ${filename}\n\n`
+    }
+
+    const getLanguage = (filename: string): string => {
+      const ext = filename.split('.').pop()?.toLowerCase()
+      const langMap: Record<string, string> = {
+        'tsx': 'typescript', 'ts': 'typescript', 'js': 'javascript', 'jsx': 'javascript',
+        'css': 'css', 'json': 'json', 'md': 'markdown'
+      }
+      return langMap[ext || ''] || 'plaintext'
+    }
   const [files, setFiles] = useState<FileTreeNode[]>([])
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [creatingFile, setCreatingFile] = useState<{ parentId?: string; type: 'file' | 'directory' } | null>(null)
@@ -167,39 +181,16 @@ export default function Sidebar() {
       return
     }
 
+    console.log('Opening file:', node)
     const existingTab = tabs.find(tab => tab.path === node.path)
     if (existingTab) {
+      console.log('File already open, switching to tab:', existingTab.id)
+      const { setActiveTab } = useIDEStore.getState()
+      setActiveTab(existingTab.id)
       return
     }
 
-    // Generate sample content based on file type
-    const getFileContent = (filename: string): string => {
-      const ext = filename.split('.').pop()?.toLowerCase()
-      const componentName = filename.replace(/\.(tsx|jsx)$/, '').replace(/[^a-zA-Z0-9]/g, '')
-      const contentMap: Record<string, string> = {
-        'tsx': `'use client'\n\nimport { useState } from 'react'\n\nexport default function ${componentName}() {\n  return (\n    <div>\n      <h1>${componentName}</h1>\n    </div>\n  )\n}`,
-        'jsx': `'use client'\n\nimport { useState } from 'react'\n\nexport default function ${componentName}() {\n  return (\n    <div>\n      <h1>${componentName}</h1>\n    </div>\n  )\n}`,
-        'ts': `// ${filename}\n\nexport const example = () => {\n  console.log('Hello from ${filename}')\n}`,
-        'js': `// ${filename}\n\nfunction example() {\n  console.log('Hello from ${filename}')\n}\n\nexport default example`,
-        'css': `/* ${filename} */\n\n.container {\n  padding: 20px;\n  margin: 0 auto;\n}`,
-        'json': `{\n  "name": "example",\n  "version": "1.0.0"\n}`,
-        'md': `# ${filename.replace('.md', '')}\n\nContent here...`,
-        'html': `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${filename.replace('.html', '')}</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n</body>\n</html>`,
-        'py': `# ${filename}\n\ndef main():\n    print("Hello from ${filename}")\n\nif __name__ == "__main__":\n    main()`
-      }
-      return contentMap[ext || ''] || `// ${filename}\n\n`
-    }
-
-    const getLanguage = (filename: string): string => {
-      const ext = filename.split('.').pop()?.toLowerCase()
-      const langMap: Record<string, string> = {
-        'tsx': 'typescript', 'ts': 'typescript', 'js': 'javascript', 'jsx': 'javascript',
-        'css': 'css', 'json': 'json', 'md': 'markdown'
-      }
-      return langMap[ext || ''] || 'plaintext'
-    }
-
-    addTab({
+    const fileTab = {
       id: node.id,
       name: node.name,
       path: node.path,
@@ -207,7 +198,10 @@ export default function Sidebar() {
       language: getLanguage(node.name),
       isDirty: false,
       icon: fileTreeManager.getFileIcon(node.name)
-    })
+    }
+    
+    console.log('Adding new tab:', fileTab)
+    addTab(fileTab)
   }
 
   const handleCreateFile = (fileName: string) => {
@@ -322,7 +316,6 @@ export default function Sidebar() {
       isDirty: false,
       icon: 'ph-fill ph-file-text'
     })
-    setActiveYamlFile(yamlFile.id)
   }
 
   const createNewYamlFile = () => {
@@ -333,21 +326,25 @@ export default function Sidebar() {
       content: '# New YAML configuration\nname: example\nversion: 1.0',
       isValid: true
     }
-    addYamlFile(newFile)
     openYamlFile(newFile)
   }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      const isYamlFile = file.name.toLowerCase().endsWith('.yml') || file.name.toLowerCase().endsWith('.yaml')
-      const isYamlMimeType = file.type === 'application/x-yaml' || file.type === 'text/yaml' || file.type === 'text/x-yaml'
-      
-      if (isYamlFile || isYamlMimeType) {
-        uploadYamlFile(file)
-      } else {
-        alert('Please upload only YAML files (.yml or .yaml)')
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const content = e.target?.result as string
+        const yamlFile = {
+          id: `yaml-${Date.now()}`,
+          name: file.name,
+          path: `/${file.name}`,
+          content,
+          isValid: true
+        }
+        openYamlFile(yamlFile)
       }
+      reader.readAsText(file)
     }
     event.target.value = ''
   }
@@ -628,94 +625,29 @@ export default function Sidebar() {
                 <span className="text-white text-sm font-medium">YAML Files</span>
                 <div className="flex gap-1">
                   <button 
-                    onClick={createNewYamlFile}
+                    onClick={() => {
+                      const newFile = {
+                        id: `yaml-${Date.now()}`,
+                        name: 'new-config.yml',
+                        path: '/new-config.yml',
+                        content: '# New YAML configuration\nname: example\nversion: 1.0',
+                        language: 'yaml',
+                        isDirty: false,
+                        icon: 'ph-fill ph-file-text'
+                      }
+                      addTab(newFile)
+                    }}
                     className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-800 transition-colors group"
                     title="New YAML File"
                   >
                     <i className="ph ph-file-plus text-zinc-400 group-hover:text-blue-400 text-sm transition-colors"></i>
                   </button>
-                  <label className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-800 transition-colors group cursor-pointer" title="Upload YAML File">
-                    <i className="ph ph-upload text-zinc-400 group-hover:text-green-400 text-sm transition-colors"></i>
-                    <input type="file" accept=".yml,.yaml" onChange={handleFileUpload} className="hidden" />
-                  </label>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-3">
-                {yamlFiles.length === 0 ? (
-                  <div className="text-center text-zinc-500 text-sm py-8">
-                    <i className="ph ph-file-text text-2xl mb-2 block"></i>
-                    No YAML files
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {yamlFiles.map((yamlFile) => (
-                      <div
-                        key={yamlFile.id}
-                        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition group ${
-                          activeYamlFile === yamlFile.id ? 'bg-blue-600/20 text-white' : 'text-zinc-300 hover:bg-zinc-800/50'
-                        }`}
-                      >
-                        <div onClick={() => openYamlFile(yamlFile)} className="flex items-center gap-2 flex-1">
-                          <i className="ph ph-file-text text-sm"></i>
-                          <span className="text-xs truncate flex-1">{yamlFile.name}</span>
-                          {yamlFile.isRunning && (
-                            <i className="ph ph-spinner text-xs animate-spin text-blue-400"></i>
-                          )}
-                          {yamlFile.runStatus === 'success' && (
-                            <i className="ph ph-check-circle text-xs text-green-400"></i>
-                          )}
-                          {yamlFile.runStatus === 'error' && (
-                            <i className="ph ph-x-circle text-xs text-red-400"></i>
-                          )}
-                          {!yamlFile.isValid && (
-                            <i className="ph ph-warning text-xs text-yellow-400"></i>
-                          )}
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              validateYaml(yamlFile.id)
-                            }}
-                            className="p-1 text-zinc-400 hover:text-blue-400 transition rounded"
-                            title="Validate"
-                          >
-                            <i className="ph ph-check-circle text-xs"></i>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              runYaml(yamlFile.id)
-                            }}
-                            className="p-1 text-zinc-400 hover:text-green-400 transition rounded"
-                            title="Run"
-                            disabled={yamlFile.isRunning}
-                          >
-                            <i className={`ph ${yamlFile.isRunning ? 'ph-spinner animate-spin' : 'ph-play'} text-xs`}></i>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              deleteYamlFile(yamlFile.id)
-                            }}
-                            className="p-1 text-zinc-400 hover:text-red-400 transition rounded"
-                            title="Delete"
-                          >
-                            <i className="ph ph-trash text-xs"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="mt-4 pt-4 border-t border-zinc-800">
-                  <button
-                    onClick={() => setYamlModal(true)}
-                    className="w-full p-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded transition flex items-center justify-center gap-2"
-                  >
-                    <i className="ph ph-code"></i>
-                    Open YAML Editor
-                  </button>
+                <div className="text-center text-zinc-500 text-sm py-8">
+                  <i className="ph ph-file-text text-2xl mb-2 block"></i>
+                  No YAML files
                 </div>
               </div>
             </div>

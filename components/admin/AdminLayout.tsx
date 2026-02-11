@@ -1,26 +1,86 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import KriyaLogo from '../logo/KriyaLogo'
+import { useState, useEffect, memo, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useIDEStore } from '@/stores/ide-store-new'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 interface AdminLayoutProps {
     children: React.ReactNode
     currentView: string
-    setView: (view: any) => void
+    setView: (view: string) => void
 }
+
+const NAV_ITEMS = [
+    { id: 'dashboard', label: 'Overview', icon: 'ph-squares-four' },
+    { id: 'teams', label: 'Teams', icon: 'ph-users-three' },
+    { id: 'activity', label: 'Activity', icon: 'ph-pulse' },
+    { id: 'settings', label: 'Settings', icon: 'ph-gear' },
+] as const
+
+const NavButton = memo(({ item, currentView, setView }: { 
+    item: typeof NAV_ITEMS[number], 
+    currentView: string, 
+    setView: (view: string) => void 
+}) => {
+    const isActive = currentView === item.id
+    
+    return (
+        <button
+            onClick={() => setView(item.id)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group relative
+                ${isActive
+                    ? 'text-white bg-white/5 shadow-lg shadow-black/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
+        >
+            <i className={`ph ${item.icon} text-lg ${isActive ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'}`}></i>
+            {item.label}
+
+            {isActive && (
+                <motion.div
+                    layoutId="activeTab"
+                    className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full"
+                />
+            )}
+        </button>
+    )
+})
+
+const UserProfile = memo(({ user, logout }: { user: any, logout: () => void }) => {
+    const handleLogout = useCallback(() => {
+        logout()
+        window.location.href = '/'
+    }, [logout])
+
+    return (
+        <div className="glass rounded-xl p-3 flex items-center gap-3 border border-white/5 hover:border-white/10 transition-colors cursor-pointer group">
+            <div className="w-9 h-9 rounded-lg overflow-hidden border border-white/10">
+                <img src={user.avatar} className="w-full h-full object-cover" alt="User" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                <p className="text-xs text-zinc-500 truncate capitalize">{user.role}</p>
+            </div>
+            <button
+                onClick={handleLogout}
+                className="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center transition"
+                title="Logout"
+            >
+                <i className="ph ph-sign-out text-zinc-500 group-hover:text-red-400"></i>
+            </button>
+        </div>
+    )
+})
 
 export default function AdminLayout({ children, currentView, setView }: AdminLayoutProps) {
     const { user, logout } = useIDEStore()
-
-    const navItems = [
-        { id: 'dashboard', label: 'Overview', icon: 'ph-squares-four' },
-        { id: 'teams', label: 'Teams', icon: 'ph-users-three' },
-        { id: 'activity', label: 'Activity', icon: 'ph-pulse' },
-        { id: 'settings', label: 'Settings', icon: 'ph-gear' },
-    ]
+    
+    const currentNavItem = useMemo(() => 
+        NAV_ITEMS.find(n => n.id === currentView), 
+        [currentView]
+    )
 
     return (
         <div className="flex h-screen bg-black text-white overflow-hidden selection:bg-blue-500/30">
@@ -38,7 +98,7 @@ export default function AdminLayout({ children, currentView, setView }: AdminLay
                 className="w-64 border-r border-white/5 bg-black/40 backdrop-blur-xl z-20 flex flex-col"
             >
                 <div className="p-6 flex items-center gap-3 border-b border-white/5">
-                    <KriyaLogo className="w-8 h-8" />
+                    <Logo className="w-8 h-8" />
                     <div>
                         <h1 className="font-bold text-lg tracking-tight">KRIYA</h1>
                         <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold flex items-center gap-2">
@@ -49,58 +109,25 @@ export default function AdminLayout({ children, currentView, setView }: AdminLay
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => setView(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group relative
-                ${currentView === item.id
-                                    ? 'text-white bg-white/5 shadow-lg shadow-black/20'
-                                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                                }`}
-                        >
-                            <i className={`ph ${item.icon} text-lg ${currentView === item.id ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'}`}></i>
-                            {item.label}
-
-                            {currentView === item.id && (
-                                <motion.div
-                                    layoutId="activeTab"
-                                    className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full"
-                                />
-                            )}
-                        </button>
+                    {NAV_ITEMS.map((item) => (
+                        <NavButton 
+                            key={item.id} 
+                            item={item} 
+                            currentView={currentView} 
+                            setView={setView} 
+                        />
                     ))}
                 </nav>
 
                 <div className="p-4 border-t border-white/5">
-                    {user && (
-                        <div className="glass rounded-xl p-3 flex items-center gap-3 border border-white/5 hover:border-white/10 transition-colors cursor-pointer group">
-                            <div className="w-9 h-9 rounded-lg overflow-hidden border border-white/10">
-                                <img src={user.avatar} className="w-full h-full object-cover" alt="User" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                                <p className="text-xs text-zinc-500 truncate capitalize">{user.role}</p>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    logout()
-                                    window.location.href = '/login'
-                                }}
-                                className="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center transition"
-                                title="Logout"
-                            >
-                                <i className="ph ph-sign-out text-zinc-500 group-hover:text-red-400"></i>
-                            </button>
-                        </div>
-                    )}
+                    {user && <UserProfile user={user} logout={logout} />}
                 </div>
             </motion.aside>
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col relative z-10 overflow-hidden">
                 <header className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-sm px-8 flex items-center justify-between shrink-0">
-                    <h2 className="text-xl font-semibold capitalize">{navItems.find(n => n.id === currentView)?.label}</h2>
+                    <h2 className="text-xl font-semibold capitalize">{currentNavItem?.label}</h2>
 
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
@@ -115,7 +142,7 @@ export default function AdminLayout({ children, currentView, setView }: AdminLay
                         </button>
 
                         <Link
-                            href="/"
+                            href="/ide"
                             className="px-4 py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-zinc-200 transition flex items-center gap-2"
                         >
                             Open IDE
