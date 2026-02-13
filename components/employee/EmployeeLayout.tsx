@@ -57,8 +57,8 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h1 className="text-2xl font-bold text-white mb-2">Welcome to Your Workspace</h1>
-                                    <p className="text-zinc-400">Access your projects and collaborate with your team</p>
+                                    <h1 className="text-2xl font-bold text-white mb-2">Welcome to Your Workspace v2.0</h1>
+                                    <p className="text-zinc-400">Access your projects and collaborate with your team - Updated Feb 2024</p>
                                 </div>
                             </div>
 
