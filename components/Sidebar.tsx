@@ -499,7 +499,7 @@ export default function Sidebar() {
         
         <div className="mt-auto flex flex-col gap-5 items-center">
           <i 
-            onClick={() => setView(view === 'settings' ? get().previousView : 'settings')} 
+            onClick={() => setView('workspace')} 
             className={`ph-fill ph-gear-six text-lg cursor-pointer transition ${
               view === 'settings' ? 'icon-active' : 'text-zinc-700 hover:text-white'
             }`}
