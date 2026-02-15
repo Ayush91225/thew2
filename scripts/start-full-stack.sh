@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Run from project root (parent of scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT_DIR"
+
 echo "🚀 Starting KRIYA IDE with Backend"
 echo "=================================="
 
@@ -15,11 +20,11 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend server
 echo "📡 Starting backend server..."
-cd backend
+cd "$ROOT_DIR/backend"
 npm install > /dev/null 2>&1
 node local-server.js &
 BACKEND_PID=$!
-cd ..
+cd "$ROOT_DIR"
 
 # Wait for backend to start
 sleep 3

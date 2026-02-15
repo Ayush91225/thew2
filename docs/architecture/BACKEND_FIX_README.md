@@ -31,7 +31,7 @@
 
 ### Option 1: Full Stack (Recommended)
 ```bash
-./start-full-stack.sh
+./scripts/start-full-stack.sh
 ```
 
 ### Option 2: Manual

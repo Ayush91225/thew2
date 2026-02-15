@@ -4,13 +4,18 @@ Since your AWS account is suspended, this local backend server provides all the 
 
 ## Quick Start
 
-### Option 1: Using the startup script (Recommended)
+### Option 1: Full stack (frontend + backend from repo root)
+```bash
+./scripts/start-full-stack.sh
+```
+
+### Option 2: Backend only – startup script
 ```bash
 cd backend
 ./start-local.sh
 ```
 
-### Option 2: Manual setup
+### Option 3: Manual setup
 ```bash
 cd backend
 npm install

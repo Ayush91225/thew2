@@ -34,6 +34,10 @@ A modern, feature-rich IDE built with Next.js, React, and TypeScript.
    ```bash
    npm run dev
    ```
+   Or run frontend + backend together:
+   ```bash
+   ./scripts/start-full-stack.sh
+   ```
 
 3. **Open your browser**:
    Navigate to [http://localhost:3000](http://localhost:3000)
@@ -53,13 +57,21 @@ A modern, feature-rich IDE built with Next.js, React, and TypeScript.
 
 ```
 kriya/
-├── app/                 # Next.js app directory
-├── components/          # React components
-├── stores/             # Zustand stores
-├── lib/                # Utility functions
-├── hooks/              # Custom React hooks
-└── public/             # Static assets
+├── app/                 # Next.js app (pages: /login, /admin, /employee, /ide; API under /api)
+├── components/          # React components (IDE, admin/, employee/, auth/)
+├── stores/              # Zustand stores (IDE state, admin, slices)
+├── lib/                 # Services & utilities (see lib/README.md)
+├── hooks/               # Custom React hooks
+├── types/               # Shared TypeScript types
+├── public/              # Static assets
+├── backend/             # Local + AWS backend (see backend/README.md)
+├── docs/                # Documentation (setup, architecture, archive)
+├── scripts/             # Shell scripts (start-full-stack.sh, deploy-*.sh)
+├── data/                # API collections & environments
+└── workspace/           # User workspace (runtime)
 ```
+
+See **docs/ARCHITECTURE.md** for a full architecture overview.
 
 ## Development
 
