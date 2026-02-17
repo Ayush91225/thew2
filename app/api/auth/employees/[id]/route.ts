@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { users, verifyJWT } from '@/lib/auth-storage'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
+// Use inline typing for route params to satisfy Next.js types
 
 /**
  * DELETE /api/auth/employees/:id - Delete employee (OWNER only)
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
-    const employeeId = params.id
+    const employeeId = context?.params?.id
 
     // Verify OWNER authorization
     const authHeader = request.headers.get('authorization')
