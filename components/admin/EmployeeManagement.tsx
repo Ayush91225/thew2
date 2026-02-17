@@ -18,6 +18,7 @@ export default function EmployeeManagement() {
   const [user, setUser] = useState<any>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
+  const [initializing, setInitializing] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -41,48 +42,59 @@ export default function EmployeeManagement() {
   // Get user from Zustand or localStorage, with token verification fallback
   useEffect(() => {
     const initializeUser = async () => {
-      if (zustandUser) {
-        // User is in Zustand (logged in this session)
-        setUser(zustandUser)
-      } else if (typeof window !== 'undefined') {
-        // Try to get from localStorage (page refresh scenario)
-        const storedUser = localStorage.getItem('user')
-        const token = localStorage.getItem('auth_token')
-        
-        if (storedUser) {
-          try {
-            const parsed = JSON.parse(storedUser)
-            
-            // If user data is complete and has role, use it
-            if (parsed && parsed.role) {
-              setUser(parsed)
-              return
-            }
-          } catch (e) {
-            console.error('Failed to parse user from localStorage')
-          }
+      try {
+        if (zustandUser) {
+          // User is in Zustand (logged in this session)
+          setUser(zustandUser)
+          setInitializing(false)
+          return
         }
         
-        // If we have a token but user data is incomplete, verify with backend
-        if (token) {
-          try {
-            const response = await fetch('/api/auth/verify', {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`
+        if (typeof window !== 'undefined') {
+          // Try to get from localStorage (page refresh scenario)
+          const storedUser = localStorage.getItem('user')
+          const token = localStorage.getItem('auth_token')
+          
+          if (storedUser) {
+            try {
+              const parsed = JSON.parse(storedUser)
+              
+              // If user data is complete and has role, use it
+              if (parsed && parsed.role) {
+                setUser(parsed)
+                setInitializing(false)
+                return
               }
-            })
-            
-            const data = await response.json()
-            if (data.success && data.user) {
-              setUser(data.user)
-              // Update localStorage with verified user data
-              localStorage.setItem('user', JSON.stringify(data.user))
+            } catch (e) {
+              console.error('Failed to parse user from localStorage')
             }
-          } catch (err) {
-            console.error('Failed to verify token:', err)
+          }
+          
+          // If we have a token but user data is incomplete, verify with backend
+          if (token) {
+            try {
+              const response = await fetch('/api/auth/verify', {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              })
+              
+              const data = await response.json()
+              if (data.success && data.user) {
+                setUser(data.user)
+                // Update localStorage with verified user data
+                localStorage.setItem('user', JSON.stringify(data.user))
+                setInitializing(false)
+                return
+              }
+            } catch (err) {
+              console.error('Failed to verify token:', err)
+            }
           }
         }
+      } finally {
+        setInitializing(false)
       }
     }
     
@@ -224,8 +236,20 @@ export default function EmployeeManagement() {
     }
   }
 
+  // Loading state while initializing user data
+  if (initializing) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border border-white/20 border-t-white mx-auto mb-3"></div>
+          <p className="text-zinc-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Only show to OWNER
-  if (user?.role !== 'OWNER') {
+  if (!user || user?.role !== 'OWNER') {
     return (
       <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg">
         <p className="text-red-400">Only company owners can manage employees</p>
