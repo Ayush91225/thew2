@@ -1,84 +1,208 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { timingSafeEqual } from 'crypto'
+import { users, companies, teamInvites, generateId, verifyJWT, constantTimeCompare } from '@/lib/auth-storage'
 
-function constantTimeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  const bufA = Buffer.from(a, 'utf8')
-  const bufB = Buffer.from(b, 'utf8')
-  return timingSafeEqual(bufA, bufB)
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production'
+const JWT_EXPIRY_SECONDS = 7 * 24 * 60 * 60  // 7 days
+
+function generateJWT(user: any): string {
+  const header = Buffer.from(JSON.stringify({
+    alg: 'HS256',
+    typ: 'JWT'
+  })).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+
+  const payload = {
+    sub: user.id,
+    email: user.email,
+    companyId: user.companyId,
+    role: user.role,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + JWT_EXPIRY_SECONDS
+  }
+
+  const encodedPayload = Buffer.from(JSON.stringify(payload))
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+
+  // Simplified signature (for production, use HMAC-SHA256)
+  const signature = Buffer.from(`${JWT_SECRET}${header}${encodedPayload}`)
+    .toString('base64')
+    .slice(0, 30)
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+
+  return `${header}.${encodedPayload}.${signature}`
 }
 
+/**
+ * Lightweight JWT verification without external dependency
+ * Parses and validates JWT structure
+ */
+// Using imported verifyJWT from auth-storage instead
+
+/**
+ * POST /api/auth - Handles login and registration
+ * 
+ * Admin Registration:
+ *   { action: 'register-admin', email, password, name, companyName }
+ *   Creates company and OWNER user
+ * 
+ * Employee Login:
+ *   { action: 'login', email, password }
+ *   Only users with accepted invites or company members can login
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, provider } = body
+    const { action, email, password, name, companyName } = body
 
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (!action) {
+      return NextResponse.json(
+        { success: false, error: 'Action required' },
+        { status: 400 }
+      )
+    }
 
-    if (provider) {
-      // OAuth login simulation
+    // Admin Registration - Creates company and OWNER user
+    if (action === 'register-admin') {
+      if (!email || !password || !name || !companyName) {
+        return NextResponse.json(
+          { success: false, error: 'Email, password, name, and company name required' },
+          { status: 400 }
+        )
+      }
+
+      // Check if user already exists
+      const existingUser = Array.from(users.values()).find(u => u.email === email)
+      if (existingUser) {
+        return NextResponse.json(
+          { success: false, error: 'User already exists' },
+          { status: 409 }
+        )
+      }
+
+      // Create company
+      const companyId = generateId('comp')
+      
+      // Create OWNER user first
+      const userId = generateId('user')
+      const user = {
+        id: userId,
+        email,
+        name,
+        password, // ✅ Store password for login
+        companyId,
+        role: 'OWNER' as const,
+        avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${email}`,
+        permissions: ['all'],  // OWNER has all permissions
+        createdAt: new Date().toISOString()
+      }
+
+      // Save company with owner ID
+      const company = {
+        id: companyId,
+        name: companyName,
+        ownerId: userId,
+        ownerEmail: email,
+        createdAt: new Date().toISOString()
+      }
+      companies.set(companyId, company)
+      users.set(userId, user)
+
+      // Generate token
+      const token = generateJWT(user)
+
       return NextResponse.json({
         success: true,
         user: {
-          id: '2',
-          email: `user@${provider}.com`,
-          name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} User`,
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=32&h=32&fit=crop&crop=face',
-          role: 'developer',
-          permissions: ['read', 'write', 'deploy']
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          companyId: user.companyId,
+          companyName: company.name,
+          avatar: user.avatar,
+          permissions: user.permissions,
+          createdAt: user.createdAt
         },
-        token: 'mock-jwt-token',
-        refreshToken: 'mock-refresh-token'
+        token,
+        message: 'Company and admin account created successfully'
       })
     }
 
-    // Check against mock users
-    let user: any = null
+    // Employee Login
+    if (action === 'login') {
+      if (!email || !password) {
+        return NextResponse.json(
+          { success: false, error: 'Email and password required' },
+          { status: 400 }
+        )
+      }
 
-    if (constantTimeCompare(email, 'admin@kriya.dev') && constantTimeCompare(password, 'admin123')) {
-      user = {
-        id: 'admin-1',
-        email: 'admin@kriya.dev',
-        name: 'System Admin',
-        role: 'admin',
-        avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=admin',
-        permissions: ['all']
-      }
-    } else if (constantTimeCompare(email, 'head@kriya.dev') && constantTimeCompare(password, 'head123')) {
-      user = {
-        id: 'head-1',
-        email: 'head@kriya.dev',
-        name: 'Project Lead',
-        role: 'project_head',
-        avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=head',
-        permissions: ['read', 'write', 'deploy', 'manage_team']
-      }
-    } else if (constantTimeCompare(email, 'employee@kriya.dev') && constantTimeCompare(password, 'emp123')) {
-      user = {
-        id: 'emp-1',
-        email: 'employee@kriya.dev',
-        name: 'Team Member',
-        role: 'employee',
-        avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=emp',
-        permissions: ['read', 'write']
-      }
-    }
+        // Find user by email
+        const user = Array.from(users.values()).find(u => u.email === email)
 
-    if (user) {
+        console.log('[Auth] Login attempt for:', email)
+        console.log('[Auth] Users count:', users.size)
+        console.log('[Auth] User found:', user ? user.id : 'none')
+
+        if (!user) {
+          return NextResponse.json(
+            { success: false, error: 'User not found. Contact your company administrator.' },
+            { status: 401 }
+          )
+        }
+
+        // Note: In production, passwords should be hashed with bcrypt, not compared directly
+        // This is a simplified version for demonstration
+        const passwordMatch = constantTimeCompare(password, user.password || '')
+        console.log('[Auth] Password match:', passwordMatch)
+
+        if (!passwordMatch) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid password' },
+            { status: 401 }
+          )
+        }
+
+      // Check if employee has accepted invite (only if created via invite system)
+      // Employees created directly via API don't need to accept invites
+      if (user.role === 'EMPLOYEE' && user.inviteStatus && user.inviteStatus !== 'accepted') {
+        return NextResponse.json(
+          { success: false, error: 'Please accept your team invite to login' },
+          { status: 403 }
+        )
+      }
+
+      // Generate token
+      const token = generateJWT(user)
+      const company = companies.get(user.companyId)
+
       return NextResponse.json({
         success: true,
-        user,
-        token: `mock-jwt-token-${user.role}`,
-        refreshToken: `mock-refresh-token-${user.role}`
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          companyId: user.companyId,
+          companyName: company?.name || '',
+          avatar: user.avatar,
+          permissions: user.permissions,
+          createdAt: user.createdAt
+        },
+        token
       })
     }
 
     return NextResponse.json(
-      { success: false, error: 'Invalid credentials' },
-      { status: 401 }
+      { success: false, error: 'Invalid action' },
+      { status: 400 }
     )
   } catch (error) {
+    console.error('Auth error:', error)
     return NextResponse.json(
       { success: false, error: 'Authentication failed' },
       { status: 500 }
@@ -86,19 +210,72 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
+/**
+ * GET /api/auth/verify - Verify JWT token
+ * Returns user data if token is valid
+ */
+export async function GET(request: NextRequest) {
   try {
-    // Logout endpoint
-    await new Promise(resolve => setTimeout(resolve, 200))
+    const authHeader = request.headers.get('authorization')
     
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'No token provided' },
+        { status: 401 }
+      )
+    }
+
+    const token = authHeader.slice(7)
+    const payload = verifyJWT(token)
+
+    if (!payload) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' },
+        { status: 401 }
+      )
+    }
+
+    // Get full user data
+    const user = users.get(payload.sub)
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const company = companies.get(user.companyId)
+
     return NextResponse.json({
       success: true,
-      message: 'Logged out successfully'
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        companyId: user.companyId,
+        companyName: company?.name || '',
+        avatar: user.avatar,
+        permissions: user.permissions,
+        createdAt: user.createdAt
+      }
     })
   } catch (error) {
+    console.error('Token verification error:', error)
     return NextResponse.json(
-      { success: false, error: 'Logout failed' },
+      { success: false, error: 'Token verification failed' },
       { status: 500 }
     )
   }
+}
+
+/**
+ * DELETE /api/auth - Logout (clear token client-side)
+ */
+export async function DELETE() {
+  return NextResponse.json({
+    success: true,
+    message: 'Logged out successfully'
+  })
 }

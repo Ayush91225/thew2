@@ -2,15 +2,10 @@
 
 import React, { useState } from 'react'
 import { useIDEStore } from '../stores/ide-store-new'
-import { MOCK_USERS, UserRole } from '../types/auth'
 
 export default function DebugPanel() {
     const [isOpen, setIsOpen] = useState(false)
-    const { user, login, logout } = useIDEStore()
-
-    const handleSwitchRole = (role: UserRole) => {
-        login(MOCK_USERS[role])
-    }
+    const { user, logout } = useIDEStore()
 
     if (process.env.NODE_ENV === 'production') return null
 
@@ -39,28 +34,10 @@ export default function DebugPanel() {
                         </div>
 
                         <div className="space-y-2">
-                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Switch Role</div>
-                            <button
-                                onClick={() => handleSwitchRole('admin')}
-                                className="w-full px-3 py-2 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white rounded flex items-center gap-2 transition"
-                            >
-                                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                Admin
-                            </button>
-                            <button
-                                onClick={() => handleSwitchRole('project_head')}
-                                className="w-full px-3 py-2 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white rounded flex items-center gap-2 transition"
-                            >
-                                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                                Project Head
-                            </button>
-                            <button
-                                onClick={() => handleSwitchRole('employee')}
-                                className="w-full px-3 py-2 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white rounded flex items-center gap-2 transition"
-                            >
-                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                Employee
-                            </button>
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Note</div>
+                            <div className="text-[11px] text-zinc-400">
+                                Login with existing credentials to switch roles
+                            </div>
                         </div>
 
                         <button

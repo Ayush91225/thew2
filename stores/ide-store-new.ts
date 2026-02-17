@@ -261,11 +261,14 @@ export const useIDEStore = create<IDEStore>()(
       {
         name: 'kriya-ide-storage',
         partialize: (state) => ({
-          // Only persist essential data
+          // Persist essential data
           activeTab: state.activeTab,
           view: state.view,
           activePanel: state.activePanel,
-          isAuthenticated: state.isAuthenticated
+          isAuthenticated: state.isAuthenticated,
+          // ✅ NEW: Persist auth data
+          user: state.user,
+          token: state.token
         })
       }
     )

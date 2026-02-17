@@ -1,5 +1,7 @@
 # KRIYA IDE – Architecture
 
+For **detailed flow, Mermaid diagrams, and a full file/folder responsibility map**, see [ARCHITECTURE_FLOW.md](./ARCHITECTURE_FLOW.md).
+
 ## High-level structure
 
 ```

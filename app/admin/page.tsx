@@ -6,6 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import DashboardView from '@/components/admin/DashboardView'
 import TeamsView from '@/components/admin/TeamsView'
 import ActivityView from '@/components/admin/ActivityView'
+import EmployeeManagement from '@/components/admin/EmployeeManagement'
 
 export default function AdminPage() {
   const [view, setView] = useState('dashboard')
@@ -27,6 +28,7 @@ export default function AdminPage() {
     <AdminLayout currentView={view} setView={setView}>
       {view === 'dashboard' && <DashboardView teams={teams} />}
       {view === 'teams' && <TeamsView teams={teams} selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam} />}
+      {view === 'employees' && <EmployeeManagement />}
       {view === 'activity' && <ActivityView />}
       {view === 'settings' && (
         <div className="flex items-center justify-center h-[500px] text-zinc-500">

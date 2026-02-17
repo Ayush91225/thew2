@@ -15,6 +15,7 @@ interface AdminLayoutProps {
 const NAV_ITEMS = [
     { id: 'dashboard', label: 'Overview', icon: 'ph-squares-four' },
     { id: 'teams', label: 'Teams', icon: 'ph-users-three' },
+    { id: 'employees', label: 'Employees', icon: 'ph-user-circle' },
     { id: 'activity', label: 'Activity', icon: 'ph-pulse' },
     { id: 'settings', label: 'Settings', icon: 'ph-gear' },
 ] as const
@@ -75,7 +76,59 @@ const UserProfile = memo(({ user, logout }: { user: any, logout: () => void }) =
 })
 
 export default function AdminLayout({ children, currentView, setView }: AdminLayoutProps) {
-    const { user, logout } = useIDEStore()
+    const { user: zustandUser, logout } = useIDEStore()
+    const [user, setUser] = useState<any>(null)
+    
+    // Get user from Zustand or localStorage, with token verification fallback
+    useEffect(() => {
+        const initializeUser = async () => {
+            if (zustandUser) {
+                // User is in Zustand (logged in this session)
+                setUser(zustandUser)
+            } else if (typeof window !== 'undefined') {
+                // Try to get from localStorage (page refresh scenario)
+                const storedUser = localStorage.getItem('user')
+                const token = localStorage.getItem('auth_token')
+                
+                if (storedUser) {
+                    try {
+                        const parsed = JSON.parse(storedUser)
+                        
+                        // If user data is complete and has role, use it
+                        if (parsed && parsed.role) {
+                            setUser(parsed)
+                            return
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse user from localStorage')
+                    }
+                }
+                
+                // If we have a token but user data is incomplete, verify with backend
+                if (token) {
+                    try {
+                        const response = await fetch('/api/auth/verify', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        })
+                        
+                        const data = await response.json()
+                        if (data.success && data.user) {
+                            setUser(data.user)
+                            // Update localStorage with verified user data
+                            localStorage.setItem('user', JSON.stringify(data.user))
+                        }
+                    } catch (err) {
+                        console.error('Failed to verify token:', err)
+                    }
+                }
+            }
+        }
+        
+        initializeUser()
+    }, [zustandUser])
     
     const currentNavItem = useMemo(() => 
         NAV_ITEMS.find(n => n.id === currentView), 

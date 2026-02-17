@@ -1,20 +1,15 @@
-// Enterprise Authentication Service
-export interface User {
-  id: string
-  email: string
-  name: string
-  avatar?: string
-  role: 'admin' | 'developer' | 'viewer'
-  permissions: string[]
-  lastLogin?: Date
-  createdAt: Date
-}
+/**
+ * Backend-driven Authentication Service
+ * Frontend consumes backend-verified auth state only
+ * Backend is the single source of truth
+ */
+
+import { User } from '@/types/auth'
 
 export interface AuthState {
   isAuthenticated: boolean
   user: User | null
   token: string | null
-  refreshToken: string | null
 }
 
 export class AuthService {
@@ -22,8 +17,7 @@ export class AuthService {
   private authState: AuthState = {
     isAuthenticated: false,
     user: null,
-    token: null,
-    refreshToken: null
+    token: null
   }
   private listeners: ((state: AuthState) => void)[] = []
 
@@ -44,17 +38,16 @@ export class AuthService {
       if (stored) {
         const parsed = JSON.parse(stored)
         this.authState = {
-          ...parsed,
-          user: parsed.user ? {
-            ...parsed.user,
-            lastLogin: parsed.user.lastLogin ? new Date(parsed.user.lastLogin) : undefined,
-            createdAt: new Date(parsed.user.createdAt)
-          } : null
+          isAuthenticated: parsed.isAuthenticated,
+          user: parsed.user,
+          token: parsed.token
         }
         
-        // Validate token expiry
-        if (this.authState.token && this.isTokenExpired(this.authState.token)) {
-          this.logout()
+        // Verify token with backend on load
+        if (this.authState.token) {
+          this.verifyToken(this.authState.token).catch(() => {
+            this.logout()
+          })
         }
       }
     } catch (error) {
@@ -75,15 +68,6 @@ export class AuthService {
     this.listeners.forEach(listener => listener(this.authState))
   }
 
-  private isTokenExpired(token: string): boolean {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      return payload.exp * 1000 < Date.now()
-    } catch {
-      return true
-    }
-  }
-
   subscribe(listener: (state: AuthState) => void): () => void {
     this.listeners.push(listener)
     return () => {
@@ -95,37 +79,168 @@ export class AuthService {
     return { ...this.authState }
   }
 
-  async login(email: string, password: string): Promise<User> {
-    // In production, this would make a secure API call to validate credentials
-    throw new Error('Authentication service not configured. Please contact administrator.')
-  }
-
-  async loginWithProvider(provider: 'github' | 'google' | 'microsoft'): Promise<User> {
-    // In production, this would handle OAuth flow with the specified provider
-    throw new Error('OAuth authentication not configured. Please contact administrator.')
-  }
-
-  async refreshAuthToken(): Promise<string> {
-    if (!this.authState.refreshToken) {
-      throw new Error('No refresh token available')
-    }
-
+  /**
+   * Admin Registration - Creates company and OWNER user
+   * Backend is single source of truth
+   */
+  async registerAdmin(email: string, password: string, name: string, companyName: string): Promise<User> {
     try {
-      // Simulate token refresh
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      if (this.authState.user) {
-        const newToken = this.generateMockToken(this.authState.user)
-        this.authState.token = newToken
-        this.saveToStorage()
-        this.notifyListeners()
-        return newToken
-      } else {
-        throw new Error('No user data available')
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'register-admin',
+          email,
+          password,
+          name,
+          companyName
+        })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Registration failed')
       }
+
+      // Store token and user from backend
+      this.authState = {
+        isAuthenticated: true,
+        user: data.user,
+        token: data.token
+      }
+
+      this.saveToStorage()
+      this.notifyListeners()
+
+      return data.user
     } catch (error) {
-      console.error('Token refresh failed:', error)
-      this.logout()
+      console.error('Registration error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Employee Login - Only users with accepted invites can login
+   * Backend verifies credentials and invite status
+   */
+  async login(email: string, password: string): Promise<User> {
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'login',
+          email,
+          password
+        })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Login failed')
+      }
+
+      // Store token and user from backend
+      this.authState = {
+        isAuthenticated: true,
+        user: data.user,
+        token: data.token
+      }
+
+      this.saveToStorage()
+      this.notifyListeners()
+
+      return data.user
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Check if user has pending invite
+   * Backend returns invite details
+   */
+  async checkInvite(email: string): Promise<any> {
+    try {
+      const response = await fetch(`/api/auth/invites?email=${encodeURIComponent(email)}`)
+      const data = await response.json()
+
+      if (!data.success) {
+        return null
+      }
+
+      return data.invite
+    } catch (error) {
+      console.error('Error checking invite:', error)
+      return null
+    }
+  }
+
+  /**
+   * Accept team invite and create employee account
+   * Backend creates user and marks invite as accepted
+   */
+  async acceptInvite(inviteId: string, password: string, name: string): Promise<User> {
+    try {
+      const response = await fetch('/api/auth/invites', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'accept',
+          inviteId,
+          password,
+          name
+        })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to accept invite')
+      }
+
+      return data.user
+    } catch (error) {
+      console.error('Invite acceptance error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Verify JWT token with backend
+   * Backend is source of truth for user validity
+   */
+  async verifyToken(token: string): Promise<User> {
+    try {
+      const response = await fetch('/api/auth/verify', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Token verification failed')
+      }
+
+      // Update state with verified user data
+      this.authState = {
+        isAuthenticated: true,
+        user: data.user,
+        token
+      }
+
+      this.saveToStorage()
+      this.notifyListeners()
+
+      return data.user
+    } catch (error) {
+      console.error('Token verification error:', error)
       throw error
     }
   }
@@ -134,75 +249,69 @@ export class AuthService {
     this.authState = {
       isAuthenticated: false,
       user: null,
-      token: null,
-      refreshToken: null
+      token: null
     }
     
     localStorage.removeItem('kriya-auth')
     this.notifyListeners()
   }
 
-  async updateProfile(updates: Partial<Pick<User, 'name' | 'avatar'>>): Promise<User> {
-    if (!this.authState.user) {
-      throw new Error('Not authenticated')
-    }
-
+  /**
+   * Create team invites (OWNER only)
+   * Backend validates ownership and creates invites
+   */
+  async createTeamInvites(emails: string[]): Promise<any> {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      const updatedUser = { ...this.authState.user, ...updates }
-      this.authState.user = updatedUser
-      this.saveToStorage()
-      this.notifyListeners()
-      return updatedUser
+      if (!this.authState.token) {
+        throw new Error('Not authenticated')
+      }
+
+      const response = await fetch('/api/auth/invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authState.token}`
+        },
+        body: JSON.stringify({
+          action: 'create',
+          emails
+        })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create invites')
+      }
+
+      return data.invites
     } catch (error) {
-      console.error('Profile update failed:', error)
+      console.error('Error creating team invites:', error)
       throw error
     }
   }
 
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    if (!this.authState.user) {
-      throw new Error('Not authenticated')
-    }
-
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Mock validation - in production, validate against secure backend
-      if (currentPassword.length < 6) {
-        throw new Error('Current password is incorrect')
-      }
-      
-      if (newPassword.length < 6) {
-        throw new Error('New password must be at least 6 characters')
-      }
-      
-      // In production, this would update the password on the server
-      console.log('Password changed successfully')
-    } catch (error) {
-      console.error('Password change failed:', error)
-      throw error
-    }
+  hasRole(role: 'OWNER' | 'EMPLOYEE'): boolean {
+    return this.authState.user?.role === role
   }
 
-  hasPermission(permission: string): boolean {
-    return this.authState.user?.permissions.includes(permission) || false
+  isOwner(): boolean {
+    return this.authState.user?.role === 'OWNER'
   }
 
-  hasRole(role: User['role']): boolean {
-    return this.authState.user?.role === role || false
+  isEmployee(): boolean {
+    return this.authState.user?.role === 'EMPLOYEE'
   }
 
-  private generateMockToken(user: User): string {
-    // In production, tokens would be generated by a secure backend service
-    throw new Error('Token generation not implemented')
+  getCompanyId(): string | null {
+    return this.authState.user?.companyId || null
   }
 
-  private generateMockRefreshToken(user: User): string {
-    // In production, refresh tokens would be generated by a secure backend service  
-    throw new Error('Refresh token generation not implemented')
+  getUser(): User | null {
+    return this.authState.user || null
+  }
+
+  getToken(): string | null {
+    return this.authState.token || null
   }
 }
