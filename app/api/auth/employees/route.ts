@@ -27,23 +27,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get requesting user (should be OWNER)
-    console.log('[Create Employee] Looking for user with ID:', payload.sub)
-    const admin = Array.from(users.values()).find(u => u.id === payload.sub)
-    
-    if (!admin) {
-      console.log('[Create Employee] User not found. Available users:', Array.from(users.keys()))
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    if (admin.role !== 'OWNER') {
-      console.log('[Create Employee] User role is:', admin.role)
+    // Check authorization directly from token payload
+    // JWT already contains role - no need for database lookup
+    if (payload.role !== 'OWNER') {
+      console.log('[Create Employee] User role is:', payload.role, 'Required: OWNER')
       return NextResponse.json(
         { success: false, error: 'Only company owners can create employees' },
         { status: 403 }
+      )
+    }
+
+    // Get admin's companyId from token for company assignment
+    const adminCompanyId = payload.companyId
+    if (!adminCompanyId) {
+      return NextResponse.json(
+        { success: false, error: 'Company ID missing from token' },
+        { status: 400 }
       )
     }
 
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     // Check if employee already exists
     const existingUser = Array.from(users.values()).find(
-      u => u.email === email && u.companyId === admin.companyId
+      u => u.email === email && u.companyId === adminCompanyId
     )
     if (existingUser) {
       return NextResponse.json(
@@ -83,19 +82,19 @@ export async function POST(request: NextRequest) {
       email,
       name,
       password, // In production, hash this with bcrypt!
-      companyId: admin.companyId,
+      companyId: adminCompanyId,
       role: 'EMPLOYEE' as const,
       avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${email}`,
       permissions: ['view', 'edit', 'collaborate'],
       status: 'active',
-      createdBy: admin.id,
+      createdBy: payload.sub,
       createdAt: new Date().toISOString()
     }
 
     users.set(employeeId, employee)
     console.log('[Create Employee] Employee created:', employeeId)
 
-    const company = companies.get(admin.companyId)
+    const company = companies.get(adminCompanyId)
 
     return NextResponse.json({
       success: true,
@@ -146,18 +145,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get requesting user (should be OWNER)
-    const admin = Array.from(users.values()).find(u => u.id === payload.sub)
-    if (!admin || admin.role !== 'OWNER') {
+    // Check authorization directly from token payload
+    if (payload.role !== 'OWNER') {
       return NextResponse.json(
         { success: false, error: 'Only company owners can view employees' },
         { status: 403 }
       )
     }
 
-    // Get all employees in company
+    // Get all employees in company using companyId from token
     const employees = Array.from(users.values()).filter(
-      u => u.companyId === admin.companyId && u.role === 'EMPLOYEE'
+      u => u.companyId === payload.companyId && u.role === 'EMPLOYEE'
     )
 
     return NextResponse.json({

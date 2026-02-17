@@ -28,10 +28,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user from payload
-    const user = users.get(payload.sub)
-    
-    if (!user || user.role !== 'OWNER') {
+    // Check authorization directly from token payload
+    if (payload.role !== 'OWNER') {
       return NextResponse.json(
         { success: false, error: 'Only company owners can create invites' },
         { status: 403 }
@@ -62,7 +60,7 @@ export async function POST(request: NextRequest) {
         const inviteId = generateId('inv')
         const invite = {
           id: inviteId,
-          companyId: user.companyId,
+          companyId: payload.companyId,
           email,
           status: 'pending',
           createdAt: new Date().toISOString(),

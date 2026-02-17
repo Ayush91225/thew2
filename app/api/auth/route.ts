@@ -235,30 +235,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get full user data
+    // Try to get full user data from storage, fallback to token payload
     const user = users.get(payload.sub)
     
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    const company = companies.get(user.companyId)
+    const company = user ? companies.get(user.companyId) : companies.get(payload.companyId)
 
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        companyId: user.companyId,
+        id: payload.sub,
+        email: payload.email,
+        name: user?.name || payload.email.split('@')[0],
+        role: payload.role,
+        companyId: payload.companyId,
         companyName: company?.name || '',
-        avatar: user.avatar,
-        permissions: user.permissions,
-        createdAt: user.createdAt
+        avatar: user?.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${payload.email}`,
+        permissions: user?.permissions || (payload.role === 'OWNER' ? ['all'] : ['view', 'edit', 'collaborate']),
+        createdAt: user?.createdAt || new Date().toISOString()
       }
     })
   } catch (error) {

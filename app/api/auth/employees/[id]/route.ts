@@ -29,9 +29,8 @@ export async function DELETE(request: NextRequest, context: any) {
       )
     }
 
-    // Get requesting user (should be OWNER)
-    const admin = users.get(payload.sub)
-    if (!admin || admin.role !== 'OWNER') {
+    // Check authorization directly from token payload
+    if (payload.role !== 'OWNER') {
       return NextResponse.json(
         { success: false, error: 'Only company owners can delete employees' },
         { status: 403 }
@@ -40,7 +39,7 @@ export async function DELETE(request: NextRequest, context: any) {
 
     // Get employee
     const employee = users.get(employeeId)
-    if (!employee || employee.companyId !== admin.companyId) {
+    if (!employee || employee.companyId !== payload.companyId) {
       return NextResponse.json(
         { success: false, error: 'Employee not found' },
         { status: 404 }
