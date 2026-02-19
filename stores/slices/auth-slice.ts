@@ -46,10 +46,10 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
                 throw new Error(data.error || 'Registration failed')
             }
 
-            // Store token in localStorage
+            // Store token in sessionStorage (tab-specific)
             if (typeof window !== 'undefined') {
-                localStorage.setItem('auth_token', data.token)
-                localStorage.setItem('user', JSON.stringify(data.user))
+                sessionStorage.setItem('auth_token', data.token)
+                sessionStorage.setItem('user', JSON.stringify(data.user))
             }
 
             set({
@@ -86,10 +86,10 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
                 throw new Error(data.error || 'Login failed')
             }
 
-            // Store token in localStorage for API requests
+            // Store token in sessionStorage (tab-specific)
             if (typeof window !== 'undefined') {
-                localStorage.setItem('auth_token', data.token)
-                localStorage.setItem('user', JSON.stringify(data.user))
+                sessionStorage.setItem('auth_token', data.token)
+                sessionStorage.setItem('user', JSON.stringify(data.user))
             }
 
             set({
@@ -143,10 +143,10 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
                 throw new Error(data.error || 'Failed to accept invite')
             }
 
-            // Store token in localStorage
+            // Store token in sessionStorage
             if (typeof window !== 'undefined') {
-                localStorage.setItem('auth_token', data.token)
-                localStorage.setItem('user', JSON.stringify(data.user))
+                sessionStorage.setItem('auth_token', data.token)
+                sessionStorage.setItem('user', JSON.stringify(data.user))
             }
 
             set({
@@ -194,11 +194,10 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
     },
 
     logout: () => {
-        // Clear from localStorage
+        // Clear from sessionStorage
         if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token')
-            localStorage.removeItem('user')
-            localStorage.removeItem('kriya-auth')
+            sessionStorage.removeItem('auth_token')
+            sessionStorage.removeItem('user')
         }
         
         set({

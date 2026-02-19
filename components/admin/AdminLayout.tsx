@@ -82,53 +82,43 @@ export default function AdminLayout({ children, currentView, setView }: AdminLay
     // Get user from Zustand or localStorage, with token verification fallback
     useEffect(() => {
         const initializeUser = async () => {
-            if (zustandUser) {
-                // User is in Zustand (logged in this session)
-                setUser(zustandUser)
-            } else if (typeof window !== 'undefined') {
-                // Try to get from localStorage (page refresh scenario)
-                const storedUser = localStorage.getItem('user')
-                const token = localStorage.getItem('auth_token')
+            if (typeof window === 'undefined') return
+            
+            const token = localStorage.getItem('auth_token')
+            
+            if (!token) {
+                setUser(null)
+                return
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
                 
-                if (storedUser) {
-                    try {
-                        const parsed = JSON.parse(storedUser)
-                        
-                        // If user data is complete and has role, use it
-                        if (parsed && parsed.role) {
-                            setUser(parsed)
-                            return
-                        }
-                    } catch (e) {
-                        console.error('Failed to parse user from localStorage')
-                    }
+                const data = await response.json()
+                if (data.success && data.user) {
+                    setUser(data.user)
+                    useIDEStore.setState({ user: data.user, isAuthenticated: true, token })
+                } else {
+                    setUser(null)
                 }
-                
-                // If we have a token but user data is incomplete, verify with backend
-                if (token) {
-                    try {
-                        const response = await fetch('/api/auth/verify', {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        })
-                        
-                        const data = await response.json()
-                        if (data.success && data.user) {
-                            setUser(data.user)
-                            // Update localStorage with verified user data
-                            localStorage.setItem('user', JSON.stringify(data.user))
-                        }
-                    } catch (err) {
-                        console.error('Failed to verify token:', err)
-                    }
-                }
+            } catch (err) {
+                console.error('Failed to verify token:', err)
+                setUser(null)
             }
         }
         
         initializeUser()
-    }, [zustandUser])
+        
+        // Poll token every 2 seconds to detect changes
+        const interval = setInterval(() => {
+            initializeUser()
+        }, 2000)
+        
+        return () => clearInterval(interval)
+    }, [])
     
     const currentNavItem = useMemo(() => 
         NAV_ITEMS.find(n => n.id === currentView), 
@@ -140,8 +130,6 @@ export default function AdminLayout({ children, currentView, setView }: AdminLay
             {/* Background Ambience */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/10 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-900/10 rounded-full blur-[120px]" />
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
             </div>
 
             {/* Sidebar */}
