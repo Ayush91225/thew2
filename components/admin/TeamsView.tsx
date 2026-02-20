@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useAdminStore } from '@/stores/admin-store'
 import InviteUserModal from './InviteUserModal'
+import AddMemberModal from './AddMemberModal'
 
 interface TeamsViewProps {
     teams: any[]
@@ -14,9 +15,11 @@ interface TeamsViewProps {
 
 export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: TeamsViewProps) {
     const router = useRouter()
-    const { addTeam, deleteTeam } = useAdminStore()
+    const { addTeam, deleteTeam, refreshTeams } = useAdminStore()
     const [showCreate, setShowCreate] = useState(false)
     const [showInvite, setShowInvite] = useState(false)
+    const [showAddMember, setShowAddMember] = useState(false)
+    const [activeTeam, setActiveTeam] = useState<any>(null)
     const [newTeam, setNewTeam] = useState({ 
         name: '', 
         description: '', 
@@ -243,6 +246,13 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
                                                 +{team.members.length - 3}
                                             </div>
                                         )}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setActiveTeam(team); setShowAddMember(true); }}
+                                            className="w-8 h-8 rounded-full border-2 border-dashed border-white/20 hover:border-blue-500 hover:bg-blue-500/10 flex items-center justify-center transition"
+                                            title="Add member"
+                                        >
+                                            <i className="ph ph-plus text-zinc-400 hover:text-blue-400"></i>
+                                        </button>
                                     </div>
                                     <div>
                                         <button
@@ -271,6 +281,15 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
             </div>
 
             <InviteUserModal isOpen={showInvite} onClose={() => setShowInvite(false)} />
+            {activeTeam && (
+                <AddMemberModal
+                    isOpen={showAddMember}
+                    onClose={() => { setShowAddMember(false); setActiveTeam(null); }}
+                    teamId={activeTeam.id}
+                    teamName={activeTeam.name}
+                    onSuccess={refreshTeams}
+                />
+            )}
         </div>
     )
 }
