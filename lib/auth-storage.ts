@@ -5,7 +5,6 @@
 let _users: Map<string, any> | null = null
 let _companies: Map<string, any> | null = null
 let _teamInvites: Map<string, any> | null = null
-let _teamNotifications: Map<string, any> | null = null
 
 // Reuse existing maps if they exist (prevents data loss on module reload)
 // In Next.js dev mode, modules can be re-evaluated, so we cache in global
@@ -14,19 +13,16 @@ if (typeof global !== 'undefined' && (global as any)[globalKey]) {
   _users = (global as any)[globalKey].users
   _companies = (global as any)[globalKey].companies
   _teamInvites = (global as any)[globalKey].teamInvites
-  _teamNotifications = (global as any)[globalKey].teamNotifications
 } else {
   _users = new Map<string, any>()
   _companies = new Map<string, any>()
   _teamInvites = new Map<string, any>()
-  _teamNotifications = new Map<string, any>()
   
   if (typeof global !== 'undefined') {
     (global as any)[globalKey] = {
       users: _users,
       companies: _companies,
-      teamInvites: _teamInvites,
-      teamNotifications: _teamNotifications
+      teamInvites: _teamInvites
     }
   }
 }
@@ -34,7 +30,6 @@ if (typeof global !== 'undefined' && (global as any)[globalKey]) {
 export const users = _users!
 export const companies = _companies!
 export const teamInvites = _teamInvites!
-export const teamNotifications = _teamNotifications!
 
 export function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`

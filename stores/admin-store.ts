@@ -35,8 +35,7 @@ export const useAdminStore = create<AdminStore>()(
       },
       
       addTeam: (team) => {
-        // Create team in team service
-        const newTeam = teamService.createTeam(team)
+        // This would create a real team in the service
         const newActivity = {
           id: Date.now(),
           type: 'member' as const,
