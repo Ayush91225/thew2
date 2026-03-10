@@ -21,6 +21,12 @@ if (typeof global !== 'undefined' && (global as any)[globalKey]) {
   _teamInvites = new Map<string, any>()
   _teamNotifications = new Map<string, any>()
   
+  // Clear all demo data - start fresh
+  _users.clear()
+  _companies.clear()
+  _teamInvites.clear()
+  _teamNotifications.clear()
+  
   if (typeof global !== 'undefined') {
     (global as any)[globalKey] = {
       users: _users,

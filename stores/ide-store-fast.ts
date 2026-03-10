@@ -53,8 +53,12 @@ interface FastIDEStore {
   uploadYamlFile: (file: File) => Promise<void>
   setYamlModal: (open: boolean) => void
   collab: boolean
+  setCollab: (collab: boolean) => void
   runCurrentFile: () => void
   saveFile: (tabId: string) => void
+  isRunning: boolean
+  user: any
+  logout: () => void
 }
 
 export const useIDEStore = create<FastIDEStore>()(
@@ -123,9 +127,13 @@ export const useIDEStore = create<FastIDEStore>()(
     uploadYamlFile: async () => {},
     setYamlModal: () => {},
     collab: false,
-    runCurrentFile: () => {},
+    setCollab: (collab) => set({ collab }),
+    runCurrentFile: () => set({ isRunning: true }, false, () => setTimeout(() => set({ isRunning: false }), 2000)),
     saveFile: (tabId) => set((state) => ({
       tabs: state.tabs.map(t => t.id === tabId ? { ...t, isDirty: false } : t)
-    }))
+    })),
+    isRunning: false,
+    user: null,
+    logout: () => set({ user: null })
   }))
 )

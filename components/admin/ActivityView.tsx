@@ -5,7 +5,13 @@ import { motion } from 'framer-motion'
 import { useAdminStore } from '@/stores/admin-store'
 
 export default function ActivityView() {
-    const { activities } = useAdminStore()
+    const { activities, clearActivities } = useAdminStore()
+
+    const handleClear = () => {
+        if (window.confirm('Clear all activity logs?')) {
+            clearActivities()
+        }
+    }
 
     // Group activities by date
     const groupedActivities = activities.reduce((acc: any, activity) => {
@@ -25,10 +31,19 @@ export default function ActivityView() {
         <div className="max-w-4xl mx-auto py-8">
             <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-bold font-mono">System Audit Log</h2>
-                <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10 transition flex items-center gap-2">
-                    <i className="ph ph-download-simple"></i>
-                    Export CSV
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handleClear}
+                        className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm hover:bg-red-500/20 transition flex items-center gap-2"
+                    >
+                        <i className="ph ph-trash"></i>
+                        Clear All
+                    </button>
+                    <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10 transition flex items-center gap-2">
+                        <i className="ph ph-download-simple"></i>
+                        Export CSV
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-8 relative">

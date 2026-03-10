@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users    User[]
+  projects Project[]
+  teams    Team[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  role      String   @default("EMPLOYEE")
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  teamMemberships TeamMember[] @relation("UserTeamMemberships")
+  projects        Project[]    @relation("ProjectMembers")
+  headedTeams     Team[]       @relation("TeamHead")
+}
+
+model Project {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  teamId    String?      // ✅ THIS enables linking to Team
+  team      Team? @relation(fields: [teamId], references: [id])
+
+  members   User[] @relation("ProjectMembers")
+}
+
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  teamHeadId String?
+  teamHead   User?  @relation("TeamHead", fields: [teamHeadId], references: [id])
+
+  members     TeamMember[]  // Changed from User[] to TeamMember[]
+  invitations Invitation[]
+  projects    Project[]
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  role      String   @default("developer") // lead, developer, designer
+  joinedAt  DateTime @default(now())
+
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("UserTeamMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+
+model Invitation {
+  id     String @id @default(uuid())
+  email  String
+  role   String
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+}

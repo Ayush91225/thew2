@@ -65,9 +65,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if employee already exists
-    const existingUser = Array.from(users.values()).find(
-      u => u.email === email && u.companyId === adminCompanyId
-    )
+    const { prisma } = await import('@/lib/prisma')
+    const existingUser = await prisma.user.findFirst({
+      where: { 
+        email,
+        companyId: adminCompanyId
+      }
+    })
     if (existingUser) {
       return NextResponse.json(
         { success: false, error: 'Employee with this email already exists' },
@@ -75,26 +79,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create new employee
-    const employeeId = generateId('user')
-    const employee = {
-      id: employeeId,
-      email,
-      name,
-      password, // In production, hash this with bcrypt!
-      companyId: adminCompanyId,
-      role: 'EMPLOYEE' as const,
-      avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${email}`,
-      permissions: ['view', 'edit', 'collaborate'],
-      status: 'active',
-      createdBy: payload.sub,
-      createdAt: new Date().toISOString()
-    }
+    // Create new employee in database
+    const employee = await prisma.user.create({
+      data: {
+        email,
+        name,
+        role: 'EMPLOYEE',
+        companyId: adminCompanyId
+      },
+      include: { company: true }
+    })
 
-    users.set(employeeId, employee)
-    console.log('[Create Employee] Employee created:', employeeId)
-
-    const company = companies.get(adminCompanyId)
+    console.log('[Create Employee] Employee created:', employee.id)
 
     return NextResponse.json({
       success: true,
@@ -105,11 +101,11 @@ export async function POST(request: NextRequest) {
         name: employee.name,
         role: employee.role,
         companyId: employee.companyId,
-        companyName: company?.name || '',
-        avatar: employee.avatar,
-        permissions: employee.permissions,
-        status: employee.status,
-        createdAt: employee.createdAt
+        companyName: employee.company.name,
+        avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${email}`,
+        permissions: ['view', 'edit', 'collaborate'],
+        status: 'active',
+        createdAt: employee.createdAt.toISOString()
       }
     })
   } catch (error) {
@@ -153,10 +149,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get all employees in company using companyId from token
-    const employees = Array.from(users.values()).filter(
-      u => u.companyId === payload.companyId && u.role === 'EMPLOYEE'
-    )
+    // Get all employees in company using Prisma
+    const { prisma } = await import('@/lib/prisma')
+    const employees = await prisma.user.findMany({
+      where: {
+        companyId: payload.companyId,
+        role: 'EMPLOYEE'
+      },
+      include: { company: true }
+    })
 
     return NextResponse.json({
       success: true,
@@ -166,8 +167,9 @@ export async function GET(request: NextRequest) {
         email: e.email,
         name: e.name,
         role: e.role,
-        status: e.status,
-        createdAt: e.createdAt
+        companyId: e.companyId,
+        companyName: e.company.name,
+        createdAt: e.createdAt.toISOString()
       }))
     })
   } catch (error) {

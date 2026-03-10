@@ -17,6 +17,8 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
     const { addTeam, deleteTeam } = useAdminStore()
     const [showCreate, setShowCreate] = useState(false)
     const [showInvite, setShowInvite] = useState(false)
+    const [employees, setEmployees] = useState<any[]>([])
+    const [loadingEmployees, setLoadingEmployees] = useState(false)
     const [newTeam, setNewTeam] = useState({ 
         name: '', 
         description: '', 
@@ -243,6 +245,23 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
                                                 +{team.members.length - 3}
                                             </div>
                                         )}
+                                        <button 
+                                            onClick={async () => {
+                                                setLoadingEmployees(true)
+                                                const token = sessionStorage.getItem('auth_token')
+                                                const res = await fetch('/api/auth/employees', {
+                                                    headers: { 'Authorization': `Bearer ${token}` }
+                                                })
+                                                const data = await res.json()
+                                                if (data.success) setEmployees(data.employees)
+                                                setLoadingEmployees(false)
+                                                setSelectedTeam(team.id)
+                                            }}
+                                            className="w-8 h-8 rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900 flex items-center justify-center text-zinc-500 hover:border-emerald-500 hover:text-emerald-400 transition"
+                                            title="Add member"
+                                        >
+                                            <i className="ph ph-plus text-sm"></i>
+                                        </button>
                                     </div>
                                     <div>
                                         <button
@@ -271,6 +290,62 @@ export default function TeamsView({ teams, selectedTeam, setSelectedTeam }: Team
             </div>
 
             <InviteUserModal isOpen={showInvite} onClose={() => setShowInvite(false)} />
+            
+            {/* Add Member Modal */}
+            {selectedTeam && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setSelectedTeam(null)}>
+                    <div className="glass border border-white/10 rounded-xl p-6 w-96" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-white mb-4">Add Team Member</h3>
+                        <p className="text-zinc-400 text-sm mb-4">Select an employee to add to this team</p>
+                        
+                        {loadingEmployees ? (
+                            <div className="text-center py-8 text-zinc-500">Loading...</div>
+                        ) : employees.length === 0 ? (
+                            <div className="text-center py-8 text-zinc-500">
+                                <i className="ph ph-users text-4xl mb-2"></i>
+                                <p>No employees available</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+                                {employees.map(emp => (
+                                    <button
+                                        key={emp.id}
+                                        onClick={async () => {
+                                            const token = sessionStorage.getItem('auth_token')
+                                            const res = await fetch(`/api/teams/${selectedTeam}/members`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                body: JSON.stringify({ userId: emp.id, role: 'developer' })
+                                            })
+                                            if (res.ok) {
+                                                setSelectedTeam(null)
+                                                window.location.reload()
+                                            }
+                                        }}
+                                        className="w-full p-3 bg-zinc-900 hover:bg-zinc-800 rounded-lg text-left transition flex items-center gap-3"
+                                    >
+                                        <img src={emp.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${emp.email}`} className="w-10 h-10 rounded-full" />
+                                        <div>
+                                            <p className="text-white font-medium">{emp.name}</p>
+                                            <p className="text-zinc-500 text-sm">{emp.email}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        
+                        <button 
+                            onClick={() => {
+                                setSelectedTeam(null)
+                                setEmployees([])
+                            }}
+                            className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-white transition"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

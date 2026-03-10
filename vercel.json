@@ -27,7 +27,6 @@
     "NEXT_PUBLIC_COLLABORATION_WS_URL": "wss://xtc3torv9c.execute-api.ap-south-1.amazonaws.com/prod",
     "NEXT_PUBLIC_API_URL": "https://1ngwyksutc.execute-api.ap-south-1.amazonaws.com/prod",
     "NEXT_PUBLIC_JWT_SECRET": "kriya-collaboration-secret-2024",
-    "NEXT_PUBLIC_AWS_REGION": "ap-south-1",
-    "MONGODB_URI": "mongodb+srv://tanmaysoni2105_db_user:6ud5EFkelHbBCaVF@cluster0.rcmtjdh.mongodb.net/kriya_ide?retryWrites=true&w=majority"
+    "NEXT_PUBLIC_AWS_REGION": "ap-south-1"
   }
 }

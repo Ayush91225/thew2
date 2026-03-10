@@ -29,24 +29,32 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Try to get full user data from storage, fallback to token payload
-    const user = users.get(payload.sub)
-    
-    const company = user ? companies.get(user.companyId) : companies.get(payload.companyId)
+    // Get user from database using Prisma
+    const { prisma } = await import('@/lib/prisma')
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: { company: true }
+    })
 
-    // Return user data from either the stored user or the token payload
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
     return NextResponse.json({
       success: true,
       user: {
-        id: payload.sub,
-        email: payload.email,
-        name: user?.name || payload.email.split('@')[0], // Fallback to email prefix
-        role: payload.role,
-        companyId: payload.companyId,
-        companyName: company?.name || '',
-        avatar: user?.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${payload.email}`,
-        permissions: user?.permissions || (payload.role === 'OWNER' ? ['all'] : ['view', 'edit', 'collaborate']),
-        createdAt: user?.createdAt || new Date().toISOString()
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        companyId: user.companyId,
+        companyName: user.company.name,
+        avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${user.email}`,
+        permissions: user.role === 'OWNER' ? ['all'] : ['view', 'edit', 'collaborate'],
+        createdAt: user.createdAt.toISOString()
       }
     })
   } catch (error) {

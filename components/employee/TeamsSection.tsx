@@ -1,11 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 
 export default function TeamsSection() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'my-teams' | 'invitations'>('my-teams')
   const [searchTerm, setSearchTerm] = useState('')
+  const [teams, setTeams] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchTeams()
+  }, [])
+
+  const fetchTeams = async () => {
+    try {
+      const token = sessionStorage.getItem('auth_token')
+      const res = await fetch('/api/teams/my-teams', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success) setTeams(data.teams)
+    } catch (error) {
+      console.error('Failed to fetch teams:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -61,15 +84,41 @@ export default function TeamsSection() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="p-10 text-center text-zinc-500">
-              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i className="ph ph-users text-zinc-600 text-3xl"></i>
+            {loading ? (
+              <div className="p-10 text-center text-zinc-500">Loading teams...</div>
+            ) : teams.length === 0 ? (
+              <div className="p-10 text-center text-zinc-500">
+                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="ph ph-users text-zinc-600 text-3xl"></i>
+                </div>
+                <h4 className="text-lg font-semibold text-zinc-400 mb-2">No Teams Yet</h4>
+                <p className="text-zinc-600 text-sm max-w-md mx-auto">
+                  You're not part of any teams yet. Wait for an invitation from your admin or request to join a team.
+                </p>
               </div>
-              <h4 className="text-lg font-semibold text-zinc-400 mb-2">No Teams Yet</h4>
-              <p className="text-zinc-600 text-sm max-w-md mx-auto">
-                You're not part of any teams yet. Wait for an invitation from your admin or request to join a team.
-              </p>
-            </div>
+            ) : (
+              teams.map(team => (
+                <div key={team.id} className="grid grid-cols-[3fr_2fr_1fr_1fr_1fr] px-6 py-4 border-b border-white/5 hover:bg-white/5 transition items-center">
+                  <div>
+                    <p className="text-white font-medium">{team.name}</p>
+                    <p className="text-zinc-500 text-xs mt-1">Role: {team.role}</p>
+                  </div>
+                  <div className="text-zinc-400 text-sm">Team workspace</div>
+                  <div>
+                    <span className="px-2 py-1 rounded text-xs font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">SOLO</span>
+                  </div>
+                  <div className="text-zinc-400 text-sm">{team.memberCount} members</div>
+                  <div>
+                    <button 
+                      onClick={() => router.push(`/ide?team=${team.id}`)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded transition"
+                    >
+                      Open IDE
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

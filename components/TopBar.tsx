@@ -1,6 +1,6 @@
 'use client'
 
-import { useIDEStore } from '@/stores/ide-store-new'
+import { useIDEStore } from '@/stores/ide-store-fast'
 import { collaborationService } from '@/lib/collaboration-service'
 import { useState, useEffect, useRef } from 'react'
 import Logo from '@/components/Logo'
@@ -105,38 +105,32 @@ export default function TopBar() {
     }
   }, [])
 
-  const toggleCollaboration = async () => {
-    console.log('🔄 toggleCollaboration called, activeTab:', activeTab, 'collab:', collab)
-
-    if (!activeTab) {
-      console.warn('No active tab for collaboration')
-      return
-    }
-
-    setIsConnecting(true)
+  const toggleCollaboration = () => {
+    console.log('🔄 TOGGLE CLICKED!')
+    console.log('  - Current collab state:', collab)
+    
     const newMode = collab ? 'solo' : 'live'
-
-    console.log(`🔄 Toggling to ${newMode} mode for tab:`, activeTab)
-
+    console.log(`  - Switching to ${newMode} mode`)
+    
     try {
-      // Join document in the new mode - use a FIXED shared document ID for all users
-      const sharedDocumentId = 'shared-document' // Fixed ID so all users join the same document
-      console.log('🎯 About to call joinDocument with:', sharedDocumentId, newMode)
-
+      const sharedDocumentId = 'shared-document'
+      console.log('  - Joining document:', sharedDocumentId, 'mode:', newMode)
+      
       const result = collaborationService.joinDocument(sharedDocumentId, newMode)
-      console.log('📋 joinDocument result:', result)
-
+      console.log('  - Join result:', result)
+      
       setCollab(!collab)
-
+      console.log('  - State updated to:', !collab)
+      
       if (newMode === 'solo') {
         setCollaborationUsers([])
         setConnectionStatus('disconnected')
+      } else {
+        setConnectionStatus('connected')
       }
     } catch (error) {
-      console.error('Failed to toggle collaboration:', error)
+      console.error('❌ Toggle failed:', error)
       setConnectionStatus('error')
-    } finally {
-      setIsConnecting(false)
     }
   }
 
@@ -169,7 +163,7 @@ export default function TopBar() {
             <div className="flex bg-zinc-900 rounded-lg p-1">
               <button
                 onClick={toggleCollaboration}
-                disabled={isConnecting || !activeTab}
+                disabled={isConnecting}
                 className={`px-3 py-1 text-xs font-bold rounded transition flex items-center gap-2 ${!collab
                   ? 'bg-blue-600 text-white'
                   : 'text-zinc-400 hover:text-white'
@@ -184,7 +178,7 @@ export default function TopBar() {
               </button>
               <button
                 onClick={toggleCollaboration}
-                disabled={isConnecting || !activeTab}
+                disabled={isConnecting}
                 className={`px-3 py-1 text-xs font-bold rounded transition flex items-center gap-2 ${collab
                   ? 'bg-green-600 text-white'
                   : 'text-zinc-400 hover:text-white'
