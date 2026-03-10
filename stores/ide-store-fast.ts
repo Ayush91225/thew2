@@ -128,7 +128,10 @@ export const useIDEStore = create<FastIDEStore>()(
     setYamlModal: () => {},
     collab: false,
     setCollab: (collab) => set({ collab }),
-    runCurrentFile: () => set({ isRunning: true }, false, () => setTimeout(() => set({ isRunning: false }), 2000)),
+    runCurrentFile: () => {
+      set({ isRunning: true })
+      setTimeout(() => set({ isRunning: false }), 2000)
+    },
     saveFile: (tabId) => set((state) => ({
       tabs: state.tabs.map(t => t.id === tabId ? { ...t, isDirty: false } : t)
     })),

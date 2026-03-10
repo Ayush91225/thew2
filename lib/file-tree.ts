@@ -111,8 +111,7 @@ export class FileTreeManager {
           type: 'directory',
           isExpanded: false,
           children: [
-            { id: 'file-system.ts', name: 'file-system.ts', path: '/lib/file-system.ts', type: 'file', size: 2048 },
-            { id: 'auth-service.ts', name: 'auth-service.ts', path: '/lib/auth-service.ts', type: 'file', size: 3072 }
+            { id: 'file-system.ts', name: 'file-system.ts', path: '/lib/file-system.ts', type: 'file', size: 2048 }
           ]
         },
         { id: 'package.json', name: 'package.json', path: '/package.json', type: 'file', size: 768 },

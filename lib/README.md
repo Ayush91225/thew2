@@ -18,7 +18,6 @@
 | `database-service.ts` | Database service layer |
 | `team-service.ts` | Team management |
 | **Auth & extensions** | |
-| `auth-service.ts` | Auth helpers |
 | `extension-manager.ts` | Extension lifecycle |
 | `extension-service.ts` | Extension discovery/loading |
 | **Utils** | |

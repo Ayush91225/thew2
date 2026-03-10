@@ -74,9 +74,7 @@ flowchart TB
         IDE_COMP["CodeEditor, FileTabs, Sidebar, TopBar, StatusBar"]
         FEAT["CommandPalette, Terminal, AIChat, SettingsView"]
         ADMIN_COMP["admin/ AdminLayout, DashboardView, TeamsView"]
-        EMP_COMP["employee/ EmployeeLayout"]
-        AUTH_COMP["auth/ AuthGuard"]
-    end
+        EMP_COMP["employee/ EmployeeLayout"]    end
 
     subgraph STORES["stores/"]
         FAST["ide-store-fast.ts"]
@@ -328,7 +326,6 @@ Each folder under `app/api/` corresponds to a route segment. The handler is in `
 | **admin/StatsCard** | Stat card. |
 | **admin/InviteUserModal** | Invite user modal. |
 | **employee/EmployeeLayout** | Employee layout and nav. |
-| **auth/AuthGuard** | Protects routes; uses `ide-store-new` auth. |
 
 ---
 
@@ -501,9 +498,7 @@ KRIYA/
 │   ├── DatabaseView.tsx
 │   ├── CollaborationManager.tsx
 │   ├── admin/              # AdminLayout, DashboardView, TeamsView, ActivityView
-│   ├── employee/           # EmployeeLayout
-│   └── auth/                # AuthGuard
-│
+│   ├── employee/           # EmployeeLayout│
 ├── stores/
 │   ├── ide-store-fast.ts   # IDE core (tabs, view, panels)
 │   ├── ide-store-new.ts    # Auth, settings, collaboration

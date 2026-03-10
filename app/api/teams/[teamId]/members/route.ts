@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyJWT } from '@/lib/auth-storage'
 
-export async function POST(request: NextRequest, { params }: { params: { teamId: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ teamId: string }> }) {
   try {
     const authHeader = request.headers.get('authorization')
     if (!authHeader?.startsWith('Bearer ')) {
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: { teamId:
     }
 
     const { userId, role = 'developer' } = await request.json()
+    const params = await context.params
     const teamId = params.teamId
 
     if (!userId) {
