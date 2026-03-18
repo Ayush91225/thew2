@@ -8,87 +8,72 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model Company {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
-  createdAt DateTime @default(now())
-
-  users    User[]
-  projects Project[]
-  teams    Team[]
+  createdAt DateTime  @default(now())
+  projects  Project[]
+  teams     Team[]
+  users     User[]
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  role      String   @default("EMPLOYEE")
-  createdAt DateTime @default(now())
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  teamMemberships TeamMember[] @relation("UserTeamMemberships")
-  projects        Project[]    @relation("ProjectMembers")
+  id              String       @id @default(uuid())
+  email           String       @unique
+  name            String?
+  role            String       @default("EMPLOYEE")
+  createdAt       DateTime     @default(now())
+  companyId       String
   headedTeams     Team[]       @relation("TeamHead")
+  teamMemberships TeamMember[] @relation("UserTeamMemberships")
+  company         Company      @relation(fields: [companyId], references: [id])
+  projects        Project[]    @relation("ProjectMembers")
 }
 
 model Project {
   id        String   @id @default(uuid())
   name      String
   createdAt DateTime @default(now())
-
   companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  teamId    String?      // ✅ THIS enables linking to Team
-  team      Team? @relation(fields: [teamId], references: [id])
-
-  members   User[] @relation("ProjectMembers")
+  teamId    String?
+  company   Company  @relation(fields: [companyId], references: [id])
+  team      Team?    @relation(fields: [teamId], references: [id])
+  members   User[]   @relation("ProjectMembers")
 }
 
-
 model Team {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  teamHeadId String?
-  teamHead   User?  @relation("TeamHead", fields: [teamHeadId], references: [id])
-
-  members     TeamMember[]  // Changed from User[] to TeamMember[]
+  id          String       @id @default(uuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  companyId   String
+  teamHeadId  String?
   invitations Invitation[]
   projects    Project[]
+  company     Company      @relation(fields: [companyId], references: [id])
+  teamHead    User?        @relation("TeamHead", fields: [teamHeadId], references: [id])
+  members     TeamMember[]
 }
 
 model TeamMember {
-  id        String   @id @default(uuid())
-  role      String   @default("developer") // lead, developer, designer
-  joinedAt  DateTime @default(now())
-
-  teamId String
-  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  userId String
-  user   User   @relation("UserTeamMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  id       String   @id @default(uuid())
+  role     String   @default("developer")
+  joinedAt DateTime @default(now())
+  teamId   String
+  userId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation("UserTeamMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@index([teamId])
   @@index([userId])
 }
 
-
 model Invitation {
-  id     String @id @default(uuid())
-  email  String
-  role   String
-  teamId String
-  team   Team   @relation(fields: [teamId], references: [id])
-
+  id        String   @id @default(uuid())
+  email     String
+  role      String
+  teamId    String
   status    String   @default("PENDING")
   createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id])
 }
