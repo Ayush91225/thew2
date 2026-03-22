@@ -147,13 +147,40 @@ export default function TopBar() {
         <div className="flex items-center gap-4">
           {/* Team Work Status */}
           {teamContext && (
-            <div className="flex items-center gap-3 px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 rounded-lg">
-              <i className="ph ph-users text-blue-400"></i>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-blue-100">{teamContext.name}</span>
-                <span className="text-[10px] text-blue-300">
-                  {collab ? 'Live Collaboration Active' : 'Solo Mode'} • {teamContext.members?.length || 0} members
-                </span>
+            <div className="relative group">
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-default hover:bg-zinc-800/60 transition-colors">
+                <i className="ph ph-users text-zinc-400 group-hover:text-[#A0EF9A] transition-colors text-sm"></i>
+                <span className="text-xs font-semibold text-zinc-400 group-hover:text-white transition-colors">{teamContext.name}</span>
+              </div>
+              {/* Hover card */}
+              <div className="absolute top-full left-0 mt-2 w-56 z-50
+                opacity-0 -translate-y-1 pointer-events-none
+                group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto
+                transition-all duration-200 ease-out">
+                <div className="bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl overflow-hidden">
+                  {/* Header */}
+                  <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#A0EF9A] shadow-[0_0_6px_#A0EF9A]"></div>
+                    <span className="text-sm font-bold text-white">{teamContext.name}</span>
+                  </div>
+                  {/* Details */}
+                  <div className="px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-zinc-500">Mode</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        collab
+                          ? 'bg-[#A0EF9A]/10 text-[#A0EF9A] border border-[#A0EF9A]/30'
+                          : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                      }`}>
+                        {collab ? '⚡ Live' : '● Solo'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-zinc-500">Members</span>
+                      <span className="text-xs font-semibold text-white">{teamContext.members?.length || 0}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
