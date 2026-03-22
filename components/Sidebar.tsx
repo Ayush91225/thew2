@@ -413,7 +413,7 @@ export default function Sidebar() {
                   node.type === 'directory' 
                     ? selectedFolder === node.id ? 'ph-fill ph-folder-open' : 'ph-fill ph-folder'
                     : fileTreeManager.getFileIcon(node.name)
-                } text-sm`} style={node.type === 'directory' ? { color: selectedFolder === node.id ? '#10B981' : '#059669' } : {}}></i>
+                } text-sm`} style={node.type === 'directory' ? { color: selectedFolder === node.id ? '#A0EF9A' : '#A0EF9A' } : {}}></i>
               </div>
               
               {isRenaming ? (
