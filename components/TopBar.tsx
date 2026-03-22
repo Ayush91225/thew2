@@ -27,16 +27,18 @@ export default function TopBar() {
   const [teamContext, setTeamContext] = useState<any>(null)
 
   useEffect(() => {
-    // Check for team context
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const teamId = params.get('team')
-      
       if (teamId) {
-        const storedTeam = localStorage.getItem('activeTeam')
-        if (storedTeam) {
-          setTeamContext(JSON.parse(storedTeam))
-        }
+        // Fetch fresh team data from API for accurate member count
+        fetch(`/api/teams/${teamId}`)
+          .then(r => r.json())
+          .then(data => { if (data.success && data.team) setTeamContext(data.team) })
+          .catch(() => {
+            const storedTeam = localStorage.getItem('activeTeam')
+            if (storedTeam) setTeamContext(JSON.parse(storedTeam))
+          })
       }
     }
   }, [])
