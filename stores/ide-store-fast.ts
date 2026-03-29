@@ -44,14 +44,8 @@ interface FastIDEStore {
   
   // Compatibility stubs
   gitBranch: string
-  yamlFiles: any[]
-  addYamlFile: (file: any) => void
-  deleteYamlFile: (id: string) => void
-  setActiveYamlFile: (id: string) => void
-  validateYaml: (id: string) => void
-  runYaml: (id: string) => void
-  uploadYamlFile: (file: File) => Promise<void>
-  setYamlModal: (open: boolean) => void
+  settingsModal: boolean
+  setSettingsModal: (open: boolean) => void
   collab: boolean
   setCollab: (collab: boolean) => void
   runCurrentFile: () => void
@@ -118,14 +112,8 @@ export const useIDEStore = create<FastIDEStore>()(
     
     // Compatibility stubs
     gitBranch: 'main',
-    yamlFiles: [],
-    addYamlFile: () => {},
-    deleteYamlFile: () => {},
-    setActiveYamlFile: () => {},
-    validateYaml: () => {},
-    runYaml: () => {},
-    uploadYamlFile: async () => {},
-    setYamlModal: () => {},
+    settingsModal: false,
+    setSettingsModal: (open) => set({ settingsModal: open }),
     collab: false,
     setCollab: (collab) => set({ collab }),
     runCurrentFile: () => {

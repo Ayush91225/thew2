@@ -20,7 +20,7 @@ const sidebarTabs = [
 
 export default function Sidebar() {
   const { 
-    setAIChatOpen, 
+    setAIModal,
     setView,
     view,
     setGlobalSearch,
@@ -301,54 +301,6 @@ export default function Sidebar() {
     setContextMenu(null)
   }
 
-  const openYamlFile = (yamlFile: any) => {
-    const existingTab = tabs.find(tab => tab.path === yamlFile.path)
-    if (existingTab) {
-      return
-    }
-
-    addTab({
-      id: yamlFile.id,
-      name: yamlFile.name,
-      path: yamlFile.path,
-      content: yamlFile.content,
-      language: 'yaml',
-      isDirty: false,
-      icon: 'ph-fill ph-file-text'
-    })
-  }
-
-  const createNewYamlFile = () => {
-    const newFile = {
-      id: `yaml-${Date.now()}`,
-      name: 'new-config.yml',
-      path: '/new-config.yml',
-      content: '# New YAML configuration\nname: example\nversion: 1.0',
-      isValid: true
-    }
-    openYamlFile(newFile)
-  }
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const content = e.target?.result as string
-        const yamlFile = {
-          id: `yaml-${Date.now()}`,
-          name: file.name,
-          path: `/${file.name}`,
-          content,
-          isValid: true
-        }
-        openYamlFile(yamlFile)
-      }
-      reader.readAsText(file)
-    }
-    event.target.value = ''
-  }
-
   const renderFileTree = (nodes: FileTreeNode[], depth = 0, parentLines: boolean[] = []): React.ReactNode => {
     return nodes.map((node, index) => {
       const isLast = index === nodes.length - 1
@@ -480,7 +432,7 @@ export default function Sidebar() {
           <i 
             key={tab.id}
             onClick={() => {
-              if (isMobile && activePanel === tab.id) {
+              if (activePanel === tab.id) {
                 setActivePanel('')
               } else {
                 setActivePanel(tab.id)
@@ -493,7 +445,7 @@ export default function Sidebar() {
           ></i>
         ))}
         <i 
-          onClick={() => setAIChatOpen(true)} 
+          onClick={() => setAIModal(true)} 
           className="ph-fill ph-sparkle text-lg text-zinc-700 hover:text-white cursor-pointer transition"
         ></i>
         
@@ -517,7 +469,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {activePanel && (
+      {activePanel && activePanel !== 'yaml' && (
         <>
           {/* Mobile Overlay */}
           {isMobile && (
@@ -619,39 +571,7 @@ export default function Sidebar() {
           {activePanel === 'extensions' && <ExtensionsPanel />}
           {activePanel === 'database' && <DatabasePanel />}
           {activePanel === 'api' && <APIPanel />}
-          {activePanel === 'yaml' && (
-            <div className="flex flex-col h-full">
-              <div className="h-11 px-4 flex items-center justify-between shrink-0 border-b border-zinc-800/50">
-                <span className="text-white text-sm font-medium">YAML Files</span>
-                <div className="flex gap-1">
-                  <button 
-                    onClick={() => {
-                      const newFile = {
-                        id: `yaml-${Date.now()}`,
-                        name: 'new-config.yml',
-                        path: '/new-config.yml',
-                        content: '# New YAML configuration\nname: example\nversion: 1.0',
-                        language: 'yaml',
-                        isDirty: false,
-                        icon: 'ph-fill ph-file-text'
-                      }
-                      addTab(newFile)
-                    }}
-                    className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-800 transition-colors group"
-                    title="New YAML File"
-                  >
-                    <i className="ph ph-file-plus text-zinc-400 group-hover:text-blue-400 text-sm transition-colors"></i>
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-3">
-                <div className="text-center text-zinc-500 text-sm py-8">
-                  <i className="ph ph-file-text text-2xl mb-2 block"></i>
-                  No YAML files
-                </div>
-              </div>
-            </div>
-          )}
+
           
           {/* Resize Handle - Desktop Only */}
           {!isMobile && (

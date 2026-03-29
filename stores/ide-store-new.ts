@@ -55,9 +55,6 @@ interface CompatibilitySlice {
   terminalTabs: any[]
   activeTerminalTab: string | null
 
-  // YAML state
-  yamlFiles: any[]
-  activeYamlFile: string | null
 
   // Collaboration state
   collaborationUsers: any[]
@@ -76,15 +73,6 @@ interface CompatibilitySlice {
   addTerminalTab: (tab: any) => void
   closeTerminalTab: (tabId: string) => void
   setActiveTerminalTab: (tabId: string) => void
-
-  // YAML actions
-  addYamlFile: (file: any) => void
-  updateYamlFile: (id: string, content: string) => void
-  deleteYamlFile: (id: string) => void
-  setActiveYamlFile: (id: string) => void
-  validateYaml: (id: string) => void
-  runYaml: (id: string) => void
-  uploadYamlFile: (file: File) => Promise<void>
 
   // Collaboration actions
   setCollaborationConnection: (connected: boolean) => void
@@ -110,10 +98,6 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   // Terminal state
   terminalTabs: [{ id: 'bash-1', name: 'bash', type: 'bash', isActive: true }],
   activeTerminalTab: 'bash-1',
-
-  // YAML state
-  yamlFiles: [],
-  activeYamlFile: null,
 
   // Collaboration state
   collaborationUsers: [],
@@ -144,15 +128,6 @@ const createCompatibilitySlice = (set: any, get: any): CompatibilitySlice => ({
   addTerminalTab: (tab: any) => set((state: any) => ({ terminalTabs: [...state.terminalTabs, tab], activeTerminalTab: tab.id })),
   closeTerminalTab: (tabId: string) => set((state: any) => ({ terminalTabs: state.terminalTabs.filter((t: any) => t.id !== tabId) })),
   setActiveTerminalTab: (tabId: string) => set({ activeTerminalTab: tabId }),
-
-  // YAML actions
-  addYamlFile: (file: any) => set((state: any) => ({ yamlFiles: [...state.yamlFiles, file], activeYamlFile: file.id })),
-  updateYamlFile: (id: string, content: string) => set((state: any) => ({ yamlFiles: state.yamlFiles.map((f: any) => f.id === id ? { ...f, content } : f) })),
-  deleteYamlFile: (id: string) => set((state: any) => ({ yamlFiles: state.yamlFiles.filter((f: any) => f.id !== id), activeYamlFile: state.activeYamlFile === id ? null : state.activeYamlFile })),
-  setActiveYamlFile: (id: string) => set({ activeYamlFile: id }),
-  validateYaml: (id: string) => { },
-  runYaml: (id: string) => { },
-  uploadYamlFile: async (file: File) => { },
 
   // Collaboration actions
   setCollaborationConnection: (connected: boolean) => set({ isConnectedToCollaboration: connected }),
@@ -197,7 +172,7 @@ export const useIDEStore = create<IDEStore>()(
               updates.view = view
             }
 
-            if (panel && ['files', 'search', 'git', 'debug', 'database', 'api', 'yaml', 'extensions'].includes(panel)) {
+            if (panel && ['files', 'search', 'git', 'debug', 'database', 'api', 'extensions'].includes(panel)) {
               updates.activePanel = panel
             }
 

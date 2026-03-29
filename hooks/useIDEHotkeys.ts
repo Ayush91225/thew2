@@ -1,7 +1,7 @@
 'use client'
 
 import { useHotkeys } from 'react-hotkeys-hook'
-import { useIDEStore } from '@/stores/ide-store'
+import { useIDEStore } from '@/stores/ide-store-fast'
 
 export function useIDEHotkeys() {
   const {

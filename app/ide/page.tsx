@@ -13,6 +13,7 @@ import StatusBar from '@/components/StatusBar'
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 const CodeEditor = dynamic(() => import('@/components/CodeEditor'), { ssr: false })
 const FileTabs = dynamic(() => import('@/components/FileTabs'), { ssr: false })
+const YamlLayout = dynamic(() => import('@/components/YamlLayout'), { ssr: false })
 
 // Lazy load heavy components
 const CommandPalette = lazy(() => import('@/components/CommandPalette'))
@@ -79,7 +80,14 @@ const MobileRestriction = memo(() => (
   </div>
 ))
 
-const MainContent = memo(({ view }: { view: string }) => {
+const MainContent = memo(({ view, activePanel }: { view: string, activePanel: string }) => {
+  if (activePanel === 'yaml') {
+    return (
+      <div className="flex-1 h-full overflow-hidden">
+        <YamlLayout />
+      </div>
+    )
+  }
   switch (view) {
     case 'deploy':
       return (
@@ -121,11 +129,13 @@ export default function Home() {
   
   let view: string
   let aiChatOpen: boolean
+  let activePanel: string = ''
   
   try {
     const store = useIDEStore()
     view = store.view
     aiChatOpen = store.aiChatOpen
+    activePanel = store.activePanel
     useIDEHotkeys()
   } catch (err) {
     setError(err as Error)
@@ -171,7 +181,7 @@ export default function Home() {
           </ErrorBoundary>
           <div className="flex flex-1 overflow-hidden">
             <ErrorBoundary fallback={<ErrorFallback error={new Error('Editor error')} resetError={() => window.location.reload()} />}>
-              <MainContent view={view} />
+              <MainContent view={view} activePanel={activePanel} />
             </ErrorBoundary>
           </div>
           {aiChatOpen && (
