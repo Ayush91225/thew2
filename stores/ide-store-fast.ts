@@ -53,6 +53,14 @@ interface FastIDEStore {
   isRunning: boolean
   user: any
   logout: () => void
+  fontSize: number
+  setFontSize: (size: number) => void
+  tabSize: number
+  setTabSize: (size: number) => void
+  minimap: boolean
+  setMinimap: (val: boolean) => void
+  autoSave: boolean
+  setAutoSave: (val: boolean) => void
 }
 
 export const useIDEStore = create<FastIDEStore>()(
@@ -125,6 +133,14 @@ export const useIDEStore = create<FastIDEStore>()(
     })),
     isRunning: false,
     user: null,
-    logout: () => set({ user: null })
+    logout: () => set({ user: null }),
+    fontSize: 14,
+    setFontSize: (size) => set({ fontSize: size }),
+    tabSize: 2,
+    setTabSize: (size) => set({ tabSize: size }),
+    minimap: false,
+    setMinimap: (val) => set({ minimap: val }),
+    autoSave: true,
+    setAutoSave: (val) => set({ autoSave: val })
   }))
 )
